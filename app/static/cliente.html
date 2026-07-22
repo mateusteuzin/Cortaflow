@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a09">
+  <link rel="icon" type="image/png" sizes="any" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <link rel="apple-touch-icon" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <meta name="description" content="Agende seu corte, barba ou tratamento em poucos minutos.">
+  <title>CortaFlow · Agendamento online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/cliente.css?v=20260722-shop-selector">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="identity" href="#top" aria-label="Voltar ao início">
+        <img class="identity-logo shop-logo" src="/assets/cortaflow-icon-default.png" alt="" width="52" height="52">
+        <span id="shop-initials" class="visually-hidden">CF</span>
+        <span class="identity-copy"><strong id="shop-name">CORTAFLOW</strong><small id="shop-address">Studio &amp; Grooming</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="status-chip"><i></i> Agenda online</span>
+        <button class="text-button" id="find" type="button">Minhas reservas <span>↗</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-image" role="img" aria-label="Barbeiro finalizando o corte de um cliente"></div>
+      <div class="hero-grain" aria-hidden="true"></div>
+      <div class="hero-orbit orbit-a" aria-hidden="true"></div>
+      <div class="hero-orbit orbit-b" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <span class="eyebrow"><i></i> Precisão em cada detalhe</span>
+          <h1 id="hero-title">Seu estilo.<br><em>No seu tempo.</em></h1>
+          <p>Uma experiência premium do primeiro toque ao acabamento final. Escolha o serviço, o profissional e o melhor horário para você.</p>
+          <div class="hero-actions">
+            <a class="gold-button" href="#booking"><span>Agendar meu horário</span><b>↘</b></a>
+            <span class="hero-caption">Reserva rápida<br><strong>em menos de 2 minutos</strong></span>
+          </div>
+          <div class="trust-row" aria-label="Benefícios">
+            <span><b>01</b> Confirmação imediata</span>
+            <span><b>02</b> Horários em tempo real</span>
+            <span><b>03</b> Atendimento personalizado</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-signature" aria-hidden="true"><span>EST.</span><b>2026</b></div>
+    </section>
+
+    <section id="booking" class="booking-section" aria-label="Agendamento">
+      <div class="booking-context">
+        <span class="section-index">01 — RESERVA ONLINE</span>
+        <h2>Escolha. Reserve.<br><em>Chegue e relaxe.</em></h2>
+        <p>Nada de ligações ou espera. Nossa agenda mostra somente os horários realmente disponíveis.</p>
+        <div class="booking-benefits">
+          <div><span>✓</span><p><strong>Sem complicação</strong><small>Seu horário garantido em poucos passos.</small></p></div>
+          <div><span>✓</span><p><strong>Você no controle</strong><small>Consulte suas reservas quando precisar.</small></p></div>
+        </div>
+      </div>
+
+      <section class="booking-shell" aria-label="Formulário de agendamento">
+        <div class="progress">
+          <div class="progress-head">
+            <div><span class="progress-kicker">RESERVE SUA CADEIRA</span><strong id="step-title">Escolha seu horário</strong></div>
+            <span id="step-label">Etapa 1 de 3</span>
+          </div>
+          <div class="progress-track"><i id="progress-bar"></i></div>
+          <div class="progress-steps" aria-hidden="true"><span class="active">Serviço</span><span>Seus dados</span><span>Confirmação</span></div>
+        </div>
+
+        <div id="loading" class="state"><span class="spinner"></span><p>Preparando a melhor experiência para você...</p></div>
+        <div id="fatal" class="state hidden"><span class="state-icon">!</span><span class="progress-kicker">PAUSA RÁPIDA</span><h2>Agenda indisponível</h2><p id="fatal-message"></p><button type="button" onclick="location.reload()">Tentar novamente <span>↗</span></button></div>
+        <div id="shop-picker" class="state shop-picker hidden"><span class="progress-kicker">ESCOLHA ONDE AGENDAR</span><h2>Encontre sua barbearia</h2><p>Selecione o estabelecimento para consultar serviços, profissionais e horários disponíveis.</p><div id="shop-options" class="shop-options"></div><a class="shop-owner-link" href="/">Sou proprietário de uma barbearia →</a></div>
+
+        <div id="flow" class="hidden">
+          <section class="step" data-step="1">
+            <div class="field-block"><div class="field-heading"><label>Qual experiência você quer?</label><span class="field-hint">ESCOLHA 1</span></div><div id="services" class="service-list"></div></div>
+            <div id="barber-block" class="field-block muted-block"><div class="field-heading"><label>Escolha seu profissional</label><span class="field-hint">ESCOLHA 2</span></div><div id="barbers" class="professional-list"></div></div>
+            <div id="date-block" class="field-block muted-block"><div class="field-heading"><label for="date">Qual o melhor dia?</label><span class="field-hint">ESCOLHA 3</span></div><input id="date" type="date"></div>
+            <div id="time-block" class="field-block muted-block"><div class="field-row"><label>Horários disponíveis</label><small id="slot-count"></small></div><div id="slots" class="slot-grid"><p class="helper">Escolha um serviço e um profissional.</p></div></div>
+            <button id="to-details" class="primary booking-cta" type="button" disabled><span>Continuar com meus dados</span><b>→</b></button>
+          </section>
+
+          <section class="step hidden" data-step="2">
+            <button class="back" type="button" data-back="1">← Voltar</button><span class="step-kicker">SEUS DADOS</span><h2>Como podemos falar com você?</h2><p class="description">Usaremos seus dados somente para identificar e confirmar esta reserva.</p>
+            <label class="input-label" for="name">Nome completo<input id="name" autocomplete="name" required placeholder="Como devemos chamar você?"></label>
+            <label class="input-label" for="phone">WhatsApp<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(00) 00000-0000"><small>A confirmação será enviada para este número.</small></label>
+            <label class="input-label" for="client-email">E-mail<input id="client-email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@email.com"><small>Enviaremos os detalhes da reserva para este e-mail.</small></label>
+            <button id="to-review" class="primary" type="button"><span>Revisar agendamento</span><b>→</b></button>
+          </section>
+
+          <section class="step hidden" data-step="3">
+            <button class="back" type="button" data-back="2">← Voltar</button><span class="step-kicker">ÚLTIMA CONFERÊNCIA</span><h2>Seu momento está quase reservado.</h2><p class="description">Confira os detalhes antes de confirmar.</p><div id="review" class="review"></div><button id="confirm" class="primary" type="button"><span>Confirmar meu agendamento</span><b>✓</b></button><p class="legal">Ao confirmar, você concorda em receber mensagens relacionadas a este agendamento.</p>
+          </section>
+          <p id="error" class="error" role="alert"></p>
+        </div>
+      </section>
+    </section>
+
+    <section class="experience-strip" aria-label="Experiência CortaFlow">
+      <span class="shop-brand-name">CORTAFLOW</span><p>Mais que um corte. <em>Um ritual de confiança.</em></p><b>STUDIO &amp; GROOMING</b>
+    </section>
+  </main>
+
+  <footer><div class="footer-inner"><div class="footer-brand"><img class="shop-logo" src="/assets/cortaflow-icon-default.png" alt="" width="44" height="44"><span><strong class="shop-brand-name">CORTAFLOW</strong><small>Agendamento online</small></span></div><p>Excelência, precisão e respeito pelo seu tempo.</p><a href="#top">Voltar ao topo ↑</a></div></footer>
+
+  <div class="mobile-reserve-bar"><span><small>AGENDA ONLINE</small><strong>Escolha seu horário</strong></span><a href="#booking">Agendar <b>↗</b></a></div>
+
+  <section id="success" class="success-overlay hidden" aria-live="polite">
+    <div class="success-card">
+      <div class="success-brand"><img class="shop-logo" src="/assets/cortaflow-icon-default.png" alt="" width="38" height="38"><span class="shop-brand-name">CORTAFLOW</span><strong><i></i> Confirmado</strong></div>
+      <div class="success-icon">✓</div>
+      <span class="step-kicker">RESERVA CONCLUÍDA</span>
+      <h2>Seu horário está reservado.</h2>
+      <p>Confira abaixo todos os detalhes do seu atendimento.</p>
+      <div id="summary" class="summary"></div>
+      <div class="reservation-guidance"><span>i</span><p><b>Antes de sair de casa</b>Chegue com 5 minutos de antecedência para aproveitar sua experiência com tranquilidade.</p></div>
+      <div class="success-actions"><a id="whatsapp" class="primary link-button" target="_blank" rel="noopener"><span>Falar com a barbearia</span><b>↗</b></a><button class="secondary restart" type="button" onclick="location.reload()">Fazer outro agendamento</button></div>
+    </div>
+  </section>
+
+  <dialog id="lookup"><form method="dialog"><div class="dialog-head"><div><span class="step-kicker">CONSULTA RÁPIDA</span><h2>Minhas reservas</h2></div><button value="cancel" class="close" type="submit" aria-label="Fechar">×</button></div><p class="dialog-copy">Use o mesmo WhatsApp informado no agendamento.</p><label class="input-label" for="lookup-phone">Telefone<input id="lookup-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label><button id="lookup-submit" type="button" class="primary"><span>Consultar agora</span><b>→</b></button><div id="lookup-result"></div></form></dialog>
+  <script src="/cliente.js?v=20260722-cortaflow-default-icon"></script>
+</body>
+</html>

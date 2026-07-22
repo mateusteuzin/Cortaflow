@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0c0a">
+  <link rel="icon" type="image/png" sizes="any" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <link rel="apple-touch-icon" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <meta name="description" content="Painel de gestão CortaFlow">
+  <title>CortaFlow | Painel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=20260722-mobile-clean-headings">
+</head>
+<body>
+  <section id="login" class="auth-screen">
+    <div class="auth-brand">
+      <img src="/assets/cortaflow-logo-transparent.png?v=20260722" alt="CortaFlow" width="280" height="56">
+      <span>Gestão inteligente para barbearias</span>
+    </div>
+
+    <div class="auth-layout">
+      <div class="auth-message">
+        <span class="eyebrow">CONTROLE TOTAL. ROTINA MAIS LEVE.</span>
+        <h1>Sua barbearia fluindo de verdade.</h1>
+        <p>Agenda, equipe e resultados conectados em um painel simples, rápido e feito para a rotina da sua barbearia.</p>
+        <div class="auth-showcase" aria-hidden="true"><div class="showcase-window"><span>UMA OPERAÇÃO MAIS INTELIGENTE</span><strong>Menos tarefas.<br><em>Mais crescimento.</em></strong><div class="showcase-bars"><i></i><i></i><i></i></div></div><div class="showcase-orbit"></div></div><div class="auth-points" aria-label="Recursos do painel">
+          <span><i>01</i> Agenda em tempo real</span>
+          <span><i>02</i> Gestão da equipe</span>
+          <span><i>03</i> Visão financeira</span>
+        </div>
+      </div>
+
+      <form id="login-form" class="auth-card">
+        <span class="eyebrow">ACESSO SEGURO</span>
+        <h2>Entre no seu painel.</h2>
+        <p class="muted">Acompanhe sua operação de onde estiver.</p>
+        <label for="email">E-mail
+          <input id="email" type="email" autocomplete="email" required placeholder="voce@barbearia.com">
+        </label>
+        <label for="password">Senha
+          <span class="password-field"><input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"><button id="toggle-password" type="button" aria-label="Mostrar senha">Mostrar</button></span>
+        </label>
+        <button class="button button-primary" type="submit">Entrar no painel</button>
+        <p id="login-error" class="error" role="alert"></p>
+        <a href="#" id="show-register" class="auth-secondary-action">Criar minha conta grátis</a>
+        <div class="auth-card-footer"><span><i></i> Seus dados estão protegidos</span><a href="/cliente.html">Sou cliente: agendar horário →</a></div>
+      </form>
+
+      <form id="register-form" class="auth-card hidden">
+        <span class="eyebrow">COMECE AGORA</span>
+        <h2>Crie sua barbearia.</h2>
+        <p class="muted">Configure seu espaço e comece a receber agendamentos.</p>
+        <div class="grid2">
+          <label for="register-name">Seu nome
+            <input id="register-name" name="nome" autocomplete="name" required>
+          </label>
+          <label for="shop-name-register">Barbearia
+            <input id="shop-name-register" name="barbearia_nome" required>
+          </label>
+          <label for="register-email">E-mail Gmail
+            <input id="register-email" name="email" type="email" autocomplete="email" inputmode="email" pattern="^[^@\s]+@(gmail\.com|googlemail\.com)$" title="Use um endereço oficial do Gmail, como nome@gmail.com" placeholder="seunome@gmail.com" required>
+            <small>Use uma conta oficial @gmail.com.</small>
+          </label>
+          <label for="register-phone">Telefone
+            <input id="register-phone" name="telefone" type="tel" autocomplete="tel">
+          </label>
+        </div>
+        <label for="register-password">Senha
+          <input id="register-password" name="senha" type="password" autocomplete="new-password" minlength="6" required>
+        </label>
+        <button class="button button-primary" type="submit">Criar conta</button>
+        <p class="hint"><a href="#" id="show-login">Já tenho uma conta</a></p>
+      </form>
+    </div>
+  </section>
+
+  <div id="app" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand-lockup">
+          <span class="brand-mark"><img id="admin-shop-logo" src="/assets/cortaflow-icon-default.png" alt="" width="38" height="38"></span>
+          <div><strong id="admin-shop-name">CORTAFLOW</strong><span>Painel de gestão</span></div>
+        </div>
+        <button id="menu-close" class="icon-button menu-close" type="button" aria-label="Fechar menu">×</button>
+      </div>
+      <nav aria-label="Navegação principal">
+        <span class="nav-label">VISÃO GERAL</span>
+        <button data-view="dashboard" class="active" type="button"><span class="nav-icon">01</span><span>Resumo do dia</span></button>
+        <button data-view="agenda" type="button"><span class="nav-icon">02</span><span>Agenda</span></button>
+        <span class="nav-label nav-label-spaced">OPERAÇÃO</span>
+        <button data-view="barbeiros" type="button"><span class="nav-icon">03</span><span>Equipe</span></button>
+        <button data-view="servicos" type="button"><span class="nav-icon">04</span><span>Serviços</span></button>
+        <button data-view="produtos" type="button"><span class="nav-icon">05</span><span>Produtos</span></button>
+        <button data-view="relatorios" type="button"><span class="nav-icon">06</span><span>Insights</span></button>
+        <span class="nav-label nav-label-spaced">CONFIGURAÇÕES</span>
+        <button data-view="conta" type="button"><span class="nav-icon">07</span><span>Minha conta</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <a id="public-booking-link" class="public-link" href="/cliente.html" target="_blank" rel="noopener">Abrir página de agendamento <span>↗</span></a>
+        <button id="logout" class="logout-button" type="button">Sair da conta <span>→</span></button>
+      </div>
+    </aside>
+    <div id="overlay" class="sidebar-overlay"></div>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button id="menu" class="icon-button menu-trigger" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+          <div>
+          <span class="eyebrow">PAINEL DE CONTROLE</span>
+          <h1 id="title">Resumo do dia</h1>
+        </div>
+        <div class="topbar-meta">
+          <span class="live-status"><i></i> Operação ativa</span>
+          <span id="today" class="today"></span>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow">RESUMO DO DIA</span>
+            <h2>Olá, <span id="owner-name">gestor</span>.</h2>
+            <p>Veja o que está acontecendo na sua barbearia hoje.</p>
+          </div>
+          <button class="button button-light" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+        </div>
+        <div class="metrics">
+          <article class="metric-card"><span>FATURAMENTO HOJE</span><strong id="revenue">R$ 0,00</strong><small>serviços realizados</small></article>
+          <article class="metric-card"><span>ATENDIMENTOS</span><strong id="cuts">0</strong><small>concluídos hoje</small></article>
+          <article class="metric-card"><span>PRÓXIMOS HORÁRIOS</span><strong id="upcoming-count">0</strong><small>na agenda de hoje</small></article>
+          <article class="metric-card"><span>EQUIPE ATIVA</span><strong id="team-count">0</strong><small>profissionais</small></article>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><span class="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button class="text-link" data-go="agenda" type="button">Ver agenda completa <span>→</span></button></div>
+          <div id="upcoming" class="appointment-list"></div>
+        </div>
+      </section>
+
+      <section id="agenda" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button></div>
+        <div class="toolbar"><label for="agenda-date">Dia<input id="agenda-date" type="date"></label><label for="agenda-barber">Profissional<select id="agenda-barber"><option value="">Todos os barbeiros</option></select></label></div>
+        <div class="panel"><div id="appointments" class="appointment-list"></div></div>
+      </section>
+
+      <section id="barbeiros" class="view hidden"><div class="section-heading"><div><span class="eyebrow">SUA EQUIPE</span><h2>Profissionais</h2><p>Tenha os contatos e a comissão sempre à mão.</p></div><button class="button button-primary" type="button" onclick="openBarber()">+ Adicionar barbeiro</button></div><div id="barber-grid" class="card-grid"></div></section>
+      <section id="servicos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Serviços</h2><p>Gerencie o que aparece na página de agendamento.</p></div><button class="button button-primary" type="button" onclick="openService()">+ Adicionar serviço</button></div><div id="service-grid" class="card-grid"></div></section>
+      <section id="produtos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">ESTOQUE</span><h2>Produtos</h2><p>Acompanhe itens usados ou vendidos no atendimento.</p></div><button class="button button-primary" type="button" onclick="openProduct()">+ Adicionar produto</button></div><div id="product-grid" class="card-grid"></div></section>
+
+      <section id="relatorios" class="view hidden"><div class="section-heading"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios</h2><p>Entenda o desempenho do dia e os clientes mais fiéis.</p></div></div><div class="metrics metrics-compact"><article class="metric-card"><span>FATURAMENTO DO DIA</span><strong id="report-total">R$ 0,00</strong></article><article class="metric-card"><span>CORTES REALIZADOS</span><strong id="report-cuts">0</strong></article></div><div class="report-grid"><div class="panel"><span class="eyebrow">DESEMPENHO</span><h2>Resultado por profissional</h2><div id="barber-report"></div></div><div class="panel"><span class="eyebrow">FIDELIDADE</span><h2>Clientes mais frequentes</h2><div id="loyalty-report"></div></div></div></section>
+
+      <section id="conta" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">IDENTIDADE DA MARCA</span><h2>Minha conta</h2><p>Personalize como sua barbearia aparece para os clientes.</p></div></div>
+        <form id="account-form" class="panel account-panel">
+          <div class="account-branding">
+            <div><span class="eyebrow">LOGO DA BARBEARIA</span><h3>Sua marca em destaque</h3><p>Use uma imagem quadrada ou horizontal, de preferência com fundo transparente.</p></div>
+            <label class="account-logo-picker">
+              <span class="account-logo-preview"><img id="account-logo-preview" src="/assets/cortaflow-icon-default.png" alt="Prévia da logo"></span>
+              <span><b>Escolher logo</b><small>JPG, PNG ou WebP · até 5 MB</small></span>
+              <input id="account-logo-file" type="file" accept="image/jpeg,image/png,image/webp">
+            </label>
+            <input id="account-logo-url" name="logo_url" type="hidden">
+          </div>
+          <div class="account-fields grid2">
+            <label>Nome da barbearia<input name="nome" required></label>
+            <label>Telefone<input name="telefone" type="tel"></label>
+            <label>Endereço<input name="endereco"></label>
+            <label>CNPJ<input name="cnpj"></label>
+            <label>E-mail Gmail para notificações<input name="email_notificacoes" type="email" autocomplete="email" inputmode="email" pattern="^[^@\s]+@(gmail\.com|googlemail\.com)$" title="Use um endereço oficial do Gmail, como nome@gmail.com" placeholder="seunome@gmail.com"><small>Aceitamos somente endereços oficiais @gmail.com.</small></label>
+          </div>
+          <label class="notification-toggle"><input name="notificar_novos_agendamentos" type="checkbox" value="true"><span><b>Receber novos agendamentos por e-mail</b><small>Envia os dados da reserva para o endereço informado acima.</small></span></label>
+          <p id="account-error" class="error" role="alert"></p>
+          <button class="button button-primary" type="submit">Salvar identidade</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js?v=20260722-gmail-register-validation"></script>
+</body>
+</html>
