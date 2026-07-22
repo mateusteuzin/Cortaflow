@@ -210,6 +210,7 @@ function bindNavigation() {
     if (file) $('#account-logo-preview').src = URL.createObjectURL(file);
   };
   $('#account-form').onsubmit = saveProfile;
+  $('#copy-booking-link').onclick = copyBookingLink;
   document.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) return;
@@ -245,7 +246,26 @@ function applyShopBrand(profile) {
   if (!profile) return;
   $('#admin-shop-name').textContent = profile.nome;
   $('#admin-shop-logo').src = profile.logo_url || '/assets/cortaflow-icon-default.png';
-  $('#public-booking-link').href = `/cliente.html?barbearia=${profile.id}`;
+  const bookingPath = `/agendar/${encodeURIComponent(profile.slug)}`;
+  const bookingUrl = new URL(bookingPath, location.origin).href;
+  $('#public-booking-link').href = bookingPath;
+  $('#booking-link-value').value = bookingUrl;
+  $('#open-booking-link').href = bookingPath;
+}
+
+async function copyBookingLink() {
+  const value = $('#booking-link-value').value;
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+    else {
+      $('#booking-link-value').select();
+      document.execCommand('copy');
+      window.getSelection()?.removeAllRanges();
+    }
+    toast('Link copiado com sucesso.');
+  } catch (error) {
+    toast('Não foi possível copiar. Selecione o link manualmente.');
+  }
 }
 
 async function loadProfile() {
@@ -257,6 +277,7 @@ async function loadProfile() {
   });
   form.elements.email_notificacoes.value = shopProfile.email_notificacoes || '';
   form.elements.notificar_novos_agendamentos.checked = shopProfile.notificar_novos_agendamentos !== false;
+  form.elements.public_booking_enabled.checked = shopProfile.public_booking_enabled !== false;
   $('#account-logo-preview').src = shopProfile.logo_url || '/assets/cortaflow-icon-default.png';
 }
 
@@ -267,6 +288,7 @@ async function saveProfile(event) {
   const data = Object.fromEntries(new FormData(form));
   data.email_notificacoes = data.email_notificacoes.trim() || null;
   data.notificar_novos_agendamentos = form.elements.notificar_novos_agendamentos.checked;
+  data.public_booking_enabled = form.elements.public_booking_enabled.checked;
   submit.disabled = true;
   $('#account-error').textContent = '';
   try {

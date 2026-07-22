@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/cliente.css?v=20260722-shop-selector">
+  <link rel="stylesheet" href="/cliente.css?v=20260722-public-slugs">
 </head>
 <body>
   <header class="topbar">
@@ -76,8 +76,6 @@
 
         <div id="loading" class="state"><span class="spinner"></span><p>Preparando a melhor experiência para você...</p></div>
         <div id="fatal" class="state hidden"><span class="state-icon">!</span><span class="progress-kicker">PAUSA RÁPIDA</span><h2>Agenda indisponível</h2><p id="fatal-message"></p><button type="button" onclick="location.reload()">Tentar novamente <span>↗</span></button></div>
-        <div id="shop-picker" class="state shop-picker hidden"><span class="progress-kicker">ESCOLHA ONDE AGENDAR</span><h2>Encontre sua barbearia</h2><p>Selecione o estabelecimento para consultar serviços, profissionais e horários disponíveis.</p><div id="shop-options" class="shop-options"></div><a class="shop-owner-link" href="/">Sou proprietário de uma barbearia →</a></div>
-
         <div id="flow" class="hidden">
           <section class="step" data-step="1">
             <div class="field-block"><div class="field-heading"><label>Qual experiência você quer?</label><span class="field-hint">ESCOLHA 1</span></div><div id="services" class="service-list"></div></div>
@@ -126,6 +124,6 @@
   </section>
 
   <dialog id="lookup"><form method="dialog"><div class="dialog-head"><div><span class="step-kicker">CONSULTA RÁPIDA</span><h2>Minhas reservas</h2></div><button value="cancel" class="close" type="submit" aria-label="Fechar">×</button></div><p class="dialog-copy">Use o mesmo WhatsApp informado no agendamento.</p><label class="input-label" for="lookup-phone">Telefone<input id="lookup-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label><button id="lookup-submit" type="button" class="primary"><span>Consultar agora</span><b>→</b></button><div id="lookup-result"></div></form></dialog>
-  <script src="/cliente.js?v=20260722-cortaflow-default-icon"></script>
+  <script src="/cliente.js?v=20260722-public-slugs"></script>
 </body>
 </html>

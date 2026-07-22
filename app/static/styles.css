@@ -157,6 +157,12 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 .section-heading { margin: 2px 0 24px; }
 .section-heading p { margin: 7px 0 0; color: var(--muted); font-size: 10px; }
 .account-panel { max-width: 820px; }
+.booking-link-card { margin: 0 0 25px; padding: 20px; border: 1px solid #d9c898; background: linear-gradient(135deg,#faf6ea,#f3ead5); }
+.booking-link-card h3 { margin: 8px 0 5px; font: 600 24px/1 var(--display); text-transform: uppercase; }
+.booking-link-card p { margin: 0; color: var(--muted); font-size: 10px; }
+.booking-link-value { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 8px; margin-top: 16px; }
+.booking-link-value input { min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid #d8d1c1; background: #fff; color: #4c4b45; font-size: 10px; }
+.booking-link-value .button { min-height: 44px; padding: 0 15px; white-space: nowrap; }
 .account-branding { display: grid; grid-template-columns: 1fr 290px; align-items: center; gap: 28px; padding-bottom: 25px; border-bottom: 1px solid var(--line); }
 .account-branding h3 { margin: 8px 0 5px; font: 600 22px/1 var(--display); text-transform: uppercase; }
 .account-branding p { max-width: 430px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
@@ -263,6 +269,7 @@ html[data-theme="dark"] dialog { border-color: var(--line); background: var(--pa
 html[data-theme="dark"] .professional-card { border-color: var(--line) !important; background: var(--paper) !important; }
 html[data-theme="dark"] .toolbar,
 html[data-theme="dark"] .report-filters,
+html[data-theme="dark"] .booking-link-card,
 html[data-theme="dark"] .notification-toggle,
 html[data-theme="dark"] .upload-picker,
 html[data-theme="dark"] .account-logo-picker { border-color: var(--line); background: #20211c; }
@@ -274,6 +281,7 @@ html[data-theme="dark"] .toolbar input,
 html[data-theme="dark"] .toolbar select,
 html[data-theme="dark"] .report-filters select,
 html[data-theme="dark"] .account-fields input { border-color: #3d3e37; background: #11120f; color: var(--ink); }
+html[data-theme="dark"] .booking-link-value input { border-color:#3d3e37;background:#11120f;color:var(--ink); }
 html[data-theme="dark"] .upload-label,
 html[data-theme="dark"] .upload-copy,
 html[data-theme="dark"] .account-fields label,
@@ -338,6 +346,8 @@ html[data-theme="dark"] .topbar-meta { color: var(--muted); }
   .hero-card .button { width: 100%; margin-top: auto; }
   .panel-head, .section-heading { align-items: start; flex-direction: column; }
   .account-branding { grid-template-columns: 1fr; }
+  .booking-link-value { grid-template-columns: 1fr 1fr; }
+  .booking-link-value input { grid-column: 1 / -1; }
   .account-logo-picker { width: 100%; }
   .section-heading .button { width: 100%; }
   .toolbar { grid-template-columns: 1fr 1fr; }
@@ -355,6 +365,7 @@ html[data-theme="dark"] .topbar-meta { color: var(--muted); }
   .auth-card-footer { align-items: start; flex-direction: column; }
   .sidebar { width: min(88vw, 300px); }
   .grid2 { grid-template-columns: 1fr; }
+  .booking-link-card { padding: 17px; }
   .topbar h1 { font-size: 27px; }
   .today { max-width: 102px; text-align: right; }
   .metrics { gap: 8px; }

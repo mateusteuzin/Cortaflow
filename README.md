@@ -11,10 +11,10 @@ docker compose up --build
 Depois acesse:
 
 - Painel do proprietário: http://localhost:8000
-- Agendamento público: http://localhost:8000/cliente.html
+- Agendamento público: `http://localhost:8000/agendar/slug-da-barbearia` (copie o endereço em **Minha conta**)
 - Documentação da API: http://localhost:8000/api/docs
 
-No primeiro acesso, clique em **Crie sua conta**. A página pública encontra automaticamente a primeira barbearia ativa; em instalações com várias empresas, use `?barbearia=ID` para abrir uma agenda específica.
+No primeiro acesso, clique em **Crie sua conta**. Cada barbearia recebe automaticamente um slug único e um link exclusivo. Não existe listagem pública de estabelecimentos nem agendamento por ID numérico.
 
 ## Banco compartilhado com Supabase
 

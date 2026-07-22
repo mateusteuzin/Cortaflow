@@ -3,8 +3,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbearias (
  id SERIAL PRIMARY KEY, usuario_id INTEGER UNIQUE NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
- nome VARCHAR(160) NOT NULL, telefone VARCHAR(30), endereco TEXT, cnpj VARCHAR(24), logo_url TEXT,
+ nome VARCHAR(160) NOT NULL, slug VARCHAR(160) UNIQUE NOT NULL, telefone VARCHAR(30), endereco TEXT, cnpj VARCHAR(24), logo_url TEXT,
  email_notificacoes VARCHAR(254), notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE,
+ public_booking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
  plano_ativo BOOLEAN DEFAULT TRUE, data_assinatura DATE DEFAULT CURRENT_DATE, criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbeiros (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,

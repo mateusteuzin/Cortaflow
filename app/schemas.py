@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 GOOGLE_EMAIL_DOMAINS = {"gmail.com", "googlemail.com"}
 
@@ -54,7 +54,7 @@ class AppointmentUpdate(BaseModel):
     preco: Decimal | None = None
 
 class PublicAppointment(Appointment):
-    barbearia_id: int = 1
+    model_config = ConfigDict(extra="forbid")
     cliente_email: EmailStr
 
 class Product(BaseModel):
@@ -88,6 +88,7 @@ class ShopUpdate(BaseModel):
     logo_url: str = ""
     email_notificacoes: EmailStr | None = None
     notificar_novos_agendamentos: bool = True
+    public_booking_enabled: bool = True
 
     @field_validator("email_notificacoes")
     @classmethod

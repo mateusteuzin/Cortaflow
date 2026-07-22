@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg2 import IntegrityError
 from .database import all_rows, db, one
@@ -15,6 +15,7 @@ from .services.whatsapp import verify_webhook_signature
 from .services.whatsapp_worker import whatsapp_worker
 from .services.email import send_appointment_confirmation, send_owner_notification
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
+from .services.slugs import unique_shop_slug
 from .runtime import is_vercel, should_run_migrations, should_start_worker
 from .services.appointments import (
     AppointmentNotFoundError,
@@ -147,7 +148,8 @@ def register(data: Register):
     try:
         with db() as cur:
             cur.execute("INSERT INTO usuarios(email,senha_hash,nome,telefone) VALUES(%s,%s,%s,%s) RETURNING id", (data.email.lower(),hash_password(data.senha),data.nome,data.telefone)); uid=cur.fetchone()["id"]
-            cur.execute("INSERT INTO barbearias(usuario_id,nome,telefone) VALUES(%s,%s,%s) RETURNING id", (uid,data.barbearia_nome,data.telefone)); sid=cur.fetchone()["id"]
+            shop_slug=unique_shop_slug(cur,data.barbearia_nome)
+            cur.execute("INSERT INTO barbearias(usuario_id,nome,slug,telefone) VALUES(%s,%s,%s,%s) RETURNING id", (uid,data.barbearia_nome,shop_slug,data.telefone)); sid=cur.fetchone()["id"]
             cur.execute("INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim) SELECT %s,d,'09:00','19:00' FROM generate_series(0,5) d", (sid,))
             cur.execute("""INSERT INTO servicos(barbearia_id,nome,descricao,duracao_minutos,preco,imagem_url) VALUES
               (%s,'Corte Degradê','Degradê com acabamento completo',40,30,'/assets/service-degrade.webp'),
@@ -169,40 +171,42 @@ def profile(user=Depends(current_user)): return one("SELECT * FROM barbearias WH
 @app.post("/api/barbearia/atualizar")
 def update_shop(data: ShopUpdate,user=Depends(current_user)):
     return one("""UPDATE barbearias SET nome=%s,telefone=%s,endereco=%s,cnpj=%s,logo_url=%s,
-        email_notificacoes=%s,notificar_novos_agendamentos=%s WHERE id=%s RETURNING *""",
+        email_notificacoes=%s,notificar_novos_agendamentos=%s,public_booking_enabled=%s WHERE id=%s RETURNING *""",
         (data.nome,data.telefone,data.endereco,data.cnpj,data.logo_url,data.email_notificacoes,
-         data.notificar_novos_agendamentos,user["barbearia_id"]))
+         data.notificar_novos_agendamentos,data.public_booking_enabled,user["barbearia_id"]))
 
 @app.get("/api/barbearia/barbeiros")
 def barbers(user=Depends(current_user)): return all_rows("SELECT * FROM barbeiros WHERE barbearia_id=%s ORDER BY ativo DESC,nome",(user["barbearia_id"],))
 
-def resolve_public_shop(barbearia_id:int|None=None):
-    if barbearia_id is None:
-        shops=all_rows("SELECT id,nome,telefone,endereco,logo_url FROM barbearias WHERE plano_ativo ORDER BY id")
-        if len(shops) > 1:
-            raise HTTPException(400,"Link de agendamento incompleto. Abra a página pelo painel da barbearia.")
-        shop=shops[0] if shops else None
-    else:
-        shop=one("SELECT id,nome,telefone,endereco,logo_url FROM barbearias WHERE id=%s AND plano_ativo",(barbearia_id,))
-    if not shop: raise HTTPException(404,"Barbearia não encontrada")
+def resolve_public_shop(slug:str):
+    shop=one("""SELECT id,nome,slug,telefone,endereco,logo_url,plano_ativo,public_booking_enabled
+        FROM barbearias WHERE slug=%s""",(slug.lower(),))
+    if not shop: raise HTTPException(404,"Barbearia não encontrada. Verifique se o link está correto.")
+    if not shop["plano_ativo"] or not shop["public_booking_enabled"]:
+        raise HTTPException(403,"Esta barbearia não está recebendo agendamentos no momento.")
     return shop
 
 @app.get("/api/cliente/barbearias")
 def public_shops():
-    return all_rows("""SELECT id,nome,endereco,logo_url FROM barbearias
-      WHERE plano_ativo ORDER BY nome,id""")
+    raise HTTPException(410,"A listagem pública de barbearias não está disponível. Use o link exclusivo do estabelecimento.")
 
-@app.get("/api/cliente/barbeiros")
-def public_barbers(barbearia_id:int|None=None):
-    shop=resolve_public_shop(barbearia_id)
+@app.get("/api/public/barbearias/{slug}/profissionais")
+def public_barbers(slug:str):
+    shop=resolve_public_shop(slug)
     return all_rows("SELECT id,nome,foto_url FROM barbeiros WHERE barbearia_id=%s AND ativo ORDER BY nome",(shop["id"],))
 
-@app.get("/api/cliente/barbearia")
-def public_shop(barbearia_id:int|None=None): return resolve_public_shop(barbearia_id)
+@app.get("/api/public/barbearias/{slug}")
+def public_shop(slug:str):
+    shop=resolve_public_shop(slug)
+    logo=shop["logo_url"] or ""
+    if not (logo.startswith("https://") or logo.startswith("/assets/")):
+        logo=""
+    return {"nome":shop["nome"],"slug":shop["slug"],"telefone":shop["telefone"],
+        "endereco":shop["endereco"],"logo_url":logo}
 
-@app.get("/api/cliente/servicos")
-def public_services(barbearia_id:int|None=None):
-    shop=resolve_public_shop(barbearia_id)
+@app.get("/api/public/barbearias/{slug}/servicos")
+def public_services(slug:str):
+    shop=resolve_public_shop(slug)
     return all_rows("SELECT id,nome,descricao,duracao_minutos,preco,imagem_url FROM servicos WHERE barbearia_id=%s AND ativo ORDER BY nome",(shop["id"],))
 
 @app.post("/api/barbearia/barbeiros",status_code=201)
@@ -325,23 +329,35 @@ def available(shop_id:int, day:date, barber_id:int|None, duration:int=30):
 
 @app.get("/api/agendamentos/horarios-disponiveis")
 def owner_slots(data:date,barbeiro_id:int|None=None,user=Depends(current_user)): return {"horarios":available(user["barbearia_id"],data,barbeiro_id)}
-@app.get("/api/cliente/horarios-disponiveis")
-def public_slots(data:date,barbeiro_id:int|None=None,servico_id:int|None=None,barbearia_id:int|None=None):
-    shop=resolve_public_shop(barbearia_id)
-    service=one("SELECT duracao_minutos FROM servicos WHERE id=%s AND barbearia_id=%s AND ativo",(servico_id,shop["id"])) if servico_id else None
-    if servico_id and not service: raise HTTPException(404,"Serviço não encontrado")
-    return {"horarios":available(shop["id"],data,barbeiro_id,service["duracao_minutos"] if service else 30)}
-@app.post("/api/cliente/agendar",status_code=201)
-def public_create(data:PublicAppointment,background_tasks:BackgroundTasks):
-    row=insert_appointment(data,data.barbearia_id)
+
+def validate_public_selection(shop_id:int,barbeiro_id:int,servico_id:int):
+    barber=one("SELECT id FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo",(barbeiro_id,shop_id))
+    if not barber: raise HTTPException(404,"Profissional não encontrado para esta barbearia")
+    service=one("SELECT duracao_minutos FROM servicos WHERE id=%s AND barbearia_id=%s AND ativo",(servico_id,shop_id))
+    if not service: raise HTTPException(404,"Serviço não encontrado para esta barbearia")
+    return service
+
+@app.get("/api/public/barbearias/{slug}/horarios")
+def public_slots(slug:str,data:date,barbeiro_id:int,servico_id:int):
+    shop=resolve_public_shop(slug)
+    service=validate_public_selection(shop["id"],barbeiro_id,servico_id)
+    return {"horarios":available(shop["id"],data,barbeiro_id,service["duracao_minutos"])}
+@app.post("/api/public/barbearias/{slug}/agendamentos",status_code=201)
+def public_create(slug:str,data:PublicAppointment,background_tasks:BackgroundTasks):
+    shop=resolve_public_shop(slug)
+    service=validate_public_selection(shop["id"],data.barbeiro_id,data.servico_id)
+    slots=available(shop["id"],data.data_hora.date(),data.barbeiro_id,service["duracao_minutos"])
+    if data.data_hora.strftime("%H:%M") not in slots:
+        raise HTTPException(409,"Este horário não está mais disponível")
+    row=insert_appointment(data,shop["id"])
     if not row: raise HTTPException(404,"Barbeiro não encontrado")
     dispatch_whatsapp(background_tasks)
     background_tasks.add_task(send_appointment_confirmation,row["id"])
     background_tasks.add_task(send_owner_notification,row["id"])
     return row
-@app.get("/api/cliente/meu-agendamento/{telefone}")
-def my_appointment(telefone:str,barbearia_id:int):
-    shop=resolve_public_shop(barbearia_id)
+@app.get("/api/public/barbearias/{slug}/reservas/{telefone}")
+def my_appointment(slug:str,telefone:str):
+    shop=resolve_public_shop(slug)
     digits=''.join(character for character in telefone if character.isdigit())
     if len(digits)<10: raise HTTPException(422,"Informe um WhatsApp válido")
     return all_rows("""SELECT a.id,a.data_hora,a.servico,a.status,b.nome barbeiro_nome
@@ -352,9 +368,7 @@ def my_appointment(telefone:str,barbearia_id:int):
       ORDER BY (a.data_hora>=NOW()) DESC,a.data_hora DESC LIMIT 10""",(shop["id"],digits))
 @app.post("/api/cliente/confirmar")
 def confirm(data:ConfirmRequest):
-    row=one("UPDATE agendamentos SET status='confirmado' WHERE id=%s AND status='agendado' RETURNING id",(data.agendamento_id,))
-    if not row: raise HTTPException(404,"Agendamento indisponível para confirmação")
-    return {"ok":True}
+    raise HTTPException(410,"Esta confirmação pública foi desativada")
 
 @app.get("/api/produtos")
 def products(user=Depends(current_user)): return all_rows("SELECT * FROM produtos WHERE barbearia_id=%s ORDER BY nome",(user["barbearia_id"],))
@@ -459,5 +473,9 @@ async def whatsapp_webhook(request:Request):
                     WHERE whatsapp_message_id=%s RETURNING id""",(status,error_title,message_id))
                 updated+=bool(row)
     return {"recebido":True,"atualizados":updated}
+
+@app.get("/agendar/{slug}",include_in_schema=False)
+def booking_page(slug:str):
+    return FileResponse(static/'cliente.html')
 
 app.mount('/',StaticFiles(directory=static,html=True),name='frontend')

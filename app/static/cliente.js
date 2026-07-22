@@ -1,8 +1,8 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
-const params = new URLSearchParams(location.search);
-let shopId = Number(params.get('barbearia')) || null;
-const shopQuery = () => shopId ? `?barbearia_id=${shopId}` : '';
+const bookingMatch = location.pathname.match(/^\/agendar\/([^/]+)\/?$/);
+const bookingSlug = bookingMatch ? decodeURIComponent(bookingMatch[1]).toLowerCase() : '';
+const publicBase = () => `/public/barbearias/${encodeURIComponent(bookingSlug)}`;
 const today = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -45,25 +45,6 @@ function phone(value) {
   return value.replace(/\D/g, '').replace(/^(\d{2})(\d{5})(\d{0,4}).*/, (_, area, first, last) => `(${area}) ${first}${last ? '-' + last : ''}`).slice(0, 15);
 }
 
-function showShopPicker(shops) {
-  $('#loading').classList.add('hidden');
-  $('#shop-options').innerHTML = shops.map((item) => {
-    const visual = item.logo_url
-      ? `<img src="${escapeHTML(item.logo_url)}" alt="Logo da ${escapeHTML(item.nome)}" loading="lazy">`
-      : `<span>${escapeHTML(initials(item.nome))}</span>`;
-    return `<button type="button" class="shop-option" data-shop-id="${item.id}"><span class="shop-option-logo">${visual}</span><span><b>${escapeHTML(item.nome)}</b><small>${escapeHTML(item.endereco || 'Agendamento online')}</small></span><i>→</i></button>`;
-  }).join('');
-  $$('.shop-option').forEach((button) => {
-    button.onclick = () => {
-      const url = new URL(location.href);
-      url.searchParams.set('barbearia', button.dataset.shopId);
-      url.hash = 'booking';
-      location.href = url.toString();
-    };
-  });
-  $('#shop-picker').classList.remove('hidden');
-}
-
 function setStep(step) {
   currentStep = step;
   $$('.step').forEach((element) => element.classList.toggle('hidden', Number(element.dataset.step) !== step));
@@ -82,30 +63,9 @@ function setStep(step) {
 
 async function init() {
   try {
-    if (!shopId) {
-      const shops = await api('/cliente/barbearias');
-      if (!shops.length) {
-        $('#loading').classList.add('hidden');
-        $('#fatal').classList.remove('hidden');
-        $('#fatal .progress-kicker').textContent = 'PRIMEIROS PASSOS';
-        $('#fatal h2').textContent = 'Agenda em configuração';
-        $('#fatal-message').textContent = 'Ainda não há uma barbearia disponível. Cadastre seu espaço para começar a receber agendamentos.';
-        const action = $('#fatal button');
-        action.innerHTML = 'Cadastrar minha barbearia <span>→</span>';
-        action.onclick = () => { location.href = '/'; };
-        return;
-      }
-      if (shops.length > 1) {
-        showShopPicker(shops);
-        return;
-      }
-      shopId = shops[0].id;
-      const url = new URL(location.href);
-      url.searchParams.set('barbearia', shopId);
-      history.replaceState(null, '', url);
-    }
-    [shop] = await Promise.all([api(`/cliente/barbearia${shopQuery()}`), loadServices(), loadBarbers()]);
-    shopId = shop.id;
+    if (!bookingSlug) throw new Error('Barbearia não encontrada. Verifique se o link está correto.');
+    shop = await api(publicBase());
+    await Promise.all([loadServices(), loadBarbers()]);
     $('#shop-name').textContent = shop.nome;
     $('#shop-initials').textContent = initials(shop.nome);
     $('#shop-address').textContent = shop.endereco || 'Agendamento online';
@@ -125,7 +85,7 @@ async function init() {
 }
 
 async function loadServices() {
-  const list = await api(`/cliente/servicos${shopQuery()}`);
+  const list = await api(`${publicBase()}/servicos`);
   if (!list.length) throw new Error('Esta barbearia ainda não possui serviços disponíveis.');
   $('#services').innerHTML = list.map((item, index) => `<button class="service-option" type="button" data-index="${index}"><span class="service-photo"><img src="${escapeHTML(item.imagem_url || '/assets/service-degrade.webp')}" alt="${escapeHTML(item.nome)}" loading="lazy"></span><span class="service-copy"><span><b>${escapeHTML(item.nome)}</b><small>${escapeHTML(item.descricao || 'Serviço profissional')}</small></span><strong>${money(item.preco)}</strong><span class="duration">${item.duracao_minutos} minutos</span></span></button>`).join('');
   $$('.service-option').forEach((button) => {
@@ -139,7 +99,7 @@ async function loadServices() {
 }
 
 async function loadBarbers() {
-  const list = await api(`/cliente/barbeiros${shopQuery()}`);
+  const list = await api(`${publicBase()}/profissionais`);
   if (!list.length) throw new Error('Esta barbearia ainda não possui profissionais disponíveis.');
   $('#barbers').innerHTML = list.map((item, index) => `<button class="professional" type="button" data-index="${index}"><span class="avatar">${item.foto_url ? `<img src="${escapeHTML(item.foto_url)}" alt="Foto de ${escapeHTML(item.nome)}" loading="lazy">` : escapeHTML(initials(item.nome))}</span><span><b>${escapeHTML(item.nome)}</b><small>Profissional disponível</small></span></button>`).join('');
   $$('.professional').forEach((button) => {
@@ -160,7 +120,7 @@ async function loadSlots() {
   $('#time-block').classList.add('ready');
   $('#slots').innerHTML = '<span class="spinner"></span>';
   try {
-    const result = await api(`/cliente/horarios-disponiveis?data=${dateInput.value}&barbeiro_id=${barber.id}&servico_id=${service.id}&barbearia_id=${shopId}`);
+    const result = await api(`${publicBase()}/horarios?data=${dateInput.value}&barbeiro_id=${barber.id}&servico_id=${service.id}`);
     $('#slot-count').textContent = result.horarios.length ? `${result.horarios.length} opções` : '';
     $('#slots').innerHTML = result.horarios.map((hour) => `<button class="slot" type="button" data-hour="${escapeHTML(hour)}">${escapeHTML(hour)}</button>`).join('') || '<p class="helper">Nenhum horário livre neste dia. Tente outra data.</p>';
     $$('.slot').forEach((button) => {
@@ -219,7 +179,7 @@ $('#confirm').onclick = async () => {
   button.disabled = true;
   button.textContent = 'Confirmando...';
   try {
-    const appointment = await api('/cliente/agendar', { method: 'POST', body: JSON.stringify({ barbearia_id: shopId, barbeiro_id: barber.id, servico_id: service.id, cliente_nome: $('#name').value.trim(), cliente_telefone: $('#phone').value, cliente_email: $('#client-email').value.trim(), data_hora: `${dateInput.value}T${slot}:00`, servico: service.nome, preco: Number(service.preco), duracao_minutos: service.duracao_minutos, whatsapp_autorizado: true }) });
+    const appointment = await api(`${publicBase()}/agendamentos`, { method: 'POST', body: JSON.stringify({ barbeiro_id: barber.id, servico_id: service.id, cliente_nome: $('#name').value.trim(), cliente_telefone: $('#phone').value, cliente_email: $('#client-email').value.trim(), data_hora: `${dateInput.value}T${slot}:00`, servico: service.nome, preco: Number(service.preco), duracao_minutos: service.duracao_minutos, whatsapp_autorizado: true }) });
     const reference = String(appointment.id).padStart(4, '0');
     const locationLogo = shop.logo_url
       ? `<span class="summary-shop-logo"><img src="${escapeHTML(shop.logo_url)}" alt="Logo da ${escapeHTML(shop.nome)}"></span>`
@@ -251,7 +211,7 @@ $('#lookup-submit').onclick = async () => {
   if (value.replace(/\D/g, '').length < 10) return;
   $('#lookup-result').innerHTML = '<p class="helper">Consultando...</p>';
   try {
-    const list = await api('/cliente/meu-agendamento/' + encodeURIComponent(value) + `?barbearia_id=${shopId}`);
+    const list = await api(`${publicBase()}/reservas/${encodeURIComponent(value)}`);
     $('#lookup-result').innerHTML = list.length ? list.map((item) => `<div class="lookup-item"><b>${formatDate(item.data_hora.slice(0, 10))} às ${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b><small>${escapeHTML(item.barbeiro_nome)} · ${escapeHTML(item.servico)} · ${escapeHTML(item.status)}</small></div>`).join('') : '<p class="helper">Nenhuma reserva recente encontrada para este número.</p>';
   } catch (error) {
     $('#lookup-result').innerHTML = `<p class="error">${escapeHTML(error.message)}</p>`;

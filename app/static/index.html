@@ -45,7 +45,7 @@
         <button class="button button-primary" type="submit">Entrar no painel</button>
         <p id="login-error" class="error" role="alert"></p>
         <a href="#" id="show-register" class="auth-secondary-action">Criar minha conta grátis</a>
-        <div class="auth-card-footer"><span><i></i> Seus dados estão protegidos</span><a href="/cliente.html">Sou cliente: agendar horário →</a></div>
+        <div class="auth-card-footer"><span><i></i> Seus dados estão protegidos</span></div>
       </form>
 
       <form id="register-form" class="auth-card hidden">
@@ -174,6 +174,10 @@
       <section id="conta" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">IDENTIDADE DA MARCA</span><h2>Minha conta</h2><p>Personalize como sua barbearia aparece para os clientes.</p></div></div>
         <form id="account-form" class="panel account-panel">
+          <section class="booking-link-card" aria-labelledby="booking-link-title">
+            <div><span class="eyebrow">AGENDA PÚBLICA</span><h3 id="booking-link-title">Link de agendamento</h3><p>Compartilhe este link para que seus clientes agendem diretamente na sua barbearia.</p></div>
+            <div class="booking-link-value"><input id="booking-link-value" type="text" readonly aria-label="Link público de agendamento"><button id="copy-booking-link" class="button button-primary" type="button">Copiar link</button><a id="open-booking-link" class="button button-outline" href="#" target="_blank" rel="noopener">Abrir página</a></div>
+          </section>
           <div class="account-branding">
             <div><span class="eyebrow">LOGO DA BARBEARIA</span><h3>Sua marca em destaque</h3><p>Use uma imagem quadrada ou horizontal, de preferência com fundo transparente.</p></div>
             <label class="account-logo-picker">
@@ -191,6 +195,7 @@
             <label>E-mail Gmail para notificações<input name="email_notificacoes" type="email" autocomplete="email" inputmode="email" pattern="^[^@\s]+@(gmail\.com|googlemail\.com)$" title="Use um endereço oficial do Gmail, como nome@gmail.com" placeholder="seunome@gmail.com"><small>Aceitamos somente endereços oficiais @gmail.com.</small></label>
           </div>
           <label class="notification-toggle"><input name="notificar_novos_agendamentos" type="checkbox" value="true"><span><b>Receber novos agendamentos por e-mail</b><small>Envia os dados da reserva para o endereço informado acima.</small></span></label>
+          <label class="notification-toggle"><input name="public_booking_enabled" type="checkbox" value="true"><span><b>Receber agendamentos pelo link público</b><small>Ao desativar, o link exibirá que a barbearia não está recebendo agendamentos.</small></span></label>
           <p id="account-error" class="error" role="alert"></p>
           <button class="button button-primary" type="submit">Salvar identidade</button>
         </form>
@@ -200,6 +205,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260722-period-reports"></script>
+  <script src="/app.js?v=20260722-public-slugs"></script>
 </body>
 </html>
