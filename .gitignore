@@ -13,3 +13,7 @@ Thumbs.db
 *.log
 app/static/uploads/*
 !app/static/uploads/.gitkeep
+
+.vercel
+.env*
+!.env.example
