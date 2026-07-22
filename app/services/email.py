@@ -14,12 +14,14 @@ logger = logging.getLogger(__name__)
 BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-icon-default.png"
 
 
-def _brand_header(label: str, title: str) -> str:
+def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
+    image_url = escape((logo_url or BRAND_ICON_URL).strip(), quote=True)
+    image_alt = escape(f"Logo da {title}" if logo_url else "CortaFlow", quote=True)
     return f"""<div style="background:#151511;color:#fff;padding:24px 28px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;padding-right:16px">
           <div style="width:58px;height:58px;border-radius:50%;background:#f3e2b4;border:2px solid #d5a93f;text-align:center">
-            <img src="{BRAND_ICON_URL}" width="58" height="58" alt="CortaFlow" style="display:block;width:58px;height:58px;border-radius:50%;object-fit:cover">
+            <img src="{image_url}" width="58" height="58" alt="{image_alt}" style="display:block;box-sizing:border-box;width:58px;height:58px;padding:3px;border-radius:50%;object-fit:contain;background:#fff">
           </div>
         </td>
         <td style="vertical-align:middle"><small style="color:#d5a93f;letter-spacing:2px">{escape(label)}</small>
@@ -41,7 +43,7 @@ def _email_html(item: dict) -> str:
     shop = item["barbearia_nome"]
     return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
     <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      {_brand_header('RESERVA CONFIRMADA', shop)}
+      {_brand_header('RESERVA CONFIRMADA', shop, item.get('barbearia_logo_url'))}
       <div style="padding:30px"><p>Olá, <strong>{escape(item['cliente_nome'])}</strong>.</p><p>Seu horário foi reservado com sucesso.</p>
       <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;margin:24px 0;line-height:1.8">
         <strong>{escape(item['servico'])}</strong><br>{escape(day)} às {hour}<br>Profissional: {escape(item['barbeiro_nome'])}<br>Valor: R$ {item['preco']:.2f}<br>Reserva: #{item['id']:04d}
@@ -75,7 +77,7 @@ def _owner_email_html(item: dict) -> str:
     client_email = escape(item.get("cliente_email") or "Não informado")
     return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
     <div style="max-width:620px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      {_brand_header('NOVO AGENDAMENTO', item['barbearia_nome'])}
+      {_brand_header('NOVO AGENDAMENTO', item['barbearia_nome'], item.get('barbearia_logo_url'))}
       <div style="padding:30px"><p>Uma nova reserva foi registrada pelo site.</p>
       <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
         <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
@@ -98,7 +100,7 @@ def send_appointment_confirmation(appointment_id: int) -> bool:
         one("UPDATE agendamentos SET email_erro=%s WHERE id=%s RETURNING id", ("Resend não configurado", appointment_id))
         return False
     item = one("""SELECT a.id,a.cliente_nome,a.cliente_email,a.data_hora,a.servico,a.preco,
-        b.nome barbeiro_nome,s.nome barbearia_nome FROM agendamentos a
+        b.nome barbeiro_nome,s.nome barbearia_nome,s.logo_url barbearia_logo_url FROM agendamentos a
         JOIN barbeiros b ON b.id=a.barbeiro_id JOIN barbearias s ON s.id=a.barbearia_id
         WHERE a.id=%s AND a.cliente_email IS NOT NULL AND NOT a.email_enviado
           AND a.status NOT IN ('concluido','realizado')""", (appointment_id,))
@@ -132,7 +134,8 @@ def send_owner_notification(appointment_id: int) -> bool:
     api_key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
     item = one("""SELECT a.id,a.cliente_nome,a.cliente_telefone,a.cliente_email,a.data_hora,
-        a.servico,a.preco,b.nome barbeiro_nome,s.nome barbearia_nome,s.email_notificacoes
+        a.servico,a.preco,b.nome barbeiro_nome,s.nome barbearia_nome,
+        s.logo_url barbearia_logo_url,s.email_notificacoes
         FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
         JOIN barbearias s ON s.id=a.barbearia_id WHERE a.id=%s
         AND s.notificar_novos_agendamentos AND s.email_notificacoes IS NOT NULL

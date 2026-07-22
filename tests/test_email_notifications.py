@@ -16,6 +16,7 @@ def notification_item(phone="(11) 99999-8888"):
         "preco": Decimal("50.00"),
         "barbeiro_nome": "Otavio",
         "barbearia_nome": "Blackbarber",
+        "barbearia_logo_url": "https://cdn.example.com/blackbarber.png",
     }
 
 
@@ -27,7 +28,8 @@ class OwnerEmailNotificationTests(unittest.TestCase):
 
     def test_html_contains_client_contacts_and_action(self):
         html = _owner_email_html(notification_item())
-        self.assertIn(BRAND_ICON_URL, html)
+        self.assertIn("https://cdn.example.com/blackbarber.png", html)
+        self.assertNotIn(BRAND_ICON_URL, html)
         self.assertIn('border-radius:50%', html)
         self.assertIn("Abrir conversa no WhatsApp", html)
         self.assertIn("mailto:cliente@gmail.com", html)
@@ -41,8 +43,14 @@ class OwnerEmailNotificationTests(unittest.TestCase):
 
     def test_customer_email_contains_circular_brand_logo(self):
         html = _email_html(notification_item())
-        self.assertIn(BRAND_ICON_URL, html)
+        self.assertIn("https://cdn.example.com/blackbarber.png", html)
         self.assertIn("Agendamento por CortaFlow", html)
+
+    def test_uses_cortaflow_logo_when_shop_has_no_logo(self):
+        item = notification_item()
+        item["barbearia_logo_url"] = ""
+        html = _email_html(item)
+        self.assertIn(BRAND_ICON_URL, html)
 
 
 if __name__ == "__main__":
