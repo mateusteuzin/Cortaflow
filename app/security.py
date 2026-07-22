@@ -29,7 +29,9 @@ def current_user(auth: HTTPAuthorizationCredentials = Depends(bearer)):
         user_id = int(jwt.decode(auth.credentials, SECRET, algorithms=["HS256"])["sub"])
     except (JWTError, KeyError, ValueError):
         raise HTTPException(401, "Token inválido ou expirado")
-    user = one("SELECT u.id, u.email, u.nome, b.id barbearia_id FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id WHERE u.id=%s", (user_id,))
+    user = one("SELECT u.id, u.email, u.nome, u.email_verificado, b.id barbearia_id FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id WHERE u.id=%s", (user_id,))
     if not user:
         raise HTTPException(401, "Usuário não encontrado")
+    if not user["email_verificado"]:
+        raise HTTPException(403, "Confirme seu e-mail para acessar o painel")
     return user

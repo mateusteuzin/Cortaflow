@@ -15,6 +15,35 @@ logger = logging.getLogger(__name__)
 BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-icon-default.png"
 
 
+def send_account_verification(email: str, owner_name: str, verification_token: str) -> bool:
+    """Envia a confirmação de propriedade do e-mail do dono da barbearia."""
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
+    base_url = os.getenv("PUBLIC_BASE_URL", "https://cortaflow.com.br").strip().rstrip("/")
+    if not api_key:
+        logger.warning("RESEND_API_KEY não configurada; confirmação de conta não enviada")
+        return False
+    verification_url = f"{base_url}/api/auth/verificar-email?token={quote(verification_token)}"
+    html = f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
+    <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
+      {_brand_header('CONFIRMAÇÃO DE CONTA', 'CortaFlow')}
+      <div style="padding:30px"><p>Olá, <strong>{escape(owner_name)}</strong>.</p>
+      <p>Confirme seu e-mail para liberar o painel da sua barbearia.</p>
+      <a href="{escape(verification_url, quote=True)}" style="display:inline-block;background:#171713;color:#fff;text-decoration:none;font-weight:bold;padding:15px 22px;margin:18px 0">Confirmar meu e-mail</a>
+      <p style="font-size:13px;color:#6d6b64">Este link é válido por 24 horas. Se você não criou esta conta, ignore esta mensagem.</p>
+      </div></div></body></html>"""
+    payload = json.dumps({"from": sender, "to": [email], "subject": "Confirme sua conta CortaFlow", "html": html}).encode()
+    request = Request("https://api.resend.com/emails", data=payload, method="POST", headers={
+        "Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "CortaFlow/1.0"})
+    try:
+        with urlopen(request, timeout=15) as response:
+            response.read()
+        return True
+    except (HTTPError, URLError, TimeoutError, ValueError) as error:
+        logger.warning("Falha ao enviar confirmação da conta para %s: %s", email, error)
+        return False
+
+
 def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
     candidate = (logo_url or "").strip()
     parsed = urlparse(candidate)

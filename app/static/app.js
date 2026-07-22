@@ -146,6 +146,16 @@ function openSidebar() {
 }
 
 function bindAuth() {
+  const confirmation = new URLSearchParams(location.search).get('email_confirmado');
+  if (confirmation) {
+    const notice = $('#verification-notice');
+    notice.classList.remove('hidden');
+    notice.textContent = confirmation === 'sucesso'
+      ? 'E-mail confirmado! Agora você já pode entrar no painel.'
+      : 'Este link é inválido ou expirou. Informe seu e-mail e solicite um novo link.';
+    if (confirmation !== 'sucesso') $('#resend-verification').classList.remove('hidden');
+    history.replaceState({}, '', '/');
+  }
   $('#toggle-password').onclick = () => {
     const password = $('#password');
     const showing = password.type === 'text';
@@ -169,6 +179,7 @@ function bindAuth() {
       await start();
     } catch (error) {
       $('#login-error').textContent = error.message;
+      if (/Confirme seu e-mail/i.test(error.message)) $('#resend-verification').classList.remove('hidden');
     } finally {
       button.disabled = false;
     }
@@ -184,15 +195,32 @@ function bindAuth() {
     button.disabled = true;
     try {
       const result = await api('/auth/register', { method: 'POST', body: JSON.stringify(data) });
-      token = result.access_token;
-      localStorage.setItem('token', token);
-      localStorage.setItem('name', data.nome);
-      await start();
+      event.target.reset();
+      $('#register-notice').textContent = result.message;
+      $('#register-notice').classList.remove('hidden');
+      $('#login-form').classList.remove('hidden');
+      $('#register-form').classList.add('hidden');
+      $('#email').value = data.email;
+      $('#verification-notice').textContent = result.message;
+      $('#verification-notice').classList.remove('hidden');
+      $('#resend-verification').classList.remove('hidden');
     } catch (error) {
       toast(error.message);
     } finally {
       button.disabled = false;
     }
+  };
+  $('#resend-verification').onclick = async () => {
+    const email = $('#email').value.trim();
+    if (!email) { $('#login-error').textContent = 'Informe seu Gmail acima para reenviar o link.'; return; }
+    const button = $('#resend-verification');
+    button.disabled = true;
+    try {
+      const result = await api('/auth/reenviar-confirmacao', { method: 'POST', body: JSON.stringify({ email }) });
+      $('#verification-notice').textContent = result.message;
+      $('#verification-notice').classList.remove('hidden');
+    } catch (error) { $('#login-error').textContent = error.message; }
+    finally { button.disabled = false; }
   };
 }
 

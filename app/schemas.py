@@ -28,6 +28,14 @@ class Login(BaseModel):
     email: EmailStr
     senha: str
 
+class ResendVerification(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def validate_google_email(cls, value):
+        return validate_google_email_address(value)
+
 class Barber(BaseModel):
     nome: str
     telefone: str = ""

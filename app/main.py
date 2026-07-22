@@ -1,11 +1,11 @@
-import json, logging, os, time as time_module
+import hashlib, json, logging, os, secrets, time as time_module
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg2 import IntegrityError
 from .database import all_rows, db, one
@@ -13,7 +13,7 @@ from .schemas import *
 from .security import current_user, hash_password, token, verify_password
 from .services.whatsapp import verify_webhook_signature
 from .services.whatsapp_worker import whatsapp_worker
-from .services.email import send_appointment_confirmation, send_owner_notification
+from .services.email import send_account_verification, send_appointment_confirmation, send_owner_notification
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
 from .services.slugs import unique_shop_slug
 from .runtime import is_vercel, should_run_migrations, should_start_worker
@@ -44,6 +44,10 @@ def ensure_current_schema():
             whatsapp_worker.start()
         return
     with db() as cur:
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verificado BOOLEAN NOT NULL DEFAULT TRUE")
+        cur.execute("ALTER TABLE usuarios ALTER COLUMN email_verificado SET DEFAULT FALSE")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verification_token_hash VARCHAR(64)")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS logo_url TEXT")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS email_notificacoes VARCHAR(254)")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE")
@@ -143,11 +147,21 @@ async def upload_image(arquivo: UploadFile = File(...), user=Depends(current_use
         raise HTTPException(502, str(error)) from error
     return {"url": stored.public_url}
 
+def _new_email_verification() -> tuple[str, str, datetime]:
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    return raw_token, token_hash, datetime.now().astimezone() + timedelta(hours=24)
+
+
 @app.post("/api/auth/register", status_code=201)
 def register(data: Register):
+    raw_token, token_hash, expires_at = _new_email_verification()
     try:
         with db() as cur:
-            cur.execute("INSERT INTO usuarios(email,senha_hash,nome,telefone) VALUES(%s,%s,%s,%s) RETURNING id", (data.email.lower(),hash_password(data.senha),data.nome,data.telefone)); uid=cur.fetchone()["id"]
+            cur.execute("""INSERT INTO usuarios(email,senha_hash,nome,telefone,email_verificado,
+                email_verification_token_hash,email_verification_expires_at)
+                VALUES(%s,%s,%s,%s,FALSE,%s,%s) RETURNING id""",
+                (data.email.lower(),hash_password(data.senha),data.nome,data.telefone,token_hash,expires_at)); uid=cur.fetchone()["id"]
             shop_slug=unique_shop_slug(cur,data.barbearia_nome)
             cur.execute("INSERT INTO barbearias(usuario_id,nome,slug,telefone) VALUES(%s,%s,%s,%s) RETURNING id", (uid,data.barbearia_nome,shop_slug,data.telefone)); sid=cur.fetchone()["id"]
             cur.execute("INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim) SELECT %s,d,'09:00','19:00' FROM generate_series(0,5) d", (sid,))
@@ -156,14 +170,39 @@ def register(data: Register):
               (%s,'Corte Social','Corte clássico com acabamento',30,25,'/assets/service-social.webp'),
               (%s,'Corte + Barba','Corte completo e barba alinhada',60,50,'/assets/service-combo.webp'),
               (%s,'Sobrancelha','Design e acabamento de sobrancelha',15,10,'/assets/service-sobrancelha.webp')""", (sid,sid,sid,sid))
-        return {"access_token":token(uid),"token_type":"bearer"}
+        sent = send_account_verification(data.email.lower(), data.nome, raw_token)
+        return {"requires_email_verification":True,"email_sent":sent,
+            "message":"Enviamos um link de confirmação para seu Gmail." if sent else "Conta criada. Use reenviar link para confirmar seu e-mail."}
     except IntegrityError: raise HTTPException(409,"E-mail já cadastrado")
 
 @app.post("/api/auth/login")
 def login(data: Login):
     user=one("SELECT * FROM usuarios WHERE email=%s",(data.email.lower(),))
     if not user or not verify_password(data.senha,user["senha_hash"]): raise HTTPException(401,"E-mail ou senha inválidos")
+    if not user.get("email_verificado"):
+        raise HTTPException(403,"Confirme seu e-mail antes de entrar. Confira também a caixa de spam.")
     return {"access_token":token(user["id"]),"token_type":"bearer","nome":user["nome"]}
+
+
+@app.post("/api/auth/reenviar-confirmacao")
+def resend_email_verification(data: ResendVerification):
+    user = one("SELECT id,email,nome,email_verificado FROM usuarios WHERE email=%s", (data.email.lower(),))
+    if user and not user["email_verificado"]:
+        raw_token, token_hash, expires_at = _new_email_verification()
+        one("""UPDATE usuarios SET email_verification_token_hash=%s,email_verification_expires_at=%s
+            WHERE id=%s RETURNING id""", (token_hash, expires_at, user["id"]))
+        send_account_verification(user["email"], user["nome"], raw_token)
+    return {"message":"Se existir uma conta pendente, enviaremos um novo link de confirmação."}
+
+
+@app.get("/api/auth/verificar-email")
+def verify_account_email(token: str = Query(min_length=20, max_length=200)):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = one("""UPDATE usuarios SET email_verificado=TRUE,email_verification_token_hash=NULL,
+        email_verification_expires_at=NULL WHERE email_verification_token_hash=%s
+        AND email_verification_expires_at>NOW() AND NOT email_verificado RETURNING id""", (token_hash,))
+    status = "sucesso" if user else "invalido"
+    return RedirectResponse(url=f"/?email_confirmado={status}", status_code=303)
 
 @app.get("/api/barbearia/perfil")
 def profile(user=Depends(current_user)): return one("SELECT * FROM barbearias WHERE id=%s",(user["barbearia_id"],))

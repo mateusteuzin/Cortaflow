@@ -44,6 +44,8 @@
         </label>
         <button class="button button-primary" type="submit">Entrar no painel</button>
         <p id="login-error" class="error" role="alert"></p>
+        <p id="verification-notice" class="hint hidden" role="status"></p>
+        <button id="resend-verification" class="auth-secondary-action hidden" type="button">Reenviar link de confirmação</button>
         <a href="#" id="show-register" class="auth-secondary-action">Criar minha conta grátis</a>
         <div class="auth-card-footer"><span><i></i> Seus dados estão protegidos</span></div>
       </form>
@@ -70,7 +72,8 @@
         <label for="register-password">Senha
           <input id="register-password" name="senha" type="password" autocomplete="new-password" minlength="6" required>
         </label>
-        <button class="button button-primary" type="submit">Criar conta</button>
+        <button class="button button-primary" type="submit">Criar conta e confirmar e-mail</button>
+        <p id="register-notice" class="hint hidden" role="status"></p>
         <p class="hint"><a href="#" id="show-login">Já tenho uma conta</a></p>
       </form>
     </div>
