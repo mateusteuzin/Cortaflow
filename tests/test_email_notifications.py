@@ -52,6 +52,13 @@ class OwnerEmailNotificationTests(unittest.TestCase):
         html = _email_html(item)
         self.assertIn(BRAND_ICON_URL, html)
 
+    def test_uses_cortaflow_logo_for_legacy_local_upload(self):
+        item = notification_item()
+        item["barbearia_logo_url"] = "/uploads/blackbarber.png"
+        html = _email_html(item)
+        self.assertIn(BRAND_ICON_URL, html)
+        self.assertNotIn("/uploads/blackbarber.png", html)
+
 
 if __name__ == "__main__":
     unittest.main()

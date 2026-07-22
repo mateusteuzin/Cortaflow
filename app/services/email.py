@@ -5,6 +5,7 @@ from datetime import datetime
 from html import escape
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from ..database import one
@@ -15,8 +16,11 @@ BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-icon-default.png"
 
 
 def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
-    image_url = escape((logo_url or BRAND_ICON_URL).strip(), quote=True)
-    image_alt = escape(f"Logo da {title}" if logo_url else "CortaFlow", quote=True)
+    candidate = (logo_url or "").strip()
+    parsed = urlparse(candidate)
+    has_public_logo = parsed.scheme == "https" and bool(parsed.netloc)
+    image_url = escape(candidate if has_public_logo else BRAND_ICON_URL, quote=True)
+    image_alt = escape(f"Logo da {title}" if has_public_logo else "CortaFlow", quote=True)
     return f"""<div style="background:#151511;color:#fff;padding:24px 28px">
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;padding-right:16px">
