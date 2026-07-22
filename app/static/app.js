@@ -16,6 +16,25 @@ let services = [];
 let shopProfile = null;
 let toastTimer;
 
+function setTheme(theme) {
+  const dark = theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  localStorage.setItem('cortaflow-theme', dark ? 'dark' : 'light');
+  const button = $('#theme-toggle');
+  if (!button) return;
+  button.setAttribute('aria-pressed', String(dark));
+  button.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo escuro');
+  button.querySelector('span').textContent = dark ? '☀' : '☾';
+  button.querySelector('b').textContent = dark ? 'Claro' : 'Escuro';
+}
+
+function bindTheme() {
+  const saved = localStorage.getItem('cortaflow-theme');
+  const preferred = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  setTheme(saved || preferred);
+  $('#theme-toggle').onclick = () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+}
+
 async function api(path, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
@@ -442,4 +461,5 @@ async function loadReports() {
 
 bindAuth();
 bindNavigation();
+bindTheme();
 if (token) start();
