@@ -1,0 +1,42 @@
+import unittest
+from datetime import datetime
+from decimal import Decimal
+
+from app.services.email import _owner_email_html, _owner_whatsapp_url
+
+
+def notification_item(phone="(11) 99999-8888"):
+    return {
+        "id": 42,
+        "cliente_nome": "Mateus",
+        "cliente_telefone": phone,
+        "cliente_email": "cliente@gmail.com",
+        "data_hora": datetime(2026, 7, 22, 14, 30),
+        "servico": "Corte + Barba",
+        "preco": Decimal("50.00"),
+        "barbeiro_nome": "Otavio",
+        "barbearia_nome": "Blackbarber",
+    }
+
+
+class OwnerEmailNotificationTests(unittest.TestCase):
+    def test_builds_brazilian_whatsapp_deep_link(self):
+        url = _owner_whatsapp_url(notification_item())
+        self.assertTrue(url.startswith("https://wa.me/5511999998888?text="))
+        self.assertIn("Recebemos%20seu%20agendamento", url)
+
+    def test_html_contains_client_contacts_and_action(self):
+        html = _owner_email_html(notification_item())
+        self.assertIn("Abrir conversa no WhatsApp", html)
+        self.assertIn("mailto:cliente@gmail.com", html)
+        self.assertIn("Corte + Barba", html)
+        self.assertIn("#0042", html)
+
+    def test_invalid_phone_omits_whatsapp_button(self):
+        html = _owner_email_html(notification_item("123"))
+        self.assertNotIn("Abrir conversa no WhatsApp", html)
+        self.assertIn("WhatsApp: 123", html)
+
+
+if __name__ == "__main__":
+    unittest.main()

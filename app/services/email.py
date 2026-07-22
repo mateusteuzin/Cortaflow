@@ -4,9 +4,11 @@ import os
 from datetime import datetime
 from html import escape
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from ..database import one
+from .whatsapp import normalize_phone
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,48 @@ def _email_html(item: dict) -> str:
         <strong>{escape(item['servico'])}</strong><br>{escape(day)} às {hour}<br>Profissional: {escape(item['barbeiro_nome'])}<br>Valor: R$ {item['preco']:.2f}<br>Reserva: #{item['id']:04d}
       </div><p style="font-size:13px;color:#6d6b64">Caso precise alterar o horário, entre em contato diretamente com a barbearia.</p></div>
     </div></body></html>"""
+
+
+def _owner_whatsapp_url(item: dict) -> str | None:
+    try:
+        phone = normalize_phone(item.get("cliente_telefone") or "")
+    except ValueError:
+        return None
+    message = (
+        f"Olá, {item.get('cliente_nome') or 'cliente'}! "
+        f"Aqui é da {item.get('barbearia_nome') or 'barbearia'}. "
+        f"Recebemos seu agendamento de {item.get('servico') or 'serviço'}."
+    )
+    return f"https://wa.me/{phone}?text={quote(message)}"
+
+
+def _owner_email_html(item: dict) -> str:
+    day, hour = _format_date(item["data_hora"])
+    whatsapp_url = _owner_whatsapp_url(item)
+    whatsapp_button = ""
+    if whatsapp_url:
+        whatsapp_button = (
+            f'<a href="{escape(whatsapp_url, quote=True)}" '
+            'style="display:inline-block;background:#1f9d55;color:#fff;text-decoration:none;'
+            'font-weight:bold;padding:14px 20px;margin:22px 0 4px">Abrir conversa no WhatsApp</a>'
+        )
+    client_email = escape(item.get("cliente_email") or "Não informado")
+    return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
+    <div style="max-width:620px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
+      <div style="background:#151511;color:#fff;padding:28px"><small style="color:#d5a93f;letter-spacing:2px">NOVO AGENDAMENTO</small><h1 style="margin:10px 0 0;font-size:26px">{escape(item['barbearia_nome'])}</h1></div>
+      <div style="padding:30px"><p>Uma nova reserva foi registrada pelo site.</p>
+      <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
+        <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
+        WhatsApp: {escape(item['cliente_telefone'] or 'Não informado')}<br>
+        E-mail: <a href="mailto:{client_email}" style="color:#9a6b13">{client_email}</a><br>
+        Serviço: {escape(item['servico'])}<br>
+        Profissional: {escape(item['barbeiro_nome'])}<br>
+        Data: {escape(day)} às {hour}<br>
+        Valor: R$ {item['preco']:.2f}<br>
+        Reserva: #{item['id']:04d}
+      </div>{whatsapp_button}
+      <p style="font-size:12px;color:#777">Você recebeu este aviso porque as notificações de novos agendamentos estão ativadas no CortaFlow.</p>
+      </div></div></body></html>"""
 
 
 def send_appointment_confirmation(appointment_id: int) -> bool:
@@ -79,14 +123,7 @@ def send_owner_notification(appointment_id: int) -> bool:
         AND a.status NOT IN ('concluido','realizado')""", (appointment_id,))
     if not api_key or not item:
         return False
-    day, hour = _format_date(item["data_hora"])
-    html = f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
-    <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      <div style="background:#151511;color:#fff;padding:28px"><small style="color:#d5a93f;letter-spacing:2px">NOVO AGENDAMENTO</small><h1 style="margin:10px 0 0;font-size:26px">{escape(item['barbearia_nome'])}</h1></div>
-      <div style="padding:30px"><p>Uma nova reserva foi registrada.</p><div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.8">
-        Cliente: <strong>{escape(item['cliente_nome'])}</strong><br>WhatsApp: {escape(item['cliente_telefone'])}<br>E-mail: {escape(item['cliente_email'] or 'Não informado')}<br>
-        Serviço: {escape(item['servico'])}<br>Profissional: {escape(item['barbeiro_nome'])}<br>Data: {escape(day)} às {hour}<br>Valor: R$ {item['preco']:.2f}<br>Reserva: #{item['id']:04d}
-      </div></div></div></body></html>"""
+    html = _owner_email_html(item)
     payload = json.dumps({"from": sender, "to": [item["email_notificacoes"]],
         "subject": f"Novo agendamento #{item['id']:04d} - {item['barbearia_nome']}", "html": html}).encode()
     request = Request("https://api.resend.com/emails", data=payload, method="POST", headers={
