@@ -24,7 +24,6 @@ function setTheme(theme) {
   if (!button) return;
   button.setAttribute('aria-pressed', String(dark));
   button.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo escuro');
-  button.querySelector('span').textContent = dark ? '☀' : '☾';
   button.querySelector('b').textContent = dark ? 'Claro' : 'Escuro';
 }
 
