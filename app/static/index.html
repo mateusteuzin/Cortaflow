@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260722-theme-icons">
+  <link rel="stylesheet" href="/styles.css?v=20260722-period-reports">
 </head>
 <body>
   <section id="login" class="auth-screen">
@@ -154,7 +154,22 @@
       <section id="servicos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Serviços</h2><p>Gerencie o que aparece na página de agendamento.</p></div><button class="button button-primary" type="button" onclick="openService()">+ Adicionar serviço</button></div><div id="service-grid" class="card-grid"></div></section>
       <section id="produtos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">ESTOQUE</span><h2>Produtos</h2><p>Acompanhe itens usados ou vendidos no atendimento.</p></div><button class="button button-primary" type="button" onclick="openProduct()">+ Adicionar produto</button></div><div id="product-grid" class="card-grid"></div></section>
 
-      <section id="relatorios" class="view hidden"><div class="section-heading"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios</h2><p>Entenda o desempenho do dia e os clientes mais fiéis.</p></div></div><div class="metrics metrics-compact"><article class="metric-card"><span>FATURAMENTO DO DIA</span><strong id="report-total">R$ 0,00</strong></article><article class="metric-card"><span>CORTES REALIZADOS</span><strong id="report-cuts">0</strong></article></div><div class="report-grid"><div class="panel"><span class="eyebrow">DESEMPENHO</span><h2>Resultado por profissional</h2><div id="barber-report"></div></div><div class="panel"><span class="eyebrow">FIDELIDADE</span><h2>Clientes mais frequentes</h2><div id="loyalty-report"></div></div></div></section>
+      <section id="relatorios" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios</h2><p>Compare resultados, identifique os dias mais movimentados e acompanhe sua evolução.</p></div></div>
+        <div class="report-filters" aria-label="Filtros do relatório">
+          <label>Período<select id="report-period"><option value="mensal">Mensal</option><option value="anual">Anual</option></select></label>
+          <label id="report-month-wrap">Mês<select id="report-month"></select></label>
+          <label>Ano<select id="report-year"></select></label>
+        </div>
+        <div class="metrics report-metrics">
+          <article class="metric-card"><span>FATURAMENTO</span><strong id="report-total">R$ 0,00</strong><small>no período selecionado</small></article>
+          <article class="metric-card"><span>ATENDIMENTOS</span><strong id="report-cuts">0</strong><small>concluídos no período</small></article>
+          <article class="metric-card"><span>TICKET MÉDIO</span><strong id="report-ticket">R$ 0,00</strong><small>por atendimento</small></article>
+          <article class="metric-card"><span>MELHOR PERÍODO</span><strong id="report-best">—</strong><small id="report-best-detail">sem atendimentos</small></article>
+        </div>
+        <div class="panel report-chart-panel"><div class="panel-head"><div><span class="eyebrow">MOVIMENTO</span><h2 id="report-chart-title">Atendimentos por dia</h2></div><span class="chart-legend"><i></i> Atendimentos concluídos</span></div><div id="attendance-chart" class="attendance-chart"></div></div>
+        <div class="report-grid"><div class="panel"><span class="eyebrow">DESEMPENHO</span><h2>Resultado por profissional</h2><div id="barber-report"></div></div><div class="panel"><span class="eyebrow">FIDELIDADE</span><h2>Clientes mais frequentes</h2><div id="loyalty-report"></div></div></div>
+      </section>
 
       <section id="conta" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">IDENTIDADE DA MARCA</span><h2>Minha conta</h2><p>Personalize como sua barbearia aparece para os clientes.</p></div></div>
@@ -185,6 +200,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260722-theme-icons"></script>
+  <script src="/app.js?v=20260722-period-reports"></script>
 </body>
 </html>

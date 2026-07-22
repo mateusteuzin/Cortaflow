@@ -450,11 +450,65 @@ async function removeProduct(id) {
   toast('Produto excluído');
 }
 
+const reportMonths = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+function setupReportFilters() {
+  const now = new Date();
+  if (!$('#report-month').options.length) {
+    $('#report-month').innerHTML = reportMonths.map((name, index) => `<option value="${index + 1}">${name}</option>`).join('');
+    $('#report-month').value = String(now.getMonth() + 1);
+    $('#report-year').innerHTML = Array.from({ length: 7 }, (_, index) => now.getFullYear() - index).map((year) => `<option value="${year}">${year}</option>`).join('');
+    ['report-period', 'report-month', 'report-year'].forEach((id) => { $('#' + id).onchange = () => loadReports().catch((error) => toast(error.message)); });
+  }
+  $('#report-month-wrap').classList.toggle('hidden', $('#report-period').value === 'anual');
+}
+
+function completeReportPoints(report, month, year) {
+  const values = new Map(report.pontos.map((item) => [String(item.periodo).slice(0, 10), Number(item.atendimentos)]));
+  if (report.periodo === 'anual') return reportMonths.map((label, index) => ({ label: label.slice(0, 3), value: values.get(`${year}-${String(index + 1).padStart(2, '0')}-01`) || 0 }));
+  const days = new Date(year, month, 0).getDate();
+  return Array.from({ length: days }, (_, index) => {
+    const day = index + 1;
+    return { label: String(day), value: values.get(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`) || 0 };
+  });
+}
+
+function renderAttendanceChart(points) {
+  const width = 760, height = 270, left = 42, right = 18, top = 22, bottom = 38;
+  const chartWidth = width - left - right, chartHeight = height - top - bottom;
+  const maximum = Math.max(1, ...points.map((point) => point.value));
+  const x = (index) => left + (points.length === 1 ? 0 : index * chartWidth / (points.length - 1));
+  const y = (value) => top + chartHeight - (value / maximum * chartHeight);
+  const line = points.map((point, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)},${y(point.value).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(points.length - 1).toFixed(1)},${top + chartHeight} L${left},${top + chartHeight} Z`;
+  const labelStep = Math.max(1, Math.ceil(points.length / 7));
+  const grid = Array.from({ length: 5 }, (_, index) => { const value = Math.round(maximum * (4 - index) / 4); const py = top + chartHeight * index / 4; return `<line x1="${left}" y1="${py}" x2="${width - right}" y2="${py}"/><text x="${left - 9}" y="${py + 3}">${value}</text>`; }).join('');
+  const labels = points.map((point, index) => (index % labelStep === 0 || index === points.length - 1) ? `<text x="${x(index)}" y="${height - 13}" text-anchor="middle">${escapeHTML(point.label)}</text>` : '').join('');
+  const dots = points.map((point, index) => `<circle cx="${x(index)}" cy="${y(point.value)}" r="4"><title>${escapeHTML(point.label)}: ${point.value} atendimento${point.value === 1 ? '' : 's'}</title></circle>`).join('');
+  $('#attendance-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><path class="chart-area" d="${area}"/><path class="chart-line" d="${line}"/>${dots}</svg>`;
+}
+
 async function loadReports() {
-  const [report, loyalty] = await Promise.all([api('/relatorios/dia?data=' + localDate()), api('/relatorios/fidelidade')]);
-  $('#report-total').textContent = money(report.total.total);
-  $('#report-cuts').textContent = report.total.cortes;
-  $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados hoje.</p>';
+  setupReportFilters();
+  const period = $('#report-period').value;
+  const month = Number($('#report-month').value);
+  const year = Number($('#report-year').value);
+  const [report, loyalty] = await Promise.all([api(`/relatorios/periodo?periodo=${period}&mes=${month}&ano=${year}`), api('/relatorios/fidelidade')]);
+  $('#report-month-wrap').classList.toggle('hidden', period === 'anual');
+  $('#report-total').textContent = money(report.total.faturamento);
+  $('#report-cuts').textContent = report.total.atendimentos;
+  $('#report-ticket').textContent = money(report.total.ticket_medio);
+  $('#report-chart-title').textContent = period === 'anual' ? 'Atendimentos por mês' : 'Atendimentos por dia';
+  if (report.melhor_periodo) {
+    const date = String(report.melhor_periodo.periodo).slice(0, 10);
+    $('#report-best').textContent = period === 'anual' ? reportMonths[Number(date.slice(5, 7)) - 1] : `${Number(date.slice(8, 10))}/${date.slice(5, 7)}`;
+    $('#report-best-detail').textContent = `${report.melhor_periodo.atendimentos} atendimento${Number(report.melhor_periodo.atendimentos) === 1 ? '' : 's'}`;
+  } else {
+    $('#report-best').textContent = '—';
+    $('#report-best-detail').textContent = 'sem atendimentos';
+  }
+  renderAttendanceChart(completeReportPoints(report, month, year));
+  $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
   $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
 }
 

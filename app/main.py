@@ -379,6 +379,26 @@ def appointment_products(appointment_id:int,user=Depends(current_user)): return 
 def daily(data:date,user=Depends(current_user)): return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status IN ('concluido','realizado')",(user["barbearia_id"],data)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora::date=%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(data,user["barbearia_id"]))}
 @app.get("/api/relatorios/mes")
 def monthly(mes:int,ano:int,user=Depends(current_user)): return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND EXTRACT(MONTH FROM data_hora)=%s AND EXTRACT(YEAR FROM data_hora)=%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],mes,ano))
+@app.get("/api/relatorios/periodo")
+def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+    inicio=date(ano,mes,1) if periodo=="mensal" else date(ano,1,1)
+    fim=(date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)) if periodo=="mensal" else date(ano+1,1,1)
+    bucket="day" if periodo=="mensal" else "month"
+    pontos=all_rows(f"""SELECT date_trunc('{bucket}',data_hora)::date periodo,
+        COUNT(*) atendimentos,COALESCE(SUM(preco),0) faturamento
+        FROM agendamentos WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s
+        AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1""",(user["barbearia_id"],inicio,fim))
+    total=one("""SELECT COUNT(*) atendimentos,COALESCE(SUM(preco),0) faturamento,
+        COALESCE(AVG(preco),0) ticket_medio FROM agendamentos
+        WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s
+        AND status IN ('concluido','realizado')""",(user["barbearia_id"],inicio,fim))
+    por_barbeiro=all_rows("""SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento
+        FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora>=%s
+        AND a.data_hora<%s AND a.status IN ('concluido','realizado')
+        WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC,b.nome""",(inicio,fim,user["barbearia_id"]))
+    melhor=max(pontos,key=lambda item:item["atendimentos"],default=None)
+    return {"periodo":periodo,"inicio":inicio,"fim":fim,"total":total,"pontos":pontos,
+        "melhor_periodo":melhor,"por_barbeiro":por_barbeiro}
 @app.get("/api/relatorios/barbeiro/{barber_id}")
 def barber_report(barber_id:int,user=Depends(current_user)): return one("SELECT b.nome,b.comissao_percentual,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento,COALESCE(SUM(a.preco)*b.comissao_percentual/100,0) comissao FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.status IN ('concluido','realizado') WHERE b.id=%s AND b.barbearia_id=%s GROUP BY b.id",(barber_id,user["barbearia_id"]))
 @app.get("/api/relatorios/fidelidade")
