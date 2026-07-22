@@ -11,6 +11,23 @@ from ..database import one
 from .whatsapp import normalize_phone
 
 logger = logging.getLogger(__name__)
+BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-icon-default.png"
+
+
+def _brand_header(label: str, title: str) -> str:
+    return f"""<div style="background:#151511;color:#fff;padding:24px 28px">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle;padding-right:16px">
+          <div style="width:58px;height:58px;border-radius:50%;background:#f3e2b4;border:2px solid #d5a93f;text-align:center">
+            <img src="{BRAND_ICON_URL}" width="58" height="58" alt="CortaFlow" style="display:block;width:58px;height:58px;border-radius:50%;object-fit:cover">
+          </div>
+        </td>
+        <td style="vertical-align:middle"><small style="color:#d5a93f;letter-spacing:2px">{escape(label)}</small>
+          <h1 style="margin:7px 0 0;font-size:26px;line-height:1.1">{escape(title)}</h1>
+          <span style="display:block;margin-top:6px;color:#aaa;font-size:12px">Agendamento por CortaFlow</span>
+        </td>
+      </tr></table>
+    </div>"""
 
 
 def _format_date(value: datetime) -> tuple[str, str]:
@@ -21,10 +38,10 @@ def _format_date(value: datetime) -> tuple[str, str]:
 
 def _email_html(item: dict) -> str:
     day, hour = _format_date(item["data_hora"])
-    shop = escape(item["barbearia_nome"])
+    shop = item["barbearia_nome"]
     return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
     <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      <div style="background:#151511;color:#fff;padding:28px"><small style="color:#d5a93f;letter-spacing:2px">RESERVA CONFIRMADA</small><h1 style="margin:10px 0 0;font-size:26px">{shop}</h1></div>
+      {_brand_header('RESERVA CONFIRMADA', shop)}
       <div style="padding:30px"><p>Olá, <strong>{escape(item['cliente_nome'])}</strong>.</p><p>Seu horário foi reservado com sucesso.</p>
       <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;margin:24px 0;line-height:1.8">
         <strong>{escape(item['servico'])}</strong><br>{escape(day)} às {hour}<br>Profissional: {escape(item['barbeiro_nome'])}<br>Valor: R$ {item['preco']:.2f}<br>Reserva: #{item['id']:04d}
@@ -58,7 +75,7 @@ def _owner_email_html(item: dict) -> str:
     client_email = escape(item.get("cliente_email") or "Não informado")
     return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
     <div style="max-width:620px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      <div style="background:#151511;color:#fff;padding:28px"><small style="color:#d5a93f;letter-spacing:2px">NOVO AGENDAMENTO</small><h1 style="margin:10px 0 0;font-size:26px">{escape(item['barbearia_nome'])}</h1></div>
+      {_brand_header('NOVO AGENDAMENTO', item['barbearia_nome'])}
       <div style="padding:30px"><p>Uma nova reserva foi registrada pelo site.</p>
       <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
         <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>

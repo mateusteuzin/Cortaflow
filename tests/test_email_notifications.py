@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime
 from decimal import Decimal
 
-from app.services.email import _owner_email_html, _owner_whatsapp_url
+from app.services.email import BRAND_ICON_URL, _email_html, _owner_email_html, _owner_whatsapp_url
 
 
 def notification_item(phone="(11) 99999-8888"):
@@ -27,6 +27,8 @@ class OwnerEmailNotificationTests(unittest.TestCase):
 
     def test_html_contains_client_contacts_and_action(self):
         html = _owner_email_html(notification_item())
+        self.assertIn(BRAND_ICON_URL, html)
+        self.assertIn('border-radius:50%', html)
         self.assertIn("Abrir conversa no WhatsApp", html)
         self.assertIn("mailto:cliente@gmail.com", html)
         self.assertIn("Corte + Barba", html)
@@ -36,6 +38,11 @@ class OwnerEmailNotificationTests(unittest.TestCase):
         html = _owner_email_html(notification_item("123"))
         self.assertNotIn("Abrir conversa no WhatsApp", html)
         self.assertIn("WhatsApp: 123", html)
+
+    def test_customer_email_contains_circular_brand_logo(self):
+        html = _email_html(notification_item())
+        self.assertIn(BRAND_ICON_URL, html)
+        self.assertIn("Agendamento por CortaFlow", html)
 
 
 if __name__ == "__main__":
