@@ -197,6 +197,11 @@
             <label>CNPJ<input name="cnpj"></label>
             <label>E-mail Gmail para notificações<input name="email_notificacoes" type="email" autocomplete="email" inputmode="email" pattern="^[^@\s]+@(gmail\.com|googlemail\.com)$" title="Use um endereço oficial do Gmail, como nome@gmail.com" placeholder="seunome@gmail.com"><small>Aceitamos somente endereços oficiais @gmail.com.</small></label>
           </div>
+          <section class="business-hours-card" aria-labelledby="business-hours-title">
+            <div class="business-hours-heading"><div><span class="eyebrow">FUNCIONAMENTO</span><h3 id="business-hours-title">Horários de atendimento</h3><p>Defina quando os clientes poderão encontrar horários disponíveis no seu link.</p></div></div>
+            <div id="business-hours-list" class="business-hours-list" aria-live="polite"></div>
+            <p id="business-hours-error" class="error" role="alert"></p>
+          </section>
           <label class="notification-toggle"><input name="notificar_novos_agendamentos" type="checkbox" value="true"><span><b>Receber novos agendamentos por e-mail</b><small>Envia os dados da reserva para o endereço informado acima.</small></span></label>
           <label class="notification-toggle"><input name="public_booking_enabled" type="checkbox" value="true"><span><b>Receber agendamentos pelo link público</b><small>Ao desativar, o link exibirá que a barbearia não está recebendo agendamentos.</small></span></label>
           <p id="account-error" class="error" role="alert"></p>
@@ -208,6 +213,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260722-public-slugs"></script>
+  <script src="/app.js?v=20260722-business-hours"></script>
 </body>
 </html>

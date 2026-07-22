@@ -102,3 +102,9 @@ class ShopUpdate(BaseModel):
     @classmethod
     def validate_google_email(cls, value):
         return validate_google_email_address(value)
+
+class BusinessHour(BaseModel):
+    dia_semana: int = Field(ge=0, le=6)
+    ativo: bool = True
+    hora_inicio: time | None = None
+    hora_fim: time | None = None

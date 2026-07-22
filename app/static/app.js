@@ -14,6 +14,7 @@ let barbers = [];
 let products = [];
 let services = [];
 let shopProfile = null;
+let businessHours = [];
 let toastTimer;
 
 function setTheme(theme) {
@@ -297,7 +298,10 @@ async function copyBookingLink() {
 }
 
 async function loadProfile() {
-  shopProfile = await api('/barbearia/perfil');
+  [shopProfile, businessHours] = await Promise.all([
+    api('/barbearia/perfil'),
+    api('/barbearia/horarios-funcionamento')
+  ]);
   applyShopBrand(shopProfile);
   const form = $('#account-form');
   ['nome', 'telefone', 'endereco', 'cnpj', 'logo_url'].forEach((name) => {
@@ -307,6 +311,40 @@ async function loadProfile() {
   form.elements.notificar_novos_agendamentos.checked = shopProfile.notificar_novos_agendamentos !== false;
   form.elements.public_booking_enabled.checked = shopProfile.public_booking_enabled !== false;
   $('#account-logo-preview').src = shopProfile.logo_url || '/assets/cortaflow-icon-default.png';
+  renderBusinessHours();
+}
+
+function renderBusinessHours() {
+  const dayNames = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+  $('#business-hours-list').innerHTML = businessHours.map((item) => {
+    const start = String(item.hora_inicio || '09:00').slice(0, 5);
+    const end = String(item.hora_fim || '19:00').slice(0, 5);
+    return `<div class="business-hour-row" data-day="${item.dia_semana}">
+      <label class="business-day-toggle"><input type="checkbox" ${item.ativo ? 'checked' : ''}><span>${dayNames[item.dia_semana]}</span></label>
+      <div class="business-time-fields ${item.ativo ? '' : 'is-closed'}">
+        <label><span>Abre</span><input class="business-start" type="time" value="${start}" ${item.ativo ? '' : 'disabled'}></label>
+        <i>até</i>
+        <label><span>Fecha</span><input class="business-end" type="time" value="${end}" ${item.ativo ? '' : 'disabled'}></label>
+      </div><strong class="business-closed">${item.ativo ? '' : 'Fechado'}</strong>
+    </div>`;
+  }).join('');
+  $$('.business-day-toggle input').forEach((input) => {
+    input.onchange = () => {
+      const row = input.closest('.business-hour-row');
+      row.querySelectorAll('input[type="time"]').forEach((field) => { field.disabled = !input.checked; });
+      row.querySelector('.business-time-fields').classList.toggle('is-closed', !input.checked);
+      row.querySelector('.business-closed').textContent = input.checked ? '' : 'Fechado';
+    };
+  });
+}
+
+function collectBusinessHours() {
+  return Array.from($$('.business-hour-row')).map((row) => {
+    const active = row.querySelector('.business-day-toggle input').checked;
+    return { dia_semana: Number(row.dataset.day), ativo: active,
+      hora_inicio: active ? row.querySelector('.business-start').value : null,
+      hora_fim: active ? row.querySelector('.business-end').value : null };
+  });
 }
 
 async function saveProfile(event) {
@@ -323,10 +361,13 @@ async function saveProfile(event) {
     const file = $('#account-logo-file').files?.[0];
     if (file) data.logo_url = await uploadImage(file);
     shopProfile = await api('/barbearia/atualizar', { method: 'POST', body: JSON.stringify(data) });
+    const hoursResult = await api('/barbearia/horarios-funcionamento', { method: 'PUT', body: JSON.stringify(collectBusinessHours()) });
+    businessHours = hoursResult.horarios;
+    renderBusinessHours();
     applyShopBrand(shopProfile);
     $('#account-logo-url').value = shopProfile.logo_url || '';
     $('#account-logo-file').value = '';
-    toast('Identidade da barbearia atualizada');
+    toast('Dados e horários da barbearia atualizados');
   } catch (error) {
     $('#account-error').textContent = error.message;
   } finally {

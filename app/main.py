@@ -214,6 +214,37 @@ def update_shop(data: ShopUpdate,user=Depends(current_user)):
         (data.nome,data.telefone,data.endereco,data.cnpj,data.logo_url,data.email_notificacoes,
          data.notificar_novos_agendamentos,data.public_booking_enabled,user["barbearia_id"]))
 
+@app.get("/api/barbearia/horarios-funcionamento")
+def business_hours(user=Depends(current_user)):
+    rows = all_rows("""SELECT dia_semana,hora_inicio,hora_fim FROM horarios_funcionamento
+        WHERE barbearia_id=%s ORDER BY dia_semana""", (user["barbearia_id"],))
+    configured = {row["dia_semana"]: row for row in rows}
+    return [{"dia_semana": day, "ativo": day in configured,
+        "hora_inicio": configured[day]["hora_inicio"] if day in configured else None,
+        "hora_fim": configured[day]["hora_fim"] if day in configured else None} for day in range(7)]
+
+@app.put("/api/barbearia/horarios-funcionamento")
+def update_business_hours(items: list[BusinessHour], user=Depends(current_user)):
+    if len(items) != 7 or {item.dia_semana for item in items} != set(range(7)):
+        raise HTTPException(422, "Informe os sete dias da semana uma única vez")
+    active = []
+    for item in items:
+        if not item.ativo:
+            continue
+        if item.hora_inicio is None or item.hora_fim is None:
+            raise HTTPException(422, "Informe abertura e fechamento nos dias de atendimento")
+        if item.hora_inicio >= item.hora_fim:
+            raise HTTPException(422, "O horário de fechamento deve ser posterior à abertura")
+        active.append(item)
+    if not active:
+        raise HTTPException(422, "Mantenha pelo menos um dia de atendimento ativo")
+    with db() as cur:
+        cur.execute("DELETE FROM horarios_funcionamento WHERE barbearia_id=%s", (user["barbearia_id"],))
+        cur.executemany("""INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim)
+            VALUES(%s,%s,%s,%s)""", [(user["barbearia_id"], item.dia_semana,
+                item.hora_inicio, item.hora_fim) for item in active])
+    return {"message":"Horários de atendimento atualizados","horarios":business_hours(user)}
+
 @app.get("/api/barbearia/barbeiros")
 def barbers(user=Depends(current_user)): return all_rows("SELECT * FROM barbeiros WHERE barbearia_id=%s ORDER BY ativo DESC,nome",(user["barbearia_id"],))
 

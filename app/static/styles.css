@@ -176,6 +176,19 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 .account-logo-picker small { color: #77766d; font-size: 9px; }
 .account-fields { margin: 9px 0 18px; }
 .account-fields label { display: block; margin-top: 15px; color: #46463f; font-size: 10px; font-weight: 800; }
+.business-hours-card { margin: 0 0 20px; padding: 20px; border: 1px solid var(--line); background: #faf8f2; }
+.business-hours-heading h3 { margin: 8px 0 5px; font: 600 22px/1 var(--display); text-transform: uppercase; }
+.business-hours-heading p { margin: 0 0 16px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.business-hours-list { border-top: 1px solid var(--line); }
+.business-hour-row { display: grid; grid-template-columns: minmax(125px,1fr) auto auto; align-items: center; gap: 14px; min-height: 58px; border-bottom: 1px solid var(--line); }
+.business-day-toggle { display: flex; align-items: center; gap: 9px; margin: 0; color: var(--ink); font-size: 10px; font-weight: 800; cursor: pointer; }
+.business-day-toggle input { width: 17px; height: 17px; margin: 0; accent-color: var(--gold); }
+.business-time-fields { display: flex; align-items: end; gap: 9px; }
+.business-time-fields label { display: grid; gap: 3px; color: var(--muted); font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.business-time-fields input { width: 104px; min-height: 36px; padding: 0 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700; }
+.business-time-fields i { padding-bottom: 11px; color: var(--muted); font-size: 9px; font-style: normal; }
+.business-time-fields.is-closed { display: none; }
+.business-closed { min-width: 48px; color: var(--muted); font-size: 8px; letter-spacing: .08em; text-align: right; text-transform: uppercase; }
 .notification-toggle { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding: 15px; border: 1px solid var(--line); background: #f8f5ed; cursor: pointer; }
 .notification-toggle input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); }
 .notification-toggle span { display: flex; flex-direction: column; gap: 4px; }
@@ -271,6 +284,7 @@ html[data-theme="dark"] .toolbar,
 html[data-theme="dark"] .report-filters,
 html[data-theme="dark"] .booking-link-card,
 html[data-theme="dark"] .notification-toggle,
+html[data-theme="dark"] .business-hours-card,
 html[data-theme="dark"] .upload-picker,
 html[data-theme="dark"] .account-logo-picker { border-color: var(--line); background: #20211c; }
 html[data-theme="dark"] .auth-card input,
@@ -281,6 +295,7 @@ html[data-theme="dark"] .toolbar input,
 html[data-theme="dark"] .toolbar select,
 html[data-theme="dark"] .report-filters select,
 html[data-theme="dark"] .account-fields input { border-color: #3d3e37; background: #11120f; color: var(--ink); }
+html[data-theme="dark"] .business-time-fields input { border-color:#3d3e37;background:#11120f;color:var(--ink); }
 html[data-theme="dark"] .booking-link-value input { border-color:#3d3e37;background:#11120f;color:var(--ink); }
 html[data-theme="dark"] .upload-label,
 html[data-theme="dark"] .upload-copy,
@@ -366,6 +381,12 @@ html[data-theme="dark"] .topbar-meta { color: var(--muted); }
   .sidebar { width: min(88vw, 300px); }
   .grid2 { grid-template-columns: 1fr; }
   .booking-link-card { padding: 17px; }
+  .business-hours-card { padding: 15px; }
+  .business-hour-row { grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0; }
+  .business-time-fields { grid-column: 1 / -1; width: 100%; }
+  .business-time-fields label { flex: 1; }
+  .business-time-fields input { width: 100%; }
+  .business-closed { grid-column: 2; grid-row: 1; }
   .topbar h1 { font-size: 27px; }
   .today { max-width: 102px; text-align: right; }
   .metrics { gap: 8px; }
