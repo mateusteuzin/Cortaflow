@@ -41,6 +41,11 @@ function closeAuth() {
 }
 
 function bindSiteNavigation() {
+  const closeMenu = () => {
+    $('#site-nav').classList.remove('open');
+    $('#menu-toggle').setAttribute('aria-expanded', 'false');
+    $('#menu-toggle').textContent = '☰';
+  };
   window.addEventListener('scroll', () => $('.site-header').classList.toggle('scrolled', scrollY > 24), { passive: true });
   $('#menu-toggle').onclick = () => {
     const open = $('#site-nav').classList.toggle('open');
@@ -48,13 +53,14 @@ function bindSiteNavigation() {
     $('#menu-toggle').textContent = open ? '×' : '☰';
   };
   $$('#site-nav a').forEach((link) => {
-    link.onclick = () => {
-      $('#site-nav').classList.remove('open');
-      $('#menu-toggle').setAttribute('aria-expanded', 'false');
-      $('#menu-toggle').textContent = '☰';
+    link.onclick = closeMenu;
+  });
+  $$('[data-auth]').forEach((button) => {
+    button.onclick = () => {
+      closeMenu();
+      showAuth(button.dataset.auth);
     };
   });
-  $$('[data-auth]').forEach((button) => { button.onclick = () => showAuth(button.dataset.auth); });
   $('#modal-close').onclick = closeAuth;
   $('#modal-backdrop').onclick = closeAuth;
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAuth(); });
