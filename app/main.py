@@ -117,31 +117,44 @@ async def security_and_rate_limit(request: Request, call_next):
 def health(): return {"status":"ok"}
 
 STRIPE_PLANS = {
-    "essencial": ("R$ 30/mês", "STRIPE_PRICE_30"),
-    "profissional": ("R$ 44,90/mês", "STRIPE_PRICE_44_90"),
-    "premium": ("R$ 64,90/mês", "STRIPE_PRICE_64_90"),
+    "essencial": {"name": "CortaFlow Essencial", "amount": 3000},
+    "profissional": {"name": "CortaFlow Profissional", "amount": 4490},
+    "premium": {"name": "CortaFlow Premium", "amount": 6490},
 }
 
 @app.post("/api/billing/checkout")
-def create_checkout(data: dict):
-    """Cria um Checkout recorrente; a chave secreta fica exclusivamente no servidor."""
+def create_checkout(data: dict, request: Request):
+    """Cria um Checkout recorrente sem misturar preços dos modos teste e produção."""
     plan = str(data.get("plan", "")).lower()
-    price_env = STRIPE_PLANS.get(plan, (None, None))[1]
+    plan_data = STRIPE_PLANS.get(plan)
+    if not plan_data:
+        raise HTTPException(422, "Plano inválido.")
     secret = os.getenv("STRIPE_SECRET_KEY")
-    price_id = os.getenv(price_env or "")
-    if not secret or not price_id or not price_id.startswith("price_"):
-        raise HTTPException(503, "Stripe ainda não está configurada. Preencha as chaves e preços no ambiente.")
+    if not secret or not secret.startswith(("sk_test_", "sk_live_")):
+        raise HTTPException(503, "Stripe ainda não está configurada. Preencha a chave secreta no ambiente.")
     try:
         import stripe
     except ImportError as error:
         raise HTTPException(503, "Dependência Stripe não instalada no servidor.") from error
     stripe.api_key = secret
+    site_url = str(request.base_url).rstrip("/")
     try:
         session = stripe.checkout.Session.create(
-            mode="subscription", line_items=[{"price": price_id, "quantity": 1}],
-            success_url=os.getenv("STRIPE_SUCCESS_URL", "http://localhost:8000/?checkout=sucesso"),
-            cancel_url=os.getenv("STRIPE_CANCEL_URL", "http://localhost:8000/?checkout=cancelado"),
+            mode="subscription",
+            line_items=[{
+                "price_data": {
+                    "currency": "brl",
+                    "unit_amount": plan_data["amount"],
+                    "recurring": {"interval": "month"},
+                    "product_data": {"name": plan_data["name"]},
+                },
+                "quantity": 1,
+            }],
+            success_url=f"{site_url}/?checkout=sucesso",
+            cancel_url=f"{site_url}/?checkout=cancelado",
             allow_promotion_codes=True,
+            metadata={"plan": plan},
+            subscription_data={"metadata": {"plan": plan}},
         )
     except stripe.error.StripeError as error:
         logging.exception("Stripe checkout error")
@@ -579,5 +592,13 @@ async def whatsapp_webhook(request:Request):
 @app.get("/agendar/{slug}",include_in_schema=False)
 def booking_page(slug:str):
     return FileResponse(static/'cliente.html')
+
+@app.get("/",include_in_schema=False)
+def landing_page():
+    return FileResponse(static/'landing.html')
+
+@app.get("/painel",include_in_schema=False)
+def dashboard_page():
+    return FileResponse(static/'index.html')
 
 app.mount('/',StaticFiles(directory=static,html=True),name='frontend')

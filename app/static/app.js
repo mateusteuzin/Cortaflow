@@ -117,10 +117,7 @@ function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('name');
   token = null;
-  $('#app').classList.add('hidden');
-  $('#login').classList.remove('hidden');
-  $('#login-form').classList.remove('hidden');
-  $('#register-form').classList.add('hidden');
+  location.replace('/');
 }
 
 function show(view) {
@@ -631,3 +628,4 @@ bindNavigation();
 bindTheme();
 bindPricing();
 if (token) start();
+else location.replace('/');
