@@ -1,6 +1,6 @@
 import hashlib, json, logging, os, secrets, time as time_module
 from collections import defaultdict, deque
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from psycopg2 import IntegrityError
 from .database import all_rows, db, one
 from .schemas import *
-from .security import current_user, hash_password, token, verify_password
+from .security import authenticated_user, current_user, hash_password, token, verify_password
 from .services.whatsapp import verify_webhook_signature
 from .services.whatsapp_worker import whatsapp_worker
 from .services.email import send_account_verification, send_appointment_confirmation, send_owner_notification
@@ -51,6 +51,12 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS logo_url TEXT")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS email_notificacoes VARCHAR(254)")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(24)")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(24) NOT NULL DEFAULT 'active'")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(120)")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(120)")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMPTZ")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE")
         cur.execute("""UPDATE barbearias b SET email_notificacoes=u.email FROM usuarios u
             WHERE b.usuario_id=u.id AND (b.email_notificacoes IS NULL OR b.email_notificacoes='')""")
         cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS foto_url TEXT")
@@ -123,7 +129,7 @@ STRIPE_PLANS = {
 }
 
 @app.post("/api/billing/checkout")
-def create_checkout(data: dict, request: Request):
+def create_checkout(data: dict, request: Request, user=Depends(authenticated_user)):
     """Cria um Checkout recorrente sem misturar preços dos modos teste e produção."""
     plan = str(data.get("plan", "")).lower()
     plan_data = STRIPE_PLANS.get(plan)
@@ -138,9 +144,25 @@ def create_checkout(data: dict, request: Request):
         raise HTTPException(503, "Dependência Stripe não instalada no servidor.") from error
     stripe.api_key = secret
     site_url = str(request.base_url).rstrip("/")
+    shop = one("""SELECT id,nome,stripe_customer_id,stripe_subscription_id,plano_ativo
+        FROM barbearias WHERE id=%s""", (user["barbearia_id"],))
+    if shop["plano_ativo"] and shop["stripe_subscription_id"]:
+        raise HTTPException(409, "Sua assinatura já está ativa. Use Minha assinatura para alterar o plano.")
     try:
+        customer_id = shop["stripe_customer_id"]
+        if not customer_id:
+            customer = stripe.Customer.create(
+                email=user["email"],
+                name=shop["nome"],
+                metadata={"barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
+            )
+            customer_id = customer.id
+            one("UPDATE barbearias SET stripe_customer_id=%s WHERE id=%s RETURNING id",
+                (customer_id, shop["id"]))
         session = stripe.checkout.Session.create(
             mode="subscription",
+            customer=customer_id,
+            client_reference_id=str(user["id"]),
             line_items=[{
                 "price_data": {
                     "currency": "brl",
@@ -150,16 +172,135 @@ def create_checkout(data: dict, request: Request):
                 },
                 "quantity": 1,
             }],
-            success_url=f"{site_url}/?checkout=sucesso",
-            cancel_url=f"{site_url}/?checkout=cancelado",
+            success_url=f"{site_url}/painel?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{site_url}/painel?checkout=cancelado",
             allow_promotion_codes=True,
-            metadata={"plan": plan},
-            subscription_data={"metadata": {"plan": plan}},
+            metadata={"plan": plan, "barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
+            subscription_data={"metadata": {"plan": plan, "barbearia_id": str(shop["id"])}},
         )
     except stripe.error.StripeError as error:
         logging.exception("Stripe checkout error")
         raise HTTPException(502, "Não foi possível abrir o checkout agora.") from error
     return {"url": session.url}
+
+def _stripe_client():
+    try:
+        import stripe
+    except ImportError as error:
+        raise HTTPException(503, "Dependência Stripe não instalada no servidor.") from error
+    secret = os.getenv("STRIPE_SECRET_KEY")
+    if not secret or not secret.startswith(("sk_test_", "sk_live_")):
+        raise HTTPException(503, "Stripe ainda não está configurada.")
+    stripe.api_key = secret
+    return stripe
+
+def _timestamp(value):
+    return datetime.fromtimestamp(int(value), tz=timezone.utc) if value else None
+
+def _metadata_shop_id(metadata) -> int:
+    try:
+        return int((metadata or {}).get("barbearia_id") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+def _save_stripe_subscription(shop_id: int, subscription, plan: str | None = None):
+    status = str(subscription.get("status") or "inactive")
+    active = status in {"active", "trialing"}
+    metadata = subscription.get("metadata") or {}
+    selected_plan = plan or metadata.get("plan")
+    return one("""UPDATE barbearias SET plano_ativo=%s,subscription_plan=COALESCE(%s,subscription_plan),
+        subscription_status=%s,stripe_subscription_id=%s,
+        subscription_current_period_end=%s,subscription_cancel_at_period_end=%s,
+        data_assinatura=CASE WHEN %s THEN CURRENT_DATE ELSE data_assinatura END
+        WHERE id=%s RETURNING id""",
+        (active, selected_plan, status, subscription.get("id"),
+         _timestamp(subscription.get("current_period_end")),
+         bool(subscription.get("cancel_at_period_end")), active, shop_id))
+
+@app.get("/api/billing/subscription")
+def subscription_details(user=Depends(authenticated_user)):
+    shop = one("""SELECT subscription_plan,subscription_status,plano_ativo,
+        subscription_current_period_end,subscription_cancel_at_period_end,
+        stripe_customer_id,stripe_subscription_id FROM barbearias WHERE id=%s""",
+        (user["barbearia_id"],))
+    return {
+        "active": bool(shop["plano_ativo"]),
+        "plan": shop["subscription_plan"],
+        "status": shop["subscription_status"] or ("active" if shop["plano_ativo"] else "inactive"),
+        "current_period_end": shop["subscription_current_period_end"],
+        "cancel_at_period_end": bool(shop["subscription_cancel_at_period_end"]),
+        "managed_by_stripe": bool(shop["stripe_customer_id"] and shop["stripe_subscription_id"]),
+    }
+
+@app.post("/api/billing/confirm")
+def confirm_checkout(data: dict, user=Depends(authenticated_user)):
+    session_id = str(data.get("session_id", ""))
+    if not session_id.startswith("cs_"):
+        raise HTTPException(422, "Sessão de checkout inválida.")
+    stripe = _stripe_client()
+    try:
+        session = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
+    except stripe.error.StripeError as error:
+        raise HTTPException(502, "Não foi possível confirmar a assinatura.") from error
+    metadata = session.get("metadata") or {}
+    if str(session.get("client_reference_id")) != str(user["id"]) or str(metadata.get("barbearia_id")) != str(user["barbearia_id"]):
+        raise HTTPException(403, "Esta assinatura não pertence à sua conta.")
+    if session.get("payment_status") not in {"paid", "no_payment_required"}:
+        raise HTTPException(409, "O pagamento ainda não foi confirmado.")
+    subscription = session.get("subscription")
+    if not subscription:
+        raise HTTPException(409, "A assinatura ainda não foi criada pela Stripe.")
+    if isinstance(subscription, str):
+        subscription = stripe.Subscription.retrieve(subscription)
+    _save_stripe_subscription(user["barbearia_id"], subscription, metadata.get("plan"))
+    return {"active": True, "plan": metadata.get("plan")}
+
+@app.post("/api/billing/portal")
+def billing_portal(request: Request, user=Depends(authenticated_user)):
+    stripe = _stripe_client()
+    shop = one("SELECT stripe_customer_id FROM barbearias WHERE id=%s", (user["barbearia_id"],))
+    if not shop["stripe_customer_id"]:
+        raise HTTPException(422, "Conclua sua primeira assinatura antes de gerenciá-la.")
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=shop["stripe_customer_id"],
+            return_url=f"{str(request.base_url).rstrip('/')}/painel",
+        )
+    except stripe.error.StripeError as error:
+        raise HTTPException(502, "Não foi possível abrir o portal da assinatura.") from error
+    return {"url": session.url}
+
+@app.post("/api/billing/webhook")
+async def stripe_webhook(request: Request):
+    stripe = _stripe_client()
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    if not webhook_secret:
+        raise HTTPException(503, "Webhook da Stripe não configurado.")
+    payload = await request.body()
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, request.headers.get("stripe-signature", ""), webhook_secret)
+    except (ValueError, stripe.error.SignatureVerificationError) as error:
+        raise HTTPException(400, "Assinatura do webhook inválida.") from error
+    obj = event["data"]["object"]
+    event_type = event["type"]
+    if event_type == "checkout.session.completed":
+        metadata = obj.get("metadata") or {}
+        shop_id = _metadata_shop_id(metadata)
+        subscription_id = obj.get("subscription")
+        if shop_id and subscription_id:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            _save_stripe_subscription(shop_id, subscription, metadata.get("plan"))
+    elif event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
+        metadata = obj.get("metadata") or {}
+        shop_id = _metadata_shop_id(metadata)
+        if shop_id:
+            _save_stripe_subscription(shop_id, obj)
+    elif event_type == "invoice.payment_failed":
+        customer_id = obj.get("customer")
+        one("""UPDATE barbearias SET plano_ativo=FALSE,subscription_status='past_due'
+            WHERE stripe_customer_id=%s RETURNING id""", (customer_id,))
+    return {"received": True}
 
 @app.post("/api/uploads/imagem", status_code=201)
 async def upload_image(arquivo: UploadFile = File(...), user=Depends(current_user)):
@@ -208,7 +349,9 @@ def register(data: Register):
                 VALUES(%s,%s,%s,%s,FALSE,%s,%s) RETURNING id""",
                 (data.email.lower(),hash_password(data.senha),data.nome,data.telefone,token_hash,expires_at)); uid=cur.fetchone()["id"]
             shop_slug=unique_shop_slug(cur,data.barbearia_nome)
-            cur.execute("INSERT INTO barbearias(usuario_id,nome,slug,telefone) VALUES(%s,%s,%s,%s) RETURNING id", (uid,data.barbearia_nome,shop_slug,data.telefone)); sid=cur.fetchone()["id"]
+            cur.execute("""INSERT INTO barbearias(usuario_id,nome,slug,telefone,plano_ativo,subscription_status)
+                VALUES(%s,%s,%s,%s,FALSE,'inactive') RETURNING id""",
+                (uid,data.barbearia_nome,shop_slug,data.telefone)); sid=cur.fetchone()["id"]
             cur.execute("INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim) SELECT %s,d,'09:00','19:00' FROM generate_series(0,5) d", (sid,))
             cur.execute("""INSERT INTO servicos(barbearia_id,nome,descricao,duracao_minutos,preco,imagem_url) VALUES
               (%s,'Corte Degradê','Degradê com acabamento completo',40,30,'/assets/service-degrade.webp'),
@@ -222,11 +365,15 @@ def register(data: Register):
 
 @app.post("/api/auth/login")
 def login(data: Login):
-    user=one("SELECT * FROM usuarios WHERE email=%s",(data.email.lower(),))
+    user=one("""SELECT u.*,b.plano_ativo,b.subscription_plan,b.subscription_status
+        FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id WHERE u.email=%s""",(data.email.lower(),))
     if not user or not verify_password(data.senha,user["senha_hash"]): raise HTTPException(401,"E-mail ou senha inválidos")
     if not user.get("email_verificado"):
         raise HTTPException(403,"Confirme seu e-mail antes de entrar. Confira também a caixa de spam.")
-    return {"access_token":token(user["id"]),"token_type":"bearer","nome":user["nome"]}
+    return {"access_token":token(user["id"]),"token_type":"bearer","nome":user["nome"],
+        "subscription_required":not bool(user["plano_ativo"]),
+        "subscription_plan":user["subscription_plan"],
+        "subscription_status":user["subscription_status"]}
 
 
 @app.post("/api/auth/reenviar-confirmacao")
@@ -325,7 +472,16 @@ def public_services(slug:str):
     return all_rows("SELECT id,nome,descricao,duracao_minutos,preco,imagem_url FROM servicos WHERE barbearia_id=%s AND ativo ORDER BY nome",(shop["id"],))
 
 @app.post("/api/barbearia/barbeiros",status_code=201)
-def create_barber(data: Barber,user=Depends(current_user)): return one("INSERT INTO barbeiros(barbearia_id,nome,telefone,comissao_percentual,foto_url) VALUES(%s,%s,%s,%s,%s) RETURNING *",(user["barbearia_id"],data.nome,data.telefone,data.comissao_percentual,data.foto_url))
+def create_barber(data: Barber,user=Depends(current_user)):
+    limit = {"essencial": 1, "profissional": 2}.get(user.get("subscription_plan"))
+    if limit is not None:
+        total = one("SELECT COUNT(*) total FROM barbeiros WHERE barbearia_id=%s AND ativo",
+            (user["barbearia_id"],))["total"]
+        if total >= limit:
+            raise HTTPException(403, f"Seu plano permite até {limit} profissional(is). Altere o plano para ampliar a equipe.")
+    return one("""INSERT INTO barbeiros(barbearia_id,nome,telefone,comissao_percentual,foto_url)
+        VALUES(%s,%s,%s,%s,%s) RETURNING *""",
+        (user["barbearia_id"],data.nome,data.telefone,data.comissao_percentual,data.foto_url))
 
 @app.put("/api/barbearia/barbeiros/{barber_id}")
 def update_barber(barber_id:int,data:Barber,user=Depends(current_user)):

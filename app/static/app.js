@@ -15,6 +15,7 @@ let products = [];
 let services = [];
 let shopProfile = null;
 let businessHours = [];
+let subscription = null;
 let toastTimer;
 
 function setTheme(theme) {
@@ -123,9 +124,9 @@ function logout() {
 function show(view) {
   $$('.view').forEach((element) => element.classList.toggle('hidden', element.id !== view));
   $$('nav button[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
-  $('#title').textContent = { dashboard: 'Resumo do dia', agenda: 'Agenda', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', conta: 'Minha conta' }[view] || 'Painel';
+  $('#title').textContent = { dashboard: 'Resumo do dia', agenda: 'Agenda', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
   closeSidebar();
-  const loaders = { agenda: loadAppointments, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, conta: loadProfile };
+  const loaders = { agenda: loadAppointments, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
   if (loaders[view]) loaders[view]().catch((error) => toast(error.message));
 }
 
@@ -237,6 +238,10 @@ function bindNavigation() {
   };
   $('#account-form').onsubmit = saveProfile;
   $('#copy-booking-link').onclick = copyBookingLink;
+  $('#manage-subscription').onclick = openBillingPortal;
+  $$('[data-subscription-plan]').forEach((button) => {
+    button.onclick = () => chooseSubscription(button.dataset.subscriptionPlan, button);
+  });
   document.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) return;
@@ -283,11 +288,105 @@ async function start() {
   $('#today').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   $('#agenda-date').value = localDate();
   try {
+    await confirmCheckout();
+    subscription = await api('/billing/subscription');
+    if (!subscription.active) {
+      document.body.classList.add('subscription-locked');
+      show('assinatura');
+      return;
+    }
+    document.body.classList.remove('subscription-locked');
     await Promise.all([loadBarbers(), loadServices(), loadProfile()]);
     await loadDashboard();
   } catch (error) {
-    logout();
-    $('#login-error').textContent = error.message;
+    if (/Sessão expirada|Autenticação|Token inválido/i.test(error.message)) {
+      logout();
+      return;
+    }
+    toast(error.message);
+  }
+}
+
+async function confirmCheckout() {
+  const params = new URLSearchParams(location.search);
+  const checkout = params.get('checkout');
+  const sessionId = params.get('session_id');
+  if (checkout === 'sucesso' && sessionId) {
+    await api('/billing/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    localStorage.removeItem('selectedPlan');
+    toast('Assinatura confirmada. Seu painel está liberado.');
+  } else if (checkout === 'cancelado') {
+    toast('Checkout cancelado. Nenhuma cobrança foi feita.');
+  }
+  if (checkout) history.replaceState({}, '', '/painel');
+}
+
+async function loadSubscription() {
+  $('#subscription-loading').classList.remove('hidden');
+  $('#subscription-content').classList.add('hidden');
+  subscription = await api('/billing/subscription');
+  const names = { essencial: 'Essencial', profissional: 'Profissional', premium: 'Premium' };
+  const descriptions = {
+    essencial: 'Agenda e gestão essenciais para um profissional.',
+    profissional: 'Operação completa para equipes com até dois profissionais.',
+    premium: 'Equipe ilimitada e visão avançada do negócio.'
+  };
+  const active = subscription.active;
+  $('#subscription-plan-name').textContent = names[subscription.plan] || (active ? 'Acesso atual' : 'Sem assinatura');
+  $('#subscription-description').textContent = descriptions[subscription.plan] || (active
+    ? 'Sua conta existente continua com acesso liberado.'
+    : 'Escolha um plano abaixo para liberar todos os recursos do painel.');
+  const badge = $('#subscription-status-badge');
+  badge.textContent = active ? (subscription.cancel_at_period_end ? 'CANCELAMENTO AGENDADO' : 'ASSINATURA ATIVA') : 'AGUARDANDO ASSINATURA';
+  badge.classList.toggle('inactive', !active || subscription.cancel_at_period_end);
+  const renewal = subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR') : '—';
+  $('#subscription-renewal-date').textContent = renewal;
+  $('#subscription-renewal-note').textContent = subscription.cancel_at_period_end
+    ? 'O acesso permanece até esta data'
+    : (subscription.current_period_end ? 'Renovação automática mensal' : 'Escolha um plano para iniciar');
+  $('#manage-subscription').classList.toggle('hidden', !subscription.managed_by_stripe);
+  $$('[data-subscription-card]').forEach((card) => {
+    const current = active && card.dataset.subscriptionCard === subscription.plan;
+    card.classList.toggle('current', current);
+    const button = card.querySelector('[data-subscription-plan]');
+    button.disabled = current;
+    button.textContent = current ? 'Plano atual' : (subscription.managed_by_stripe ? 'Alterar plano' : 'Escolher plano');
+  });
+  $('#subscription-loading').classList.add('hidden');
+  $('#subscription-content').classList.remove('hidden');
+}
+
+async function chooseSubscription(plan, button) {
+  if (subscription?.managed_by_stripe) return openBillingPortal();
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Abrindo checkout...';
+  try {
+    localStorage.setItem('selectedPlan', plan);
+    const result = await api('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plan })
+    });
+    location.href = result.url;
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = original;
+    toast(error.message);
+  }
+}
+
+async function openBillingPortal() {
+  const button = $('#manage-subscription');
+  button.disabled = true;
+  try {
+    const result = await api('/billing/portal', { method: 'POST' });
+    location.href = result.url;
+  } catch (error) {
+    button.disabled = false;
+    toast(error.message);
   }
 }
 

@@ -40,6 +40,8 @@ SUPABASE_STORAGE_BUCKET=cortaflow-images
 RESEND_API_KEY=SUA_CHAVE_RESEND
 EMAIL_FROM=CortaFlow <nao-responda@cortaflow.com.br>
 CRON_SECRET=OUTRA_CHAVE_FORTE
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 As variáveis `WHATSAPP_*` são opcionais até a integração da Meta estar pronta. Para gerar
@@ -48,6 +50,11 @@ segredos no PowerShell:
 ```powershell
 [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
 ```
+
+Na Stripe, crie um webhook para `https://cortaflow.com.br/api/billing/webhook` com os
+eventos `checkout.session.completed`, `customer.subscription.updated`,
+`customer.subscription.deleted` e `invoice.payment_failed`. Copie o segredo `whsec_`
+para `STRIPE_WEBHOOK_SECRET`.
 
 ## 4. Primeiro deploy e domínio
 

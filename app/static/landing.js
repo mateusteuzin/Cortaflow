@@ -1,6 +1,11 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 let toastTimer;
+const planDetails = {
+  essencial: { name: 'Essencial', price: 'R$ 30/mês' },
+  profissional: { name: 'Profissional', price: 'R$ 44,90/mês' },
+  premium: { name: 'Premium', price: 'R$ 64,90/mês' }
+};
 
 function toast(message) {
   const element = $('#toast');
@@ -11,9 +16,14 @@ function toast(message) {
 }
 
 async function api(path, options = {}) {
+  const accessToken = localStorage.getItem('token');
   const response = await fetch('/api' + path, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(options.headers || {})
+    }
   });
   const data = await response.json().catch(() => null);
   if (!response.ok) {
@@ -25,6 +35,15 @@ async function api(path, options = {}) {
   return data;
 }
 
+function updateSelectedPlan() {
+  const plan = localStorage.getItem('selectedPlan');
+  const details = planDetails[plan];
+  $('#selected-plan').classList.toggle('hidden', !details);
+  if (!details) return;
+  $('#selected-plan-name').textContent = details.name;
+  $('#selected-plan-price').textContent = details.price;
+}
+
 function showAuth(mode = 'login') {
   const login = $('#login-form');
   const register = $('#register-form');
@@ -32,6 +51,7 @@ function showAuth(mode = 'login') {
   register.classList.toggle('hidden', mode !== 'register');
   $('#auth-modal').classList.remove('hidden');
   document.body.classList.add('modal-open');
+  if (mode === 'register') updateSelectedPlan();
   setTimeout(() => (mode === 'login' ? $('#email') : $('#register-name')).focus(), 50);
 }
 
@@ -90,6 +110,10 @@ function bindAuth() {
   };
   $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
+  $('#change-selected-plan').onclick = () => {
+    closeAuth();
+    document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
+  };
 
   $('#login-form').onsubmit = async (event) => {
     event.preventDefault();
@@ -103,7 +127,17 @@ function bindAuth() {
       });
       localStorage.setItem('token', result.access_token);
       localStorage.setItem('name', result.nome || 'gestor');
-      location.href = '/painel';
+      const selectedPlan = localStorage.getItem('selectedPlan');
+      if (result.subscription_required) {
+        if (selectedPlan) await startCheckout(selectedPlan);
+        else {
+          closeAuth();
+          document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
+          toast('Escolha um plano para liberar seu painel.');
+        }
+      } else {
+        location.href = '/painel';
+      }
     } catch (error) {
       $('#login-error').textContent = error.message;
       if (/Confirme seu e-mail/i.test(error.message)) $('#resend-verification').classList.remove('hidden');
@@ -152,23 +186,40 @@ function bindAuth() {
 
 function bindPricing() {
   $$('[data-plan]').forEach((button) => {
-    button.onclick = async () => {
-      const original = button.innerHTML;
-      button.disabled = true;
-      button.textContent = 'Abrindo checkout...';
-      try {
-        const result = await api('/billing/checkout', {
-          method: 'POST',
-          body: JSON.stringify({ plan: button.dataset.plan })
-        });
-        location.href = result.url;
-      } catch (error) {
-        toast(error.message);
-        button.disabled = false;
-        button.innerHTML = original;
-      }
+    button.onclick = () => {
+      const plan = button.dataset.plan;
+      localStorage.setItem('selectedPlan', plan);
+      if (localStorage.getItem('token')) startCheckout(plan, button);
+      else showAuth('register');
     };
   });
+}
+
+async function startCheckout(plan, button = null) {
+  const original = button?.innerHTML;
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Abrindo checkout...';
+  }
+  try {
+    const result = await api('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plan })
+    });
+    location.href = result.url;
+  } catch (error) {
+    if (/Autenticação necessária|Token inválido|expirado/i.test(error.message)) {
+      localStorage.removeItem('token');
+      showAuth('login');
+      toast('Entre na sua conta para continuar a assinatura.');
+    } else {
+      toast(error.message);
+    }
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = original;
+    }
+  }
 }
 
 bindSiteNavigation();

@@ -8,7 +8,12 @@ CREATE TABLE IF NOT EXISTS barbearias (
  nome VARCHAR(160) NOT NULL, slug VARCHAR(160) UNIQUE NOT NULL, telefone VARCHAR(30), endereco TEXT, cnpj VARCHAR(24), logo_url TEXT,
  email_notificacoes VARCHAR(254), notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE,
  public_booking_enabled BOOLEAN NOT NULL DEFAULT TRUE,
- plano_ativo BOOLEAN DEFAULT TRUE, data_assinatura DATE DEFAULT CURRENT_DATE, criado_em TIMESTAMPTZ DEFAULT NOW());
+ plano_ativo BOOLEAN DEFAULT TRUE, data_assinatura DATE DEFAULT CURRENT_DATE,
+ subscription_plan VARCHAR(24), subscription_status VARCHAR(24) NOT NULL DEFAULT 'active',
+ stripe_customer_id VARCHAR(120), stripe_subscription_id VARCHAR(120),
+ subscription_current_period_end TIMESTAMPTZ,
+ subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+ criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbeiros (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), comissao_percentual NUMERIC(5,2) DEFAULT 40,

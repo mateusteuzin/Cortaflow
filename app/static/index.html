@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260722-mobile-readability">
+  <link rel="stylesheet" href="/styles.css?v=20260723-subscriptions">
 </head>
 <body>
   <section id="login" class="auth-screen">
@@ -103,15 +103,16 @@
       </div>
       <nav aria-label="Navegação principal">
         <span class="nav-label">VISÃO GERAL</span>
-        <button data-view="dashboard" class="active" type="button"><span class="nav-icon">01</span><span>Resumo do dia</span></button>
-        <button data-view="agenda" type="button"><span class="nav-icon">02</span><span>Agenda</span></button>
+        <button data-view="dashboard" class="active" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span>Resumo do dia</span></button>
+        <button data-view="agenda" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span><span>Agenda</span></button>
         <span class="nav-label nav-label-spaced">OPERAÇÃO</span>
-        <button data-view="barbeiros" type="button"><span class="nav-icon">03</span><span>Equipe</span></button>
-        <button data-view="servicos" type="button"><span class="nav-icon">04</span><span>Serviços</span></button>
-        <button data-view="produtos" type="button"><span class="nav-icon">05</span><span>Produtos</span></button>
-        <button data-view="relatorios" type="button"><span class="nav-icon">06</span><span>Insights</span></button>
+        <button data-view="barbeiros" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span>Equipe</span></button>
+        <button data-view="servicos" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="m6 3 12 18M18 3 6 21"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/></svg></span><span>Serviços</span></button>
+        <button data-view="produtos" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v8l-9 5-9-5Z"/></svg></span><span>Produtos</span></button>
+        <button data-view="relatorios" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/></svg></span><span>Insights</span></button>
         <span class="nav-label nav-label-spaced">CONFIGURAÇÕES</span>
-        <button data-view="conta" type="button"><span class="nav-icon">07</span><span>Minha conta</span></button>
+        <button data-view="assinatura" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M7 15h3"/></svg></span><span>Minha assinatura</span></button>
+        <button data-view="conta" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span>Minha conta</span></button>
       </nav>
       <div class="sidebar-bottom">
         <a id="public-booking-link" class="public-link" href="/cliente.html" target="_blank" rel="noopener">Abrir página de agendamento <span>↗</span></a>
@@ -187,6 +188,29 @@
         <div class="report-grid"><div class="panel"><span class="eyebrow">DESEMPENHO</span><h2>Resultado por profissional</h2><div id="barber-report"></div></div><div class="panel"><span class="eyebrow">FIDELIDADE</span><h2>Clientes mais frequentes</h2><div id="loyalty-report"></div></div></div>
       </section>
 
+      <section id="assinatura" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">COBRANÇA E ACESSO</span><h2>Minha assinatura</h2><p>Consulte seu plano, próxima renovação e opções disponíveis.</p></div></div>
+        <div id="subscription-loading" class="panel subscription-loading">Carregando sua assinatura...</div>
+        <div id="subscription-content" class="hidden">
+          <section class="subscription-summary">
+            <div class="subscription-main">
+              <span id="subscription-status-badge" class="subscription-badge">STATUS</span>
+              <small>PLANO ATUAL</small>
+              <h3 id="subscription-plan-name">Sem assinatura</h3>
+              <p id="subscription-description">Escolha um plano para liberar todos os recursos do painel.</p>
+            </div>
+            <div class="subscription-renewal"><small>PRÓXIMA RENOVAÇÃO</small><strong id="subscription-renewal-date">—</strong><span id="subscription-renewal-note">Cobrança mensal segura pela Stripe</span></div>
+            <button id="manage-subscription" class="button button-outline hidden" type="button">Gerenciar cobrança na Stripe</button>
+          </section>
+          <div class="subscription-plans">
+            <article data-subscription-card="essencial"><span>ESSENCIAL</span><h3>R$ 30<small>/mês</small></h3><p>1 profissional</p><ul><li>Agenda e clientes</li><li>Confirmação por e-mail</li><li>Visão financeira básica</li></ul><button class="button button-outline" data-subscription-plan="essencial" type="button">Escolher Essencial</button></article>
+            <article class="recommended" data-subscription-card="profissional"><b>MAIS ESCOLHIDO</b><span>PROFISSIONAL</span><h3>R$ 44,90<small>/mês</small></h3><p>Até 2 profissionais</p><ul><li>WhatsApp + e-mail</li><li>Equipe e comissões</li><li>Relatórios completos</li></ul><button class="button button-primary" data-subscription-plan="profissional" type="button">Escolher Profissional</button></article>
+            <article data-subscription-card="premium"><span>PREMIUM</span><h3>R$ 64,90<small>/mês</small></h3><p>Equipe ilimitada</p><ul><li>Relatórios mensais e anuais</li><li>Comparativos avançados</li><li>Indicadores por profissional</li></ul><button class="button button-outline" data-subscription-plan="premium" type="button">Escolher Premium</button></article>
+          </div>
+          <p class="subscription-security">Pagamento e dados de cobrança processados com segurança pela Stripe. O CortaFlow não armazena dados do cartão.</p>
+        </div>
+      </section>
+
       <section id="conta" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">IDENTIDADE DA MARCA</span><h2>Minha conta</h2><p>Personalize como sua barbearia aparece para os clientes.</p></div></div>
         <form id="account-form" class="panel account-panel">
@@ -226,6 +250,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260722-business-hours"></script>
+  <script src="/app.js?v=20260723-subscriptions"></script>
 </body>
 </html>
