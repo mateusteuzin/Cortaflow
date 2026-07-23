@@ -67,6 +67,7 @@ a { color: inherit; }
 .product-visual { position: relative; min-width: 0; perspective: 1200px; }
 .visual-glow { position: absolute; inset: 9% 5%; border-radius: 50%; background: rgba(213,167,68,.18); filter: blur(70px); }
 .dashboard-frame { position: relative; z-index: 2; overflow: hidden; border: 1px solid rgba(235,209,139,.25); border-radius: 10px; background: #121510; box-shadow: 0 45px 100px rgba(0,0,0,.5); transform: rotateY(-3deg) rotateX(1deg); }
+.real-panel-frame { border-radius:8px; transform:rotateY(-2deg); }.real-panel-frame img { display:block; width:100%; height:auto; }
 .dash-top { display: flex; height: 47px; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.07); background: #0e110e; }
 .mini-brand { display: flex; align-items: center; gap: 8px; color: #e0bc63; font-size: 8px; font-weight: 800; letter-spacing: .16em; }.mini-brand img { width: 22px; height: 22px; object-fit: contain; }
 .dots { display: flex; gap: 5px; }.dots i { width: 5px; height: 5px; border-radius: 50%; background: #3b3f38; }
