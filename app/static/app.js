@@ -162,7 +162,7 @@ function bindAuth() {
     $('#toggle-password').textContent = showing ? 'Mostrar' : 'Ocultar';
     $('#toggle-password').setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
   };
-  $('#show-register').onclick = (event) => { event.preventDefault(); $('#login-form').classList.add('hidden'); $('#register-form').classList.remove('hidden'); $('#login-error').textContent = ''; };
+  $('#show-register').onclick = (event) => { event.preventDefault(); location.href = '/#planos'; };
   $('#show-login').onclick = (event) => { event.preventDefault(); $('#register-form').classList.add('hidden'); $('#login-form').classList.remove('hidden'); };
   $('#logout').onclick = logout;
   $('#login-form').onsubmit = async (event) => {

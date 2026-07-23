@@ -60,6 +60,12 @@ function closeAuth() {
   document.body.classList.remove('modal-open');
 }
 
+function revealPlans() {
+  closeAuth();
+  document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
+  toast('Escolha seu plano para continuar a criação da conta.');
+}
+
 function bindSiteNavigation() {
   const closeMenu = () => {
     $('#site-nav').classList.remove('open');
@@ -78,6 +84,10 @@ function bindSiteNavigation() {
   $$('[data-auth]').forEach((button) => {
     button.onclick = () => {
       closeMenu();
+      if (button.dataset.auth === 'register' && !localStorage.getItem('selectedPlan')) {
+        revealPlans();
+        return;
+      }
       showAuth(button.dataset.auth);
     };
   });
@@ -108,7 +118,10 @@ function bindAuth() {
     input.type = input.type === 'password' ? 'text' : 'password';
     $('#toggle-password').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
-  $('#show-register').onclick = () => showAuth('register');
+  $('#show-register').onclick = () => {
+    if (localStorage.getItem('selectedPlan')) showAuth('register');
+    else revealPlans();
+  };
   $('#show-login').onclick = () => showAuth('login');
   $('#change-selected-plan').onclick = () => {
     closeAuth();
