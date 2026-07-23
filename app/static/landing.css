@@ -49,7 +49,7 @@ a { color: inherit; }
 .hero { position: relative; min-height: 860px; padding-top: 78px; overflow: hidden; background: #0a0c0a; }
 .hero-bg { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,10,8,.99) 0%, rgba(8,10,8,.96) 42%, rgba(8,10,8,.58) 73%, rgba(8,10,8,.82) 100%), linear-gradient(0deg, #0a0c0a 0%, transparent 30%), url('/assets/barber-hero.webp') 73% center / cover no-repeat; opacity: .83; }
 .hero::before { position: absolute; top: 0; left: 0; width: 58vw; height: 100%; background: radial-gradient(circle at 30% 35%, rgba(213,167,68,.11), transparent 48%); content: ""; }
-.hero-grid { position: relative; z-index: 2; display: grid; min-height: 690px; grid-template-columns: .92fr 1.08fr; align-items: center; gap: 66px; padding-top: 56px; }
+.hero-grid { position: relative; z-index: 2; display: grid; min-height: 690px; grid-template-columns: minmax(0,.82fr) minmax(0,1.18fr); align-items: center; gap: 44px; padding-top: 56px; }
 .hero-copy { min-width: 0; padding-bottom: 22px; }
 .hero-copy h1 { max-width: 650px; margin: 22px 0 24px; font: 750 clamp(52px, 5.6vw, 82px)/.99 var(--display); letter-spacing: -.055em; text-wrap: balance; }
 .hero-copy h1 em { display: block; color: var(--gold-light); font-style: normal; }
@@ -67,7 +67,7 @@ a { color: inherit; }
 .product-visual { position: relative; min-width: 0; perspective: 1200px; }
 .visual-glow { position: absolute; inset: 9% 5%; border-radius: 50%; background: rgba(213,167,68,.18); filter: blur(70px); }
 .dashboard-frame { position: relative; z-index: 2; overflow: hidden; border: 1px solid rgba(235,209,139,.25); border-radius: 10px; background: #121510; box-shadow: 0 45px 100px rgba(0,0,0,.5); transform: rotateY(-3deg) rotateX(1deg); }
-.real-panel-frame { border-radius:8px; transform:rotateY(-2deg); }.real-panel-frame img { display:block; width:100%; height:auto; }
+.real-panel-frame { border-color:rgba(240,207,124,.38); border-radius:8px; box-shadow:0 38px 90px rgba(0,0,0,.48); transform:none; }.real-panel-frame img { display:block; width:100%; height:auto; image-rendering:auto; }
 .dash-top { display: flex; height: 47px; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.07); background: #0e110e; }
 .mini-brand { display: flex; align-items: center; gap: 8px; color: #e0bc63; font-size: 8px; font-weight: 800; letter-spacing: .16em; }.mini-brand img { width: 22px; height: 22px; object-fit: contain; }
 .dots { display: flex; gap: 5px; }.dots i { width: 5px; height: 5px; border-radius: 50%; background: #3b3f38; }
