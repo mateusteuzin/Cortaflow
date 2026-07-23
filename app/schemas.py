@@ -38,6 +38,9 @@ class ResendVerification(BaseModel):
     def validate_google_email(cls, value):
         return validate_google_email_address(value)
 
+class VerificationSession(BaseModel):
+    code: str = Field(min_length=20, max_length=200)
+
 class Barber(BaseModel):
     nome: str
     telefone: str = ""

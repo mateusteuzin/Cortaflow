@@ -2,6 +2,11 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 let toastTimer;
 let pendingVerificationEmail = '';
+const planLabels = {
+  essencial: 'Essencial — R$ 30/mês',
+  profissional: 'Profissional — R$ 44,90/mês',
+  premium: 'Premium — R$ 64,90/mês'
+};
 
 function toast(message) {
   const element = $('#toast');
@@ -71,6 +76,15 @@ function showVerification(email, sent = true) {
   showAuth('verification');
 }
 
+function showPaymentNext(plan, verified = false) {
+  const summary = planLabels[plan];
+  if (!summary) return;
+  $('#login-payment-next').classList.remove('hidden');
+  $('#login-payment-next > span').textContent = verified ? '✓ E-mail confirmado' : '✓ Conta localizada';
+  $('#login-plan-summary').textContent = summary;
+  $('#login-form .form-submit').textContent = 'Entrar e ir para o pagamento';
+}
+
 function bindSiteNavigation() {
   const closeMenu = () => {
     $('#site-nav').classList.remove('open');
@@ -97,16 +111,22 @@ function bindSiteNavigation() {
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAuth(); });
 }
 
-function bindAuth() {
+async function bindAuth() {
   const params = new URLSearchParams(location.search);
   const confirmation = params.get('email_confirmado');
   const confirmedEmail = params.get('email');
+  const confirmedPlan = params.get('plan');
+  const verificationCode = params.get('code');
   const checkout = params.get('checkout');
   if (checkout === 'sucesso') toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
   if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobrança foi feita.');
   if (confirmation) {
     showAuth('login');
     if (confirmedEmail) $('#email').value = confirmedEmail;
+    if (confirmedPlan && planLabels[confirmedPlan]) {
+      localStorage.setItem('selectedPlan', confirmedPlan);
+      showPaymentNext(confirmedPlan, confirmation === 'sucesso');
+    }
     const notice = $('#verification-notice');
     notice.classList.remove('hidden');
     notice.textContent = confirmation === 'sucesso'
@@ -114,11 +134,40 @@ function bindAuth() {
       : 'Este link é inválido ou expirou. Solicite um novo link.';
     if (confirmation === 'sucesso') {
       $('#auth-title').textContent = 'E-mail confirmado!';
-      $('#login-description').textContent = 'Entre uma vez para continuar com o plano escolhido e concluir o pagamento.';
+      $('#login-description').textContent = verificationCode
+        ? 'Tudo certo. Estamos abrindo o pagamento seguro do seu plano.'
+        : 'Entre para continuar com o plano escolhido e concluir o pagamento.';
     }
     if (confirmation !== 'sucesso') $('#resend-verification').classList.remove('hidden');
   }
   if (confirmation || checkout) history.replaceState({}, '', '/');
+
+  if (confirmation === 'sucesso' && verificationCode) {
+    const submit = $('#login-form .form-submit');
+    submit.disabled = true;
+    submit.textContent = 'Abrindo pagamento seguro...';
+    try {
+      const result = await api('/auth/confirmar-sessao', {
+        method: 'POST',
+        body: JSON.stringify({ code: verificationCode })
+      });
+      localStorage.setItem('token', result.access_token);
+      localStorage.setItem('name', result.nome || 'gestor');
+      const plan = confirmedPlan || result.subscription_plan;
+      if (result.subscription_required && plan) {
+        localStorage.setItem('selectedPlan', plan);
+        await startCheckout(plan);
+        return;
+      }
+      location.href = '/painel';
+      return;
+    } catch (error) {
+      submit.disabled = false;
+      submit.textContent = 'Entrar e ir para o pagamento';
+      $('#verification-notice').textContent = `${error.message} Entre com sua senha para continuar.`;
+      $('#verification-notice').classList.remove('hidden');
+    }
+  }
 
   $('#toggle-password').onclick = () => {
     const input = $('#password');
@@ -147,7 +196,7 @@ function bindAuth() {
       localStorage.setItem('token', result.access_token);
       localStorage.setItem('name', result.nome || 'gestor');
       if (result.subscription_required) {
-        const plan = result.subscription_plan || localStorage.getItem('selectedPlan');
+        const plan = localStorage.getItem('selectedPlan') || result.subscription_plan;
         if (plan) await startCheckout(plan);
         else {
           closeAuth();
@@ -178,7 +227,17 @@ function bindAuth() {
       event.currentTarget.reset();
       showVerification(data.email, result.email_sent);
     } catch (error) {
-      $('#register-error').textContent = error.message;
+      if (/já possui uma conta confirmada/i.test(error.message)) {
+        $('#email').value = data.email;
+        $('#auth-title').textContent = 'Sua conta já existe.';
+        $('#login-description').textContent = 'Entre com sua senha para continuar com o plano escolhido.';
+        $('#verification-notice').textContent = 'Não é necessário criar outra conta. Seu e-mail já está confirmado.';
+        $('#verification-notice').classList.remove('hidden');
+        showPaymentNext(data.plano);
+        showAuth('login');
+      } else {
+        $('#register-error').textContent = error.message;
+      }
     } finally {
       button.disabled = false;
     }

@@ -54,6 +54,8 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE usuarios ALTER COLUMN email_verificado SET DEFAULT FALSE")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verification_token_hash VARCHAR(64)")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login_token_hash VARCHAR(64)")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login_expires_at TIMESTAMPTZ")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS logo_url TEXT")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS email_notificacoes VARCHAR(254)")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE")
@@ -389,7 +391,33 @@ def register(data: Register):
         sent = send_account_verification(data.email.lower(), data.nome, raw_token)
         return {"requires_email_verification":True,"email_sent":sent,"plan":data.plano,
             "message":"Enviamos um link de confirmação para seu Gmail." if sent else "Conta criada. Use reenviar link para confirmar seu e-mail."}
-    except IntegrityError: raise HTTPException(409,"E-mail já cadastrado")
+    except IntegrityError:
+        existing = one("""SELECT u.id,u.email,u.nome,u.email_verificado,b.id barbearia_id,
+            b.plano_ativo FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id
+            WHERE u.email=%s""", (data.email.lower(),))
+        if not existing:
+            raise HTTPException(409, "Não foi possível concluir este cadastro.")
+        if existing["email_verificado"]:
+            raise HTTPException(
+                409,
+                "Este e-mail já possui uma conta confirmada. Entre com sua senha para continuar com o plano.",
+            )
+        raw_token, token_hash, expires_at = _new_email_verification()
+        one("""UPDATE usuarios SET email_verification_token_hash=%s,
+            email_verification_expires_at=%s WHERE id=%s RETURNING id""",
+            (token_hash, expires_at, existing["id"]))
+        if not existing["plano_ativo"]:
+            one("""UPDATE barbearias SET subscription_plan=%s WHERE id=%s RETURNING id""",
+                (data.plano, existing["barbearia_id"]))
+        sent = send_account_verification(existing["email"], existing["nome"], raw_token)
+        return {
+            "requires_email_verification": True,
+            "email_sent": sent,
+            "existing_pending_account": True,
+            "plan": data.plano,
+            "message": "Sua conta já estava criada. Enviamos um novo link de confirmação para seu Gmail."
+                if sent else "Sua conta está aguardando confirmação. Tente reenviar o e-mail.",
+        }
 
 @app.post("/api/auth/login")
 def login(data: Login):
@@ -418,12 +446,40 @@ def resend_email_verification(data: ResendVerification):
 @app.get("/api/auth/verificar-email")
 def verify_account_email(token: str = Query(min_length=20, max_length=200)):
     token_hash = hashlib.sha256(token.encode()).hexdigest()
+    login_code = secrets.token_urlsafe(32)
+    login_hash = hashlib.sha256(login_code.encode()).hexdigest()
+    login_expires_at = datetime.now().astimezone() + timedelta(minutes=10)
     user = one("""UPDATE usuarios SET email_verificado=TRUE,email_verification_token_hash=NULL,
-        email_verification_expires_at=NULL WHERE email_verification_token_hash=%s
-        AND email_verification_expires_at>NOW() AND NOT email_verificado RETURNING id,email""", (token_hash,))
+        email_verification_expires_at=NULL,email_login_token_hash=%s,email_login_expires_at=%s
+        WHERE email_verification_token_hash=%s
+        AND email_verification_expires_at>NOW() AND NOT email_verificado RETURNING id,email""",
+        (login_hash, login_expires_at, token_hash))
     status = "sucesso" if user else "invalido"
     email = f"&email={quote(user['email'])}" if user else ""
-    return RedirectResponse(url=f"/?email_confirmado={status}{email}", status_code=303)
+    shop = one("SELECT subscription_plan FROM barbearias WHERE usuario_id=%s", (user["id"],)) if user else None
+    selected_plan = shop["subscription_plan"] if shop and shop["subscription_plan"] in STRIPE_PLANS else ""
+    plan = f"&plan={selected_plan}" if selected_plan else ""
+    code = f"&code={quote(login_code)}" if user else ""
+    return RedirectResponse(url=f"/?email_confirmado={status}{email}{plan}{code}", status_code=303)
+
+@app.post("/api/auth/confirmar-sessao")
+def confirm_verification_session(data: VerificationSession):
+    code_hash = hashlib.sha256(data.code.encode()).hexdigest()
+    user = one("""UPDATE usuarios SET email_login_token_hash=NULL,email_login_expires_at=NULL
+        WHERE email_login_token_hash=%s AND email_login_expires_at>NOW()
+        RETURNING id,nome""", (code_hash,))
+    if not user:
+        raise HTTPException(401, "Este acesso de confirmação expirou ou já foi utilizado.")
+    shop = one("""SELECT plano_ativo,subscription_plan,subscription_status
+        FROM barbearias WHERE usuario_id=%s""", (user["id"],))
+    return {
+        "access_token": token(user["id"]),
+        "token_type": "bearer",
+        "nome": user["nome"],
+        "subscription_required": not bool(shop["plano_ativo"]),
+        "subscription_plan": shop["subscription_plan"],
+        "subscription_status": shop["subscription_status"],
+    }
 
 @app.get("/api/barbearia/perfil")
 def profile(user=Depends(current_user)): return one("SELECT * FROM barbearias WHERE id=%s",(user["barbearia_id"],))

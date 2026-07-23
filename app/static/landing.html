@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing.css?v=20260723-signup-flow">
+  <link rel="stylesheet" href="/landing.css?v=20260723-signup-flow-2">
 </head>
 <body>
   <header class="site-header">
@@ -148,6 +148,10 @@
       <div class="auth-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><span>Gestão inteligente para barbearias</span></div>
       <form id="login-form" class="auth-form">
         <span class="form-kicker">ACESSO SEGURO</span><h2 id="auth-title">Entre no seu painel.</h2><p id="login-description">Acompanhe sua operação de onde estiver.</p>
+        <div id="login-payment-next" class="login-payment-next hidden">
+          <span>✓ E-mail confirmado</span>
+          <div><small>PRÓXIMA ETAPA</small><b>Entrar e concluir o pagamento</b><strong id="login-plan-summary"></strong></div>
+        </div>
         <label>E-mail<input id="email" type="email" autocomplete="email" required placeholder="voce@barbearia.com"></label>
         <label>Senha<span class="password-field"><input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"><button id="toggle-password" type="button">Mostrar</button></span></label>
         <button class="form-submit" type="submit">Entrar no painel</button><p id="login-error" class="form-error"></p><p id="verification-notice" class="form-notice hidden"></p><button id="resend-verification" class="form-secondary hidden" type="button">Reenviar confirmação</button><button id="show-register" class="form-secondary" type="button">Criar minha conta</button>
@@ -180,6 +184,6 @@
     </div>
   </div>
   <div id="toast" class="site-toast" role="status"></div>
-  <script src="/landing.js?v=20260723-signup-flow"></script>
+  <script src="/landing.js?v=20260723-signup-flow-2"></script>
 </body>
 </html>
