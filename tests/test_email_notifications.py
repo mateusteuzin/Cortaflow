@@ -1,8 +1,16 @@
 import unittest
+import json
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import patch
 
-from app.services.email import BRAND_ICON_URL, _email_html, _owner_email_html, _owner_whatsapp_url
+from app.services.email import (
+    BRAND_ICON_URL,
+    _email_html,
+    _owner_email_html,
+    _owner_whatsapp_url,
+    send_subscription_confirmation,
+)
 
 
 def notification_item(phone="(11) 99999-8888"):
@@ -58,6 +66,26 @@ class OwnerEmailNotificationTests(unittest.TestCase):
         html = _email_html(item)
         self.assertIn(BRAND_ICON_URL, html)
         self.assertNotIn("/uploads/blackbarber.png", html)
+
+    @patch.dict("os.environ", {
+        "RESEND_API_KEY": "re_test",
+        "EMAIL_FROM": "CortaFlow <contato@cortaflow.com.br>",
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+    })
+    @patch("app.services.email.urlopen")
+    def test_subscription_confirmation_contains_plan_and_renewal(self, mocked_urlopen):
+        mocked_urlopen.return_value.__enter__.return_value.read.return_value = b'{"id":"email_1"}'
+        sent = send_subscription_confirmation(
+            "dono@gmail.com", "Mateus", "CortaFlow Profissional", 4490,
+            datetime(2026, 8, 23),
+        )
+        self.assertTrue(sent)
+        request = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(payload["to"], ["dono@gmail.com"])
+        self.assertIn("CortaFlow Profissional", payload["html"])
+        self.assertIn("R$ 44,90", payload["html"])
+        self.assertIn("23/08/2026", payload["html"])
 
 
 if __name__ == "__main__":

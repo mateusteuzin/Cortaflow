@@ -28,6 +28,17 @@ class RegisterEmailValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "Use um e-mail oficial do Gmail"):
             Register(**register_data("dono@outlook.com"))
 
+    def test_accepts_subscription_plan(self):
+        data = register_data("dono@gmail.com")
+        data["plano"] = "premium"
+        self.assertEqual(Register(**data).plano, "premium")
+
+    def test_rejects_unknown_subscription_plan(self):
+        data = register_data("dono@gmail.com")
+        data["plano"] = "vitalicio"
+        with self.assertRaises(ValidationError):
+            Register(**data)
+
 
 if __name__ == "__main__":
     unittest.main()

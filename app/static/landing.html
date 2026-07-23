@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing.css?v=20260723-panel-sharp">
+  <link rel="stylesheet" href="/landing.css?v=20260723-signup-flow">
 </head>
 <body>
   <header class="site-header">
@@ -147,22 +147,39 @@
       <button id="modal-close" class="modal-close" type="button" aria-label="Fechar">×</button>
       <div class="auth-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><span>Gestão inteligente para barbearias</span></div>
       <form id="login-form" class="auth-form">
-        <span class="form-kicker">ACESSO SEGURO</span><h2 id="auth-title">Entre no seu painel.</h2><p>Acompanhe sua operação de onde estiver.</p>
+        <span class="form-kicker">ACESSO SEGURO</span><h2 id="auth-title">Entre no seu painel.</h2><p id="login-description">Acompanhe sua operação de onde estiver.</p>
         <label>E-mail<input id="email" type="email" autocomplete="email" required placeholder="voce@barbearia.com"></label>
         <label>Senha<span class="password-field"><input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"><button id="toggle-password" type="button">Mostrar</button></span></label>
         <button class="form-submit" type="submit">Entrar no painel</button><p id="login-error" class="form-error"></p><p id="verification-notice" class="form-notice hidden"></p><button id="resend-verification" class="form-secondary hidden" type="button">Reenviar confirmação</button><button id="show-register" class="form-secondary" type="button">Criar minha conta</button>
         <small class="form-security">● Seus dados estão protegidos</small>
       </form>
       <form id="register-form" class="auth-form hidden">
-        <span class="form-kicker">COMECE AGORA</span><h2>Crie sua barbearia.</h2><p>Configure seu espaço e comece a receber agendamentos.</p>
-        <div id="selected-plan" class="selected-plan hidden"><span>PLANO ESCOLHIDO</span><div><b id="selected-plan-name"></b><strong id="selected-plan-price"></strong></div><button id="change-selected-plan" type="button">Alterar plano</button></div>
+        <div class="signup-progress" aria-label="Etapas do cadastro"><span class="active"><b>1</b> Conta</span><i></i><span><b>2</b> E-mail</span><i></i><span><b>3</b> Pagamento</span></div>
+        <span class="form-kicker">COMECE AGORA</span><h2>Crie sua barbearia.</h2><p>Escolha o plano e informe seus dados. Você só paga depois de confirmar o e-mail.</p>
+        <fieldset class="register-plan-picker">
+          <legend>Escolha seu plano mensal</legend>
+          <label><input type="radio" name="plano" value="essencial"><span><b>Essencial</b><small>1 barbeiro</small></span><strong>R$ 30</strong></label>
+          <label class="recommended"><input type="radio" name="plano" value="profissional" checked><span><b>Profissional</b><small>Até 2 profissionais</small></span><strong>R$ 44,90</strong></label>
+          <label><input type="radio" name="plano" value="premium"><span><b>Premium</b><small>Equipe ilimitada</small></span><strong>R$ 64,90</strong></label>
+        </fieldset>
         <div class="form-grid"><label>Seu nome<input id="register-name" name="nome" autocomplete="name" required></label><label>Barbearia<input id="shop-name-register" name="barbearia_nome" required></label><label>E-mail Gmail<input id="register-email" name="email" type="email" autocomplete="email" pattern="^[^@\s]+@(gmail\.com|googlemail\.com)$" required></label><label>Telefone<input id="register-phone" name="telefone" type="tel"></label></div>
         <label>Senha<input id="register-password" name="senha" type="password" autocomplete="new-password" minlength="6" required></label>
-        <button class="form-submit" type="submit">Criar conta e confirmar e-mail</button><p id="register-notice" class="form-notice hidden"></p><button id="show-login" class="form-secondary" type="button">Já tenho uma conta</button>
+        <button class="form-submit" type="submit">Continuar e confirmar e-mail</button><p id="register-error" class="form-error"></p><button id="show-login" class="form-secondary" type="button">Já tenho uma conta</button>
       </form>
+      <section id="verification-step" class="auth-form verification-step hidden">
+        <div class="signup-progress" aria-label="Etapas do cadastro"><span class="done"><b>✓</b> Conta</span><i class="done"></i><span class="active"><b>2</b> E-mail</span><i></i><span><b>3</b> Pagamento</span></div>
+        <div class="mail-illustration" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/><circle cx="18.5" cy="5.5" r="3.5"/></svg></div>
+        <span class="form-kicker">CONFIRME SEU E-MAIL</span><h2>Confira sua caixa de entrada.</h2>
+        <p>Enviamos um link de confirmação para <strong id="verification-email"></strong>. Clique nele para validar sua conta.</p>
+        <div id="email-sent-status" class="delivery-status"><span>✓</span><div><b>E-mail enviado</b><small>O link é válido por 24 horas</small></div></div>
+        <ol class="verification-help"><li>Abra o Gmail informado.</li><li>Procure por “Confirme sua conta CortaFlow”.</li><li>Clique em <b>Confirmar meu e-mail</b>.</li></ol>
+        <p class="spam-help">Não encontrou? Verifique Spam, Promoções e Social.</p>
+        <button id="verification-resend" class="form-submit" type="button">Reenviar e-mail</button>
+        <button id="verification-login" class="form-secondary" type="button">Já confirmei — continuar</button>
+      </section>
     </div>
   </div>
   <div id="toast" class="site-toast" role="status"></div>
-  <script src="/landing.js?v=20260723-plan-first"></script>
+  <script src="/landing.js?v=20260723-signup-flow"></script>
 </body>
 </html>

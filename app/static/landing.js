@@ -1,11 +1,7 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 let toastTimer;
-const planDetails = {
-  essencial: { name: 'Essencial', price: 'R$ 30/mês' },
-  profissional: { name: 'Profissional', price: 'R$ 44,90/mês' },
-  premium: { name: 'Premium', price: 'R$ 64,90/mês' }
-};
+let pendingVerificationEmail = '';
 
 function toast(message) {
   const element = $('#toast');
@@ -37,22 +33,24 @@ async function api(path, options = {}) {
 
 function updateSelectedPlan() {
   const plan = localStorage.getItem('selectedPlan');
-  const details = planDetails[plan];
-  $('#selected-plan').classList.toggle('hidden', !details);
-  if (!details) return;
-  $('#selected-plan-name').textContent = details.name;
-  $('#selected-plan-price').textContent = details.price;
+  const input = plan && $(`#register-form input[name="plano"][value="${plan}"]`);
+  if (input) input.checked = true;
 }
 
 function showAuth(mode = 'login') {
   const login = $('#login-form');
   const register = $('#register-form');
+  const verification = $('#verification-step');
   login.classList.toggle('hidden', mode !== 'login');
   register.classList.toggle('hidden', mode !== 'register');
+  verification.classList.toggle('hidden', mode !== 'verification');
   $('#auth-modal').classList.remove('hidden');
   document.body.classList.add('modal-open');
   if (mode === 'register') updateSelectedPlan();
-  setTimeout(() => (mode === 'login' ? $('#email') : $('#register-name')).focus(), 50);
+  setTimeout(() => {
+    if (mode === 'login') $('#email').focus();
+    if (mode === 'register') $('#register-name').focus();
+  }, 50);
 }
 
 function closeAuth() {
@@ -60,10 +58,17 @@ function closeAuth() {
   document.body.classList.remove('modal-open');
 }
 
-function revealPlans() {
-  closeAuth();
-  document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
-  toast('Escolha seu plano para continuar a criação da conta.');
+function showVerification(email, sent = true) {
+  pendingVerificationEmail = email;
+  $('#verification-email').textContent = email;
+  const status = $('#email-sent-status');
+  status.classList.toggle('failed', !sent);
+  status.querySelector('span').textContent = sent ? '✓' : '!';
+  status.querySelector('b').textContent = sent ? 'E-mail enviado' : 'Não conseguimos enviar agora';
+  status.querySelector('small').textContent = sent
+    ? 'O link é válido por 24 horas'
+    : 'Use o botão abaixo para tentar novamente';
+  showAuth('verification');
 }
 
 function bindSiteNavigation() {
@@ -84,10 +89,6 @@ function bindSiteNavigation() {
   $$('[data-auth]').forEach((button) => {
     button.onclick = () => {
       closeMenu();
-      if (button.dataset.auth === 'register' && !localStorage.getItem('selectedPlan')) {
-        revealPlans();
-        return;
-      }
       showAuth(button.dataset.auth);
     };
   });
@@ -99,16 +100,22 @@ function bindSiteNavigation() {
 function bindAuth() {
   const params = new URLSearchParams(location.search);
   const confirmation = params.get('email_confirmado');
+  const confirmedEmail = params.get('email');
   const checkout = params.get('checkout');
   if (checkout === 'sucesso') toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
   if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobrança foi feita.');
   if (confirmation) {
     showAuth('login');
+    if (confirmedEmail) $('#email').value = confirmedEmail;
     const notice = $('#verification-notice');
     notice.classList.remove('hidden');
     notice.textContent = confirmation === 'sucesso'
-      ? 'E-mail confirmado. Agora você já pode entrar.'
+      ? 'E-mail confirmado com sucesso. Digite sua senha para seguir ao pagamento.'
       : 'Este link é inválido ou expirou. Solicite um novo link.';
+    if (confirmation === 'sucesso') {
+      $('#auth-title').textContent = 'E-mail confirmado!';
+      $('#login-description').textContent = 'Entre uma vez para continuar com o plano escolhido e concluir o pagamento.';
+    }
     if (confirmation !== 'sucesso') $('#resend-verification').classList.remove('hidden');
   }
   if (confirmation || checkout) history.replaceState({}, '', '/');
@@ -118,14 +125,13 @@ function bindAuth() {
     input.type = input.type === 'password' ? 'text' : 'password';
     $('#toggle-password').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
-  $('#show-register').onclick = () => {
-    if (localStorage.getItem('selectedPlan')) showAuth('register');
-    else revealPlans();
-  };
+  $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
-  $('#change-selected-plan').onclick = () => {
-    closeAuth();
-    document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
+  $('#verification-login').onclick = () => {
+    $('#email').value = pendingVerificationEmail;
+    showAuth('login');
+    $('#verification-notice').textContent = 'Depois de confirmar pelo Gmail, entre para continuar ao pagamento.';
+    $('#verification-notice').classList.remove('hidden');
   };
 
   $('#login-form').onsubmit = async (event) => {
@@ -140,9 +146,9 @@ function bindAuth() {
       });
       localStorage.setItem('token', result.access_token);
       localStorage.setItem('name', result.nome || 'gestor');
-      const selectedPlan = localStorage.getItem('selectedPlan');
       if (result.subscription_required) {
-        if (selectedPlan) await startCheckout(selectedPlan);
+        const plan = result.subscription_plan || localStorage.getItem('selectedPlan');
+        if (plan) await startCheckout(plan);
         else {
           closeAuth();
           document.querySelector('#planos').scrollIntoView({ behavior: 'smooth' });
@@ -164,37 +170,45 @@ function bindAuth() {
     if (!event.currentTarget.checkValidity()) return event.currentTarget.reportValidity();
     const button = event.currentTarget.querySelector('[type="submit"]');
     const data = Object.fromEntries(new FormData(event.currentTarget));
+    localStorage.setItem('selectedPlan', data.plano);
     button.disabled = true;
+    $('#register-error').textContent = '';
     try {
       const result = await api('/auth/register', { method: 'POST', body: JSON.stringify(data) });
       event.currentTarget.reset();
-      showAuth('login');
-      $('#email').value = data.email;
-      $('#verification-notice').textContent = result.message;
-      $('#verification-notice').classList.remove('hidden');
-      $('#resend-verification').classList.remove('hidden');
+      showVerification(data.email, result.email_sent);
+    } catch (error) {
+      $('#register-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  const resendVerification = async (email, button) => {
+    if (!email) return void toast('Informe seu Gmail para reenviar.');
+    button.disabled = true;
+    try {
+      const result = await api('/auth/reenviar-confirmacao', { method: 'POST', body: JSON.stringify({ email }) });
+      toast(result.message);
+      if (!$('#verification-step').classList.contains('hidden')) {
+        const status = $('#email-sent-status');
+        status.classList.remove('failed');
+        status.querySelector('span').textContent = '✓';
+        status.querySelector('b').textContent = 'Solicitação processada';
+        status.querySelector('small').textContent = 'Confira sua caixa de entrada e a pasta de spam';
+      }
     } catch (error) {
       toast(error.message);
     } finally {
       button.disabled = false;
     }
   };
-
-  $('#resend-verification').onclick = async () => {
-    const email = $('#email').value.trim();
-    if (!email) return void ($('#login-error').textContent = 'Informe seu Gmail acima.');
-    const button = $('#resend-verification');
-    button.disabled = true;
-    try {
-      const result = await api('/auth/reenviar-confirmacao', { method: 'POST', body: JSON.stringify({ email }) });
-      $('#verification-notice').textContent = result.message;
-      $('#verification-notice').classList.remove('hidden');
-    } catch (error) {
-      $('#login-error').textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  };
+  $('#resend-verification').onclick = () => resendVerification(
+    $('#email').value.trim(), $('#resend-verification')
+  );
+  $('#verification-resend').onclick = () => resendVerification(
+    pendingVerificationEmail, $('#verification-resend')
+  );
 }
 
 function bindPricing() {
@@ -203,8 +217,14 @@ function bindPricing() {
       const plan = button.dataset.plan;
       localStorage.setItem('selectedPlan', plan);
       if (localStorage.getItem('token')) startCheckout(plan, button);
-      else showAuth('register');
+      else {
+        updateSelectedPlan();
+        showAuth('register');
+      }
     };
+  });
+  $$('#register-form input[name="plano"]').forEach((input) => {
+    input.onchange = () => localStorage.setItem('selectedPlan', input.value);
   });
 }
 

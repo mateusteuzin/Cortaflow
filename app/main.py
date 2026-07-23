@@ -2,6 +2,7 @@ import hashlib, json, logging, os, secrets, time as time_module
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 from uuid import uuid4
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,12 @@ from .schemas import *
 from .security import authenticated_user, current_user, hash_password, token, verify_password
 from .services.whatsapp import verify_webhook_signature
 from .services.whatsapp_worker import whatsapp_worker
-from .services.email import send_account_verification, send_appointment_confirmation, send_owner_notification
+from .services.email import (
+    send_account_verification,
+    send_appointment_confirmation,
+    send_owner_notification,
+    send_subscription_confirmation,
+)
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
 from .services.slugs import unique_shop_slug
 from .runtime import is_vercel, should_run_migrations, should_start_worker
@@ -57,6 +63,7 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(120)")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMPTZ")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE")
+        cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS subscription_confirmation_email_sent_at TIMESTAMPTZ")
         cur.execute("""UPDATE barbearias b SET email_notificacoes=u.email FROM usuarios u
             WHERE b.usuario_id=u.id AND (b.email_notificacoes IS NULL OR b.email_notificacoes='')""")
         cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS foto_url TEXT")
@@ -217,6 +224,22 @@ def _save_stripe_subscription(shop_id: int, subscription, plan: str | None = Non
          _timestamp(subscription.get("current_period_end")),
          bool(subscription.get("cancel_at_period_end")), active, shop_id))
 
+def _send_subscription_email_once(shop_id: int, plan: str | None, period_end=None):
+    plan_data = STRIPE_PLANS.get(plan or "")
+    if not plan_data:
+        return
+    item = one("""UPDATE barbearias b SET subscription_confirmation_email_sent_at=NOW()
+        FROM usuarios u WHERE b.usuario_id=u.id AND b.id=%s
+        AND b.subscription_confirmation_email_sent_at IS NULL RETURNING u.email,u.nome""", (shop_id,))
+    if not item:
+        return
+    sent = send_subscription_confirmation(
+        item["email"], item["nome"], plan_data["name"], plan_data["amount"], _timestamp(period_end)
+    )
+    if not sent:
+        one("""UPDATE barbearias SET subscription_confirmation_email_sent_at=NULL
+            WHERE id=%s RETURNING id""", (shop_id,))
+
 @app.get("/api/billing/subscription")
 def subscription_details(user=Depends(authenticated_user)):
     shop = one("""SELECT subscription_plan,subscription_status,plano_ativo,
@@ -253,6 +276,9 @@ def confirm_checkout(data: dict, user=Depends(authenticated_user)):
     if isinstance(subscription, str):
         subscription = stripe.Subscription.retrieve(subscription)
     _save_stripe_subscription(user["barbearia_id"], subscription, metadata.get("plan"))
+    _send_subscription_email_once(
+        user["barbearia_id"], metadata.get("plan"), subscription.get("current_period_end")
+    )
     return {"active": True, "plan": metadata.get("plan")}
 
 @app.post("/api/billing/portal")
@@ -291,6 +317,7 @@ async def stripe_webhook(request: Request):
         if shop_id and subscription_id:
             subscription = stripe.Subscription.retrieve(subscription_id)
             _save_stripe_subscription(shop_id, subscription, metadata.get("plan"))
+            _send_subscription_email_once(shop_id, metadata.get("plan"), subscription.get("current_period_end"))
     elif event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
         metadata = obj.get("metadata") or {}
         shop_id = _metadata_shop_id(metadata)
@@ -349,9 +376,10 @@ def register(data: Register):
                 VALUES(%s,%s,%s,%s,FALSE,%s,%s) RETURNING id""",
                 (data.email.lower(),hash_password(data.senha),data.nome,data.telefone,token_hash,expires_at)); uid=cur.fetchone()["id"]
             shop_slug=unique_shop_slug(cur,data.barbearia_nome)
-            cur.execute("""INSERT INTO barbearias(usuario_id,nome,slug,telefone,plano_ativo,subscription_status)
-                VALUES(%s,%s,%s,%s,FALSE,'inactive') RETURNING id""",
-                (uid,data.barbearia_nome,shop_slug,data.telefone)); sid=cur.fetchone()["id"]
+            cur.execute("""INSERT INTO barbearias(usuario_id,nome,slug,telefone,plano_ativo,
+                subscription_status,subscription_plan)
+                VALUES(%s,%s,%s,%s,FALSE,'inactive',%s) RETURNING id""",
+                (uid,data.barbearia_nome,shop_slug,data.telefone,data.plano)); sid=cur.fetchone()["id"]
             cur.execute("INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim) SELECT %s,d,'09:00','19:00' FROM generate_series(0,5) d", (sid,))
             cur.execute("""INSERT INTO servicos(barbearia_id,nome,descricao,duracao_minutos,preco,imagem_url) VALUES
               (%s,'Corte Degradê','Degradê com acabamento completo',40,30,'/assets/service-degrade.webp'),
@@ -359,7 +387,7 @@ def register(data: Register):
               (%s,'Corte + Barba','Corte completo e barba alinhada',60,50,'/assets/service-combo.webp'),
               (%s,'Sobrancelha','Design e acabamento de sobrancelha',15,10,'/assets/service-sobrancelha.webp')""", (sid,sid,sid,sid))
         sent = send_account_verification(data.email.lower(), data.nome, raw_token)
-        return {"requires_email_verification":True,"email_sent":sent,
+        return {"requires_email_verification":True,"email_sent":sent,"plan":data.plano,
             "message":"Enviamos um link de confirmação para seu Gmail." if sent else "Conta criada. Use reenviar link para confirmar seu e-mail."}
     except IntegrityError: raise HTTPException(409,"E-mail já cadastrado")
 
@@ -392,9 +420,10 @@ def verify_account_email(token: str = Query(min_length=20, max_length=200)):
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     user = one("""UPDATE usuarios SET email_verificado=TRUE,email_verification_token_hash=NULL,
         email_verification_expires_at=NULL WHERE email_verification_token_hash=%s
-        AND email_verification_expires_at>NOW() AND NOT email_verificado RETURNING id""", (token_hash,))
+        AND email_verification_expires_at>NOW() AND NOT email_verificado RETURNING id,email""", (token_hash,))
     status = "sucesso" if user else "invalido"
-    return RedirectResponse(url=f"/?email_confirmado={status}", status_code=303)
+    email = f"&email={quote(user['email'])}" if user else ""
+    return RedirectResponse(url=f"/?email_confirmado={status}{email}", status_code=303)
 
 @app.get("/api/barbearia/perfil")
 def profile(user=Depends(current_user)): return one("SELECT * FROM barbearias WHERE id=%s",(user["barbearia_id"],))

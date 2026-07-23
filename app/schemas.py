@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 GOOGLE_EMAIL_DOMAINS = {"gmail.com", "googlemail.com"}
@@ -18,6 +19,7 @@ class Register(BaseModel):
     senha: str = Field(min_length=6, max_length=72)
     telefone: str = ""
     barbearia_nome: str = Field(min_length=2, max_length=160)
+    plano: Literal["essencial", "profissional", "premium"] = "profissional"
 
     @field_validator("email")
     @classmethod

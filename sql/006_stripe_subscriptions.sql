@@ -4,7 +4,8 @@ ALTER TABLE barbearias
   ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(120),
   ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(120),
   ADD COLUMN IF NOT EXISTS subscription_current_period_end TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS subscription_confirmation_email_sent_at TIMESTAMPTZ;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_barbearias_stripe_customer
   ON barbearias(stripe_customer_id)

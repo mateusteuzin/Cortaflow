@@ -44,6 +44,56 @@ def send_account_verification(email: str, owner_name: str, verification_token: s
         return False
 
 
+def send_subscription_confirmation(
+    email: str,
+    owner_name: str,
+    plan_name: str,
+    amount_cents: int,
+    period_end: datetime | None,
+) -> bool:
+    """Envia o resumo da assinatura depois que a Stripe confirma o pagamento."""
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
+    if not api_key:
+        logger.warning("RESEND_API_KEY não configurada; confirmação da assinatura não enviada")
+        return False
+    amount = f"{amount_cents / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    renewal = period_end.strftime("%d/%m/%Y") if period_end else "consulte no painel"
+    panel_url = os.getenv("PUBLIC_BASE_URL", "https://cortaflow.com.br").strip().rstrip("/") + "/painel"
+    html = f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
+    <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
+      {_brand_header('ASSINATURA CONFIRMADA', 'CortaFlow')}
+      <div style="padding:30px"><p>Olá, <strong>{escape(owner_name)}</strong>.</p>
+      <p>Seu pagamento foi confirmado e o acesso ao CortaFlow já está liberado.</p>
+      <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;margin:24px 0;line-height:1.9">
+        <strong>{escape(plan_name)}</strong><br>
+        Valor mensal: R$ {amount}<br>
+        Próxima renovação: {renewal}<br>
+        Status: assinatura ativa
+      </div>
+      <a href="{escape(panel_url, quote=True)}" style="display:inline-block;background:#171713;color:#fff;text-decoration:none;font-weight:bold;padding:15px 22px">Acessar meu painel</a>
+      <p style="font-size:12px;color:#777;margin-top:24px">O pagamento é processado pela Stripe. Você pode consultar ou cancelar a assinatura em Minha assinatura.</p>
+      </div></div></body></html>"""
+    payload = json.dumps({
+        "from": sender,
+        "to": [email],
+        "subject": f"Assinatura confirmada — {plan_name}",
+        "html": html,
+    }).encode()
+    request = Request("https://api.resend.com/emails", data=payload, method="POST", headers={
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "CortaFlow/1.0",
+    })
+    try:
+        with urlopen(request, timeout=15) as response:
+            response.read()
+        return True
+    except (HTTPError, URLError, TimeoutError, ValueError) as error:
+        logger.warning("Falha ao enviar confirmação da assinatura para %s: %s", email, error)
+        return False
+
+
 def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
     candidate = (logo_url or "").strip()
     parsed = urlparse(candidate)
