@@ -256,6 +256,29 @@ function bindNavigation() {
   });
 }
 
+function bindPricing() {
+  $$('[data-plan]').forEach((button) => {
+    button.onclick = async () => {
+      button.disabled = true;
+      const original = button.textContent;
+      button.textContent = 'Abrindo checkout...';
+      try {
+        const result = await fetch('/api/billing/checkout', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: button.dataset.plan })
+        });
+        const data = await result.json().catch(() => null);
+        if (!result.ok) throw new Error(data?.detail || 'Não foi possível abrir o checkout.');
+        window.location.href = data.url;
+      } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.textContent = original;
+      }
+    };
+  });
+}
+
 async function start() {
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
@@ -606,4 +629,5 @@ async function loadReports() {
 bindAuth();
 bindNavigation();
 bindTheme();
+bindPricing();
 if (token) start();

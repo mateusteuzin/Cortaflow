@@ -15,12 +15,25 @@
 </head>
 <body>
   <section id="login" class="auth-screen">
+    <div class="landing-intro">
+      <div class="landing-copy">
+        <span class="eyebrow">CORTAFLOW · GESTÃO PARA BARBEARIAS</span>
+        <h1>Mais tempo para o corte.<br><em>Mais controle para crescer.</em></h1>
+        <p>Agenda, equipe, clientes e resultados em um único painel simples para sua barbearia.</p>
+        <div class="landing-actions"><a class="button button-primary" href="#access">Começar agora <span>→</span></a><a class="landing-login" href="#access">Já tenho uma conta</a></div>
+      </div>
+      <div class="pricing-grid" aria-label="Planos CortaFlow">
+        <article class="price-card"><span>ESSENCIAL</span><strong>R$ 30<small>/mês</small></strong><p>Para começar organizado.</p><button data-plan="essencial" type="button">Escolher plano</button></article>
+        <article class="price-card featured"><b class="price-tag">MAIS ESCOLHIDO</b><span>PROFISSIONAL</span><strong>R$ 44,90<small>/mês</small></strong><p>Para ganhar ritmo e visão.</p><button data-plan="profissional" type="button">Escolher plano</button></article>
+        <article class="price-card"><span>PREMIUM</span><strong>R$ 64,90<small>/mês</small></strong><p>Para operações em expansão.</p><button data-plan="premium" type="button">Escolher plano</button></article>
+      </div>
+    </div>
     <div class="auth-brand">
       <img src="/assets/cortaflow-logo-transparent.png?v=20260722" alt="CortaFlow" width="280" height="56">
       <span>Gestão inteligente para barbearias</span>
     </div>
 
-    <div class="auth-layout">
+    <div id="access" class="auth-layout">
       <div class="auth-message">
         <span class="eyebrow">CONTROLE TOTAL. ROTINA MAIS LEVE.</span>
         <h1>Sua barbearia fluindo de verdade.</h1>

@@ -116,6 +116,38 @@ async def security_and_rate_limit(request: Request, call_next):
 @app.get("/api/health")
 def health(): return {"status":"ok"}
 
+STRIPE_PLANS = {
+    "essencial": ("R$ 30/mês", "STRIPE_PRICE_30"),
+    "profissional": ("R$ 44,90/mês", "STRIPE_PRICE_44_90"),
+    "premium": ("R$ 64,90/mês", "STRIPE_PRICE_64_90"),
+}
+
+@app.post("/api/billing/checkout")
+def create_checkout(data: dict):
+    """Cria um Checkout recorrente; a chave secreta fica exclusivamente no servidor."""
+    plan = str(data.get("plan", "")).lower()
+    price_env = STRIPE_PLANS.get(plan, (None, None))[1]
+    secret = os.getenv("STRIPE_SECRET_KEY")
+    price_id = os.getenv(price_env or "")
+    if not secret or not price_id or not price_id.startswith("price_"):
+        raise HTTPException(503, "Stripe ainda não está configurada. Preencha as chaves e preços no ambiente.")
+    try:
+        import stripe
+    except ImportError as error:
+        raise HTTPException(503, "Dependência Stripe não instalada no servidor.") from error
+    stripe.api_key = secret
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription", line_items=[{"price": price_id, "quantity": 1}],
+            success_url=os.getenv("STRIPE_SUCCESS_URL", "http://localhost:8000/?checkout=sucesso"),
+            cancel_url=os.getenv("STRIPE_CANCEL_URL", "http://localhost:8000/?checkout=cancelado"),
+            allow_promotion_codes=True,
+        )
+    except stripe.error.StripeError as error:
+        logging.exception("Stripe checkout error")
+        raise HTTPException(502, "Não foi possível abrir o checkout agora.") from error
+    return {"url": session.url}
+
 @app.post("/api/uploads/imagem", status_code=201)
 async def upload_image(arquivo: UploadFile = File(...), user=Depends(current_user)):
     image_type = image_types.get(arquivo.content_type or '')

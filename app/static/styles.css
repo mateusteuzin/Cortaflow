@@ -25,6 +25,19 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .52; }
 a { color: inherit; }
 .hidden { display: none !important; }
+.landing-intro { width: min(1240px, calc(100% - 42px)); margin: 0 auto; padding: 70px 0 52px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; align-items: center; }
+.landing-copy h1 { margin: 14px 0; color: #fff; font: 700 clamp(40px, 5vw, 72px)/1.02 var(--display); letter-spacing: -.02em; }
+.landing-copy h1 em { color: var(--gold-light); font-style: normal; }
+.landing-copy p { max-width: 490px; color: #b6b5aa; font-size: 15px; }
+.landing-actions { display: flex; align-items: center; gap: 24px; margin-top: 28px; }
+.landing-login { color: #e8e2d1; font-size: 12px; font-weight: 700; }
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.price-card { position: relative; min-height: 235px; padding: 25px 20px; border: 1px solid #393a32; background: #171914; color: #fff; }
+.price-card.featured { border-color: var(--gold); transform: translateY(-12px); background: linear-gradient(145deg,#28271d,#171914); }
+.price-card > span { color: var(--gold-light); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+.price-card strong { display: block; margin-top: 26px; font: 700 28px var(--display); }.price-card strong small { color: #aaa99f; font: 500 11px var(--sans); }
+.price-card p { min-height: 40px; color: #aaa99f; font-size: 11px; }.price-card button { width: 100%; padding: 11px; border: 1px solid #75602e; background: transparent; color: #f2d486; font-size: 10px; font-weight: 800; cursor: pointer; }.price-tag { position: absolute; top: -10px; right: 12px; padding: 4px 8px; background: var(--gold); color: #18150e; font-size: 8px; letter-spacing: .08em; }
+@media (max-width: 850px) { .landing-intro { grid-template-columns: 1fr; gap: 30px; padding-top: 42px; }.pricing-grid { grid-template-columns: 1fr; }.price-card.featured { transform: none; } }
 .eyebrow, .nav-label { display: block; color: var(--gold); font-size: 8px; font-weight: 800; letter-spacing: .2em; line-height: 1.2; text-transform: uppercase; }
 .muted { color: var(--muted); }
 .error { min-height: 18px; color: var(--red); font-size: 11px; }
