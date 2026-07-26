@@ -132,7 +132,7 @@ async def security_and_rate_limit(request: Request, call_next):
 def health(): return {"status":"ok"}
 
 STRIPE_PLANS = {
-    "essencial": {"name": "CortaFlow Essencial", "amount": 3000},
+    "essencial": {"name": "CortaFlow Essencial", "amount": 2990},
     "profissional": {"name": "CortaFlow Profissional", "amount": 4490},
     "premium": {"name": "CortaFlow Premium", "amount": 6490},
 }

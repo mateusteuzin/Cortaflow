@@ -3,7 +3,7 @@ const $$ = (selector) => document.querySelectorAll(selector);
 let toastTimer;
 let pendingVerificationEmail = '';
 const planLabels = {
-  essencial: 'Essencial — R$ 30/mês',
+  essencial: 'Essencial — R$ 29,90/mês',
   profissional: 'Profissional — R$ 44,90/mês',
   premium: 'Premium — R$ 64,90/mês'
 };
