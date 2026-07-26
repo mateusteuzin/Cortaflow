@@ -16,6 +16,7 @@ let services = [];
 let shopProfile = null;
 let businessHours = [];
 let subscription = null;
+let loyaltyClients = [];
 let toastTimer;
 
 function setTheme(theme) {
@@ -124,9 +125,9 @@ function logout() {
 function show(view) {
   $$('.view').forEach((element) => element.classList.toggle('hidden', element.id !== view));
   $$('nav button[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
-  $('#title').textContent = { dashboard: 'Resumo do dia', agenda: 'Agenda', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
+  $('#title').textContent = { dashboard: 'Resumo do dia', agenda: 'Agenda', clientes: 'Clientes', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
   closeSidebar();
-  const loaders = { agenda: loadAppointments, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
+  const loaders = { agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
   if (loaders[view]) loaders[view]().catch((error) => toast(error.message));
 }
 
@@ -512,12 +513,63 @@ function appointmentHTML(appointment) {
 
 async function loadDashboard() {
   const today = localDate();
-  const [report, appointments] = await Promise.all([api('/relatorios/dia?data=' + today), api('/agendamentos?data=' + today)]);
+  const [report, appointments, dashboardProducts, dashboardClients] = await Promise.all([
+    api('/relatorios/dia?data=' + today),
+    api('/agendamentos?data=' + today),
+    api('/produtos'),
+    api('/relatorios/fidelidade')
+  ]);
   $('#revenue').textContent = money(report.total.total);
   $('#cuts').textContent = report.total.cortes;
   const upcoming = appointments.filter((appointment) => new Date(appointment.data_hora) > new Date() && !['cancelado', 'concluido', 'realizado', 'nao_compareceu'].includes(appointment.status));
   $('#upcoming-count').textContent = upcoming.length;
   $('#upcoming').innerHTML = upcoming.slice(0, 6).map(appointmentHTML).join('') || '<div class="empty">Nenhum próximo atendimento hoje.</div>';
+  const nextAppointment = upcoming[0];
+  $('#hero-next').textContent = nextAppointment
+    ? new Date(nextAppointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : 'Agenda livre';
+  $('#hero-next-detail').textContent = nextAppointment
+    ? `${nextAppointment.cliente_nome} · ${nextAppointment.servico}`
+    : 'nenhum atendimento próximo';
+  $('#hero-pace').textContent = `${Number(report.total.cortes || 0)} realizado${Number(report.total.cortes || 0) === 1 ? '' : 's'}`;
+  $('#hero-pace-detail').textContent = upcoming.length
+    ? `${upcoming.length} horário${upcoming.length === 1 ? '' : 's'} ainda pela frente`
+    : 'dia concluído ou agenda livre';
+
+  const pending = upcoming.filter((appointment) => appointment.status === 'agendado');
+  const lowStock = dashboardProducts.filter((product) => Number(product.quantidade_estoque) <= 3);
+  const nearReward = dashboardClients.filter((client) => Number(client.cortes_para_premio) <= 2);
+  const attention = [
+    ...pending.slice(0, 2).map((appointment) => ({
+      tone: 'warning',
+      eyebrow: 'CONFIRMAÇÃO',
+      title: appointment.cliente_nome,
+      detail: `${new Date(appointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · aguardando confirmação`,
+      view: 'agenda'
+    })),
+    ...lowStock.slice(0, 2).map((product) => ({
+      tone: 'stock',
+      eyebrow: 'ESTOQUE BAIXO',
+      title: product.nome,
+      detail: `${Number(product.quantidade_estoque)} unidade${Number(product.quantidade_estoque) === 1 ? '' : 's'} restante${Number(product.quantidade_estoque) === 1 ? '' : 's'}`,
+      view: 'produtos'
+    })),
+    ...nearReward.slice(0, 2).map((client) => ({
+      tone: 'loyalty',
+      eyebrow: 'FIDELIDADE',
+      title: client.cliente_nome || client.cliente_telefone,
+      detail: `falta${Number(client.cortes_para_premio) === 1 ? '' : 'm'} ${Number(client.cortes_para_premio)} corte${Number(client.cortes_para_premio) === 1 ? '' : 's'} para o prêmio`,
+      view: 'clientes'
+    }))
+  ];
+  $('#attention-count').textContent = attention.length;
+  $('#attention-list').innerHTML = attention.slice(0, 5).map((item) => `
+    <button class="attention-item ${item.tone}" type="button" data-attention-view="${item.view}">
+      <i aria-hidden="true"></i>
+      <span><small>${escapeHTML(item.eyebrow)}</small><b>${escapeHTML(item.title)}</b><em>${escapeHTML(item.detail)}</em></span>
+      <strong aria-hidden="true">→</strong>
+    </button>`).join('') || '<div class="attention-empty"><span>✓</span><b>Operação em dia</b><small>Nenhuma pendência encontrada agora.</small></div>';
+  $$('[data-attention-view]').forEach((button) => { button.onclick = () => show(button.dataset.attentionView); });
 }
 
 async function loadAppointments() {
@@ -525,6 +577,46 @@ async function loadAppointments() {
   if ($('#agenda-barber').value) query += '&barbeiro_id=' + $('#agenda-barber').value;
   const appointments = await api('/agendamentos' + query);
   $('#appointments').innerHTML = appointments.map(appointmentHTML).join('') || '<div class="empty">Agenda livre nesta data.</div>';
+}
+
+function renderClients(query = '') {
+  const normalized = query.trim().toLocaleLowerCase('pt-BR');
+  const filtered = loyaltyClients.filter((client) => {
+    const searchable = `${client.cliente_nome || ''} ${client.cliente_telefone || ''}`.toLocaleLowerCase('pt-BR');
+    return searchable.includes(normalized);
+  });
+  $('#client-grid').innerHTML = filtered.map((client) => {
+    const name = client.cliente_nome || client.cliente_telefone || 'Cliente';
+    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+    const total = Number(client.total_cortes || 0);
+    const progress = total % 10;
+    const remaining = Number(client.cortes_para_premio || 10);
+    return `<article class="client-card">
+      <div class="client-card-head">
+        <span class="client-avatar">${escapeHTML(initials)}</span>
+        <div><h3>${escapeHTML(name)}</h3><p>${escapeHTML(client.cliente_telefone || 'Telefone não informado')}</p></div>
+        <span class="client-visits">${total}<small>visitas</small></span>
+      </div>
+      <div class="client-progress-copy"><span>Fidelidade</span><b>${progress}/10</b></div>
+      <div class="client-progress" role="progressbar" aria-label="Progresso de fidelidade de ${escapeHTML(name)}" aria-valuemin="0" aria-valuemax="10" aria-valuenow="${progress}"><i style="width:${progress * 10}%"></i></div>
+      <footer><span>${remaining === 10 && total > 0 ? 'Prêmio conquistado neste ciclo' : `Faltam ${remaining} corte${remaining === 1 ? '' : 's'} para o prêmio`}</span></footer>
+    </article>`;
+  }).join('') || `<div class="client-empty"><b>${normalized ? 'Nenhum cliente encontrado' : 'Sua base de clientes aparecerá aqui'}</b><span>${normalized ? 'Tente buscar por outro nome ou telefone.' : 'Conclua atendimentos para alimentar o programa de fidelidade.'}</span></div>`;
+}
+
+async function loadClients() {
+  loyaltyClients = await api('/relatorios/fidelidade');
+  const totalVisits = loyaltyClients.reduce((sum, client) => sum + Number(client.total_cortes || 0), 0);
+  const nearReward = loyaltyClients.filter((client) => Number(client.cortes_para_premio) <= 2).length;
+  const topClient = loyaltyClients[0];
+  $('#client-total').textContent = loyaltyClients.length;
+  $('#client-visits').textContent = totalVisits;
+  $('#client-near-reward').textContent = nearReward;
+  $('#client-top').textContent = topClient ? (topClient.cliente_nome || 'Cliente').split(' ')[0] : '—';
+  $('#client-top-detail').textContent = topClient ? `${Number(topClient.total_cortes || 0)} visitas registradas` : 'sem histórico';
+  const search = $('#client-search');
+  search.oninput = () => renderClients(search.value);
+  renderClients(search.value);
 }
 
 function fields(html, title, handler) {

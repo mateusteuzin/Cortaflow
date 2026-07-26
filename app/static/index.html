@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260723-subscriptions">
+  <link rel="stylesheet" href="/styles.css?v=20260726-admin">
 </head>
 <body>
   <section id="login" class="auth-screen">
@@ -105,6 +105,7 @@
         <span class="nav-label">VISÃO GERAL</span>
         <button data-view="dashboard" class="active" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span>Resumo do dia</span></button>
         <button data-view="agenda" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span><span>Agenda</span></button>
+        <button data-view="clientes" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span>Clientes</span></button>
         <span class="nav-label nav-label-spaced">OPERAÇÃO</span>
         <button data-view="barbeiros" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span>Equipe</span></button>
         <button data-view="servicos" type="button"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="m6 3 12 18M18 3 6 21"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/></svg></span><span>Serviços</span></button>
@@ -142,22 +143,44 @@
 
       <section id="dashboard" class="view">
         <div class="hero-card">
-          <div>
+          <div class="hero-card-main">
             <span class="eyebrow">RESUMO DO DIA</span>
             <h2>Olá, <span id="owner-name">gestor</span>.</h2>
             <p>Veja o que está acontecendo na sua barbearia hoje.</p>
+            <div class="hero-mini-stats" aria-label="Destaques da operação">
+              <div><small>PRÓXIMO HORÁRIO</small><b id="hero-next">Agenda livre</b><span id="hero-next-detail">nenhum atendimento próximo</span></div>
+              <div><small>RITMO DO DIA</small><b id="hero-pace">0 realizados</b><span id="hero-pace-detail">acompanhe o movimento em tempo real</span></div>
+            </div>
           </div>
-          <button class="button button-light" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+          <div class="hero-command">
+            <span><i></i> Central operacional</span>
+            <div class="hero-card-actions">
+              <button class="button button-light" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+              <button class="button button-quiet" data-go="agenda" type="button">Abrir agenda <span>→</span></button>
+            </div>
+          </div>
         </div>
         <div class="metrics">
-          <article class="metric-card"><span>FATURAMENTO HOJE</span><strong id="revenue">R$ 0,00</strong><small>serviços realizados</small></article>
-          <article class="metric-card"><span>ATENDIMENTOS</span><strong id="cuts">0</strong><small>concluídos hoje</small></article>
-          <article class="metric-card"><span>PRÓXIMOS HORÁRIOS</span><strong id="upcoming-count">0</strong><small>na agenda de hoje</small></article>
-          <article class="metric-card"><span>EQUIPE ATIVA</span><strong id="team-count">0</strong><small>profissionais</small></article>
+          <article class="metric-card metric-revenue"><div class="metric-head"><span>FATURAMENTO HOJE</span><i>R$</i></div><strong id="revenue">R$ 0,00</strong><small>serviços realizados</small></article>
+          <article class="metric-card metric-cuts"><div class="metric-head"><span>ATENDIMENTOS</span><i>✓</i></div><strong id="cuts">0</strong><small>concluídos hoje</small></article>
+          <article class="metric-card metric-upcoming"><div class="metric-head"><span>PRÓXIMOS HORÁRIOS</span><i>↗</i></div><strong id="upcoming-count">0</strong><small>na agenda de hoje</small></article>
+          <article class="metric-card metric-team"><div class="metric-head"><span>EQUIPE ATIVA</span><i>●</i></div><strong id="team-count">0</strong><small>profissionais disponíveis</small></article>
         </div>
-        <div class="panel">
-          <div class="panel-head"><div><span class="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button class="text-link" data-go="agenda" type="button">Ver agenda completa <span>→</span></button></div>
-          <div id="upcoming" class="appointment-list"></div>
+        <div class="dashboard-grid">
+          <div class="panel dashboard-agenda-panel">
+            <div class="panel-head"><div><span class="eyebrow">AGENDA</span><h2>Próximos atendimentos</h2></div><button class="text-link" data-go="agenda" type="button">Ver agenda completa <span>→</span></button></div>
+            <div id="upcoming" class="appointment-list"></div>
+          </div>
+          <aside class="attention-panel" aria-labelledby="attention-title">
+            <div class="attention-head"><div><span class="eyebrow">CENTRAL OPERACIONAL</span><h2 id="attention-title">Precisa de atenção</h2><p>Prioridades para manter o dia rodando.</p></div><span id="attention-count" class="attention-count">0</span></div>
+            <div id="attention-list" class="attention-list"></div>
+            <div class="quick-actions">
+              <span>ATALHOS DE GESTÃO</span>
+              <button data-go="clientes" type="button"><span>Clientes e fidelidade</span><b>→</b></button>
+              <button data-go="produtos" type="button"><span>Conferir estoque</span><b>→</b></button>
+              <button data-go="relatorios" type="button"><span>Ver desempenho</span><b>→</b></button>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -165,6 +188,20 @@
         <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button></div>
         <div class="toolbar"><label for="agenda-date">Dia<input id="agenda-date" type="date"></label><label for="agenda-barber">Profissional<select id="agenda-barber"><option value="">Todos os barbeiros</option></select></label></div>
         <div class="panel"><div id="appointments" class="appointment-list"></div></div>
+      </section>
+
+      <section id="clientes" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">RELACIONAMENTO</span><h2>Clientes</h2><p>Acompanhe frequência, fidelidade e oportunidades de retorno.</p></div></div>
+        <div class="metrics client-metrics">
+          <article class="metric-card"><span>CLIENTES CADASTRADOS</span><strong id="client-total">0</strong><small>com histórico de fidelidade</small></article>
+          <article class="metric-card"><span>VISITAS REGISTRADAS</span><strong id="client-visits">0</strong><small>cortes acumulados</small></article>
+          <article class="metric-card"><span>PERTO DO PRÊMIO</span><strong id="client-near-reward">0</strong><small>faltam até 2 cortes</small></article>
+          <article class="metric-card"><span>CLIENTE MAIS FREQUENTE</span><strong id="client-top">—</strong><small id="client-top-detail">sem histórico</small></article>
+        </div>
+        <div class="panel client-panel">
+          <div class="client-panel-head"><div><span class="eyebrow">BASE DE CLIENTES</span><h2>Fidelidade</h2></div><label class="client-search">Buscar cliente<input id="client-search" type="search" placeholder="Nome ou telefone" autocomplete="off"></label></div>
+          <div id="client-grid" class="client-grid"></div>
+        </div>
       </section>
 
       <section id="barbeiros" class="view hidden"><div class="section-heading"><div><span class="eyebrow">SUA EQUIPE</span><h2>Profissionais</h2><p>Tenha os contatos e a comissão sempre à mão.</p></div><button class="button button-primary" type="button" onclick="openBarber()">+ Adicionar barbeiro</button></div><div id="barber-grid" class="card-grid"></div></section>
@@ -250,6 +287,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button type="button" class="icon-button modal-close" onclick="document.querySelector('#modal').close()" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260723-plan-first"></script>
+  <script src="/app.js?v=20260726-admin"></script>
 </body>
 </html>
