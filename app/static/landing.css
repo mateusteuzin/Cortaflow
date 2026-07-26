@@ -206,6 +206,33 @@ a { color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
 
+/* Direção de marca: menos efeito, mais produto. */
+.hero-bg { opacity: .46; filter: saturate(.28) contrast(1.04); }
+.hero::before { background: linear-gradient(90deg, transparent 0 49.8%, rgba(222,185,96,.16) 50%, transparent 50.2%); }
+.visual-glow { display: none; }
+.real-panel-frame { border-radius: 0; box-shadow: 16px 24px 62px rgba(0,0,0,.42); }
+.hero-copy h1 { max-width: 590px; font-weight: 650; letter-spacing: -.045em; }
+.hero-copy h1 em { font-weight: 500; }
+.btn-gold { background: #c69c43; box-shadow: none; }
+.btn-gold:hover { background: #d5aa52; box-shadow: none; }
+.btn-ghost { border-color: rgba(235,224,198,.3); background: transparent; }
+.trust-strip { background: #0b0e0b; }
+.trust-strip span { padding-inline: 24px; }
+.transform-grid article,
+.feature-card.product-card,
+.product-shot { border-radius: 0; }
+.transform-grid article { background: #f7f4ed; box-shadow: inset 0 1px 0 rgba(112,96,60,.16), 0 12px 28px rgba(57,47,29,.05); }
+.transform-grid article::after { display: none; }
+.transform-grid article:hover { transform: none; box-shadow: inset 0 0 0 1px rgba(160,119,39,.48), 0 12px 28px rgba(57,47,29,.08); }
+.feature-card.product-card { background: #121611; box-shadow: inset 0 1px 0 rgba(236,218,172,.13), 0 18px 42px rgba(0,0,0,.18); }
+.feature-card.product-card:hover { transform: none; box-shadow: inset 0 0 0 1px rgba(215,177,92,.38), 0 18px 42px rgba(0,0,0,.22); }
+.feature-card.product-card::before { display: none; }
+.proof-grid article { box-shadow: none; }
+.security-list article { border-radius: 0; }
+.security-list article > i { border-radius: 0; }
+.final-cta { background: #c69c43; }
+.final-cta .btn-gold { border-color: #171a15; background: #171a15; color: #fff; }
+
 /* Editorial hero — barbearia contemporânea */
 .site-header {
   min-height: 72px;
@@ -630,3 +657,26 @@ a { color: inherit; }
   .feature-copy { padding: 30px 24px 23px; }
   .product-shot { margin: 0 12px 12px; }
 }
+
+/* Acabamento final: assinatura visual sem excesso de efeitos. */
+.hero-bg { opacity: .46; filter: saturate(.28) contrast(1.04); }
+.visual-glow { display: none; }
+.real-panel-frame { border-radius: 0; box-shadow: 16px 24px 62px rgba(0,0,0,.42); }
+.hero-copy h1 { max-width: 590px; font-weight: 650; letter-spacing: -.045em; }
+.hero-copy h1 em { font-weight: 500; }
+.btn-gold { background: #c69c43; box-shadow: none; }
+.btn-gold:hover { background: #d5aa52; box-shadow: none; }
+.btn-ghost { border-color: rgba(235,224,198,.3); background: transparent; }
+.transform-grid article,
+.feature-card.product-card,
+.product-shot { border-radius: 0; }
+.transform-grid article { background: #f7f4ed; box-shadow: inset 0 1px 0 rgba(112,96,60,.16), 0 12px 28px rgba(57,47,29,.05); }
+.transform-grid article::after { display: none; }
+.transform-grid article:hover { transform: none; box-shadow: inset 0 0 0 1px rgba(160,119,39,.48), 0 12px 28px rgba(57,47,29,.08); }
+.feature-card.product-card { background: #121611; box-shadow: inset 0 1px 0 rgba(236,218,172,.13), 0 18px 42px rgba(0,0,0,.18); }
+.feature-card.product-card:hover { transform: none; box-shadow: inset 0 0 0 1px rgba(215,177,92,.38), 0 18px 42px rgba(0,0,0,.22); }
+.feature-card.product-card::before { display: none; }
+.security-list article { border-radius: 0; }
+.security-list i { border-radius: 0; background: rgba(213,167,68,.05); }
+.final-cta { background: #c69c43; }
+.final-cta .btn-gold { border-color: #171a15; background: #171a15; color: #fff; }
