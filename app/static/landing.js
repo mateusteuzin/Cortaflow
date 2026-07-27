@@ -1,11 +1,11 @@
-const $ = (selector) => document.querySelector(selector);
+﻿const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 let toastTimer;
 let pendingVerificationEmail = '';
 const planLabels = {
-  essencial: 'Essencial — R$ 29,90/mês',
-  profissional: 'Profissional — R$ 44,90/mês',
-  premium: 'Premium — R$ 64,90/mês'
+  essencial: 'Essencial â€” R$ 29,90/mÃªs',
+  profissional: 'Profissional â€” R$ 44,90/mÃªs',
+  premium: 'Premium â€” R$ 64,90/mÃªs'
 };
 
 function toast(message) {
@@ -31,7 +31,7 @@ async function api(path, options = {}) {
     const detail = Array.isArray(data?.detail)
       ? String(data.detail[0]?.msg || '').replace(/^Value error,\s*/i, '')
       : data?.detail;
-    throw new Error(detail || 'Não foi possível concluir agora.');
+    throw new Error(detail || 'NÃ£o foi possÃ­vel concluir agora.');
   }
   return data;
 }
@@ -68,10 +68,10 @@ function showVerification(email, sent = true) {
   $('#verification-email').textContent = email;
   const status = $('#email-sent-status');
   status.classList.toggle('failed', !sent);
-  status.querySelector('span').textContent = sent ? '✓' : '!';
-  status.querySelector('b').textContent = sent ? 'E-mail enviado' : 'Não conseguimos enviar agora';
+  status.querySelector('span').textContent = sent ? 'OK' : '!';
+  status.querySelector('b').textContent = sent ? 'E-mail de confirmação enviado' : 'Não conseguimos enviar agora';
   status.querySelector('small').textContent = sent
-    ? 'O link é válido por 24 horas'
+    ? 'Abra o Gmail informado para liberar o pagamento'
     : 'Use o botão abaixo para tentar novamente';
   showAuth('verification');
 }
@@ -80,7 +80,7 @@ function showPaymentNext(plan, verified = false) {
   const summary = planLabels[plan];
   if (!summary) return;
   $('#login-payment-next').classList.remove('hidden');
-  $('#login-payment-next > span').textContent = verified ? '✓ E-mail confirmado' : '✓ Conta localizada';
+  $('#login-payment-next > span').textContent = verified ? 'âœ“ E-mail confirmado' : 'âœ“ Conta localizada';
   $('#login-plan-summary').textContent = summary;
   $('#login-form .form-submit').textContent = 'Entrar e ir para o pagamento';
 }
@@ -91,7 +91,7 @@ function bindSiteNavigation() {
     document.body.classList.remove('menu-open');
     $('#menu-toggle').setAttribute('aria-expanded', 'false');
     $('#menu-toggle').setAttribute('aria-label', 'Abrir menu');
-    $('#menu-toggle').textContent = '☰';
+    $('#menu-toggle').textContent = 'â˜°';
   };
   window.addEventListener('scroll', () => $('.site-header').classList.toggle('scrolled', scrollY > 24), { passive: true });
   $('#menu-toggle').onclick = () => {
@@ -99,7 +99,7 @@ function bindSiteNavigation() {
     document.body.classList.toggle('menu-open', open);
     $('#menu-toggle').setAttribute('aria-expanded', String(open));
     $('#menu-toggle').setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
-    $('#menu-toggle').textContent = open ? '×' : '☰';
+    $('#menu-toggle').textContent = open ? 'Ã—' : 'â˜°';
   };
   $$('#site-nav a').forEach((link) => {
     link.onclick = closeMenu;
@@ -127,7 +127,7 @@ async function bindAuth() {
   const verificationCode = params.get('code');
   const checkout = params.get('checkout');
   if (checkout === 'sucesso') toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
-  if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobrança foi feita.');
+  if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobranÃ§a foi feita.');
   if (confirmation) {
     showAuth('login');
     if (confirmedEmail) $('#email').value = confirmedEmail;
@@ -139,7 +139,7 @@ async function bindAuth() {
     notice.classList.remove('hidden');
     notice.textContent = confirmation === 'sucesso'
       ? 'E-mail confirmado com sucesso. Digite sua senha para seguir ao pagamento.'
-      : 'Este link é inválido ou expirou. Solicite um novo link.';
+      : 'Este link Ã© invÃ¡lido ou expirou. Solicite um novo link.';
     if (confirmation === 'sucesso') {
       $('#auth-title').textContent = 'E-mail confirmado!';
       $('#login-description').textContent = verificationCode
@@ -182,13 +182,13 @@ async function bindAuth() {
     input.type = input.type === 'password' ? 'text' : 'password';
     $('#toggle-password').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
-  $('#forgot-password').onclick = () => toast('A recuperação por e-mail será ativada com o Resend.');
+  $('#forgot-password').onclick = () => toast('A recuperaÃ§Ã£o por e-mail serÃ¡ ativada com o Resend.');
   $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
   $$('[data-google-login]').forEach((button) => {
     button.onclick = () => toast(button.dataset.googleMode === 'register'
-      ? 'Cadastro com Google será conectado em breve.'
-      : 'Login com Google será conectado em breve.');
+      ? 'Cadastro com Google serÃ¡ conectado em breve.'
+      : 'Login com Google serÃ¡ conectado em breve.');
   });
   $('#verification-login').onclick = () => {
     $('#email').value = pendingVerificationEmail;
@@ -230,22 +230,23 @@ async function bindAuth() {
 
   $('#register-form').onsubmit = async (event) => {
     event.preventDefault();
-    if (!event.currentTarget.checkValidity()) return event.currentTarget.reportValidity();
-    const button = event.currentTarget.querySelector('[type="submit"]');
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const form = event.currentTarget;
+    if (!form.checkValidity()) return form.reportValidity();
+    const button = form.querySelector('[type="submit"]');
+    const data = Object.fromEntries(new FormData(form));
     localStorage.setItem('selectedPlan', data.plano);
     button.disabled = true;
     $('#register-error').textContent = '';
     try {
       const result = await api('/auth/register', { method: 'POST', body: JSON.stringify(data) });
-      event.currentTarget.reset();
+      form.reset();
       showVerification(data.email, result.email_sent);
     } catch (error) {
-      if (/já possui uma conta confirmada/i.test(error.message)) {
+      if (/jÃ¡ possui uma conta confirmada/i.test(error.message)) {
         $('#email').value = data.email;
-        $('#auth-title').textContent = 'Sua conta já existe.';
+        $('#auth-title').textContent = 'Sua conta jÃ¡ existe.';
         $('#login-description').textContent = 'Entre com sua senha para continuar com o plano escolhido.';
-        $('#verification-notice').textContent = 'Não é necessário criar outra conta. Seu e-mail já está confirmado.';
+        $('#verification-notice').textContent = 'NÃ£o Ã© necessÃ¡rio criar outra conta. Seu e-mail jÃ¡ estÃ¡ confirmado.';
         $('#verification-notice').classList.remove('hidden');
         showPaymentNext(data.plano);
         showAuth('login');
@@ -266,8 +267,8 @@ async function bindAuth() {
       if (!$('#verification-step').classList.contains('hidden')) {
         const status = $('#email-sent-status');
         status.classList.remove('failed');
-        status.querySelector('span').textContent = '✓';
-        status.querySelector('b').textContent = 'Solicitação processada';
+        status.querySelector('span').textContent = 'OK';
+        status.querySelector('b').textContent = 'Novo e-mail solicitado';
         status.querySelector('small').textContent = 'Confira sua caixa de entrada e a pasta de spam';
       }
     } catch (error) {
@@ -314,7 +315,7 @@ async function startCheckout(plan, button = null) {
     });
     location.href = result.url;
   } catch (error) {
-    if (/Autenticação necessária|Token inválido|expirado/i.test(error.message)) {
+    if (/AutenticaÃ§Ã£o necessÃ¡ria|Token invÃ¡lido|expirado/i.test(error.message)) {
       localStorage.removeItem('token');
       showAuth('login');
       toast('Entre na sua conta para continuar a assinatura.');
