@@ -644,10 +644,18 @@ def _stripe_line_item(plan: str):
     plan_data = STRIPE_PLANS.get(plan)
     if not plan_data:
         raise HTTPException(422, "Plano inválido.")
-    price_id = os.getenv(plan_data["price_env"], "").strip()
-    if not price_id.startswith("price_") or len(price_id) < 12 or "..." in price_id:
-        raise HTTPException(503, f"Preço do plano {plan} não configurado na Stripe.")
-    return {"price": price_id, "quantity": 1}
+    return {
+        "price_data": {
+            "currency": "brl",
+            "unit_amount": plan_data["amount"],
+            "recurring": {"interval": "month"},
+            "product_data": {
+                "name": plan_data["name"],
+                "metadata": {"plan": plan},
+            },
+        },
+        "quantity": 1,
+    }
 
 def _create_pending_checkout(pending, request: Request):
     stripe = _stripe_client()

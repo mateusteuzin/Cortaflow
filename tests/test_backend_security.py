@@ -231,11 +231,12 @@ class BackendSecurityTests(unittest.TestCase):
         self.assertTrue(result["duplicate"])
         process.assert_not_called()
 
-    @patch.dict("os.environ", {"STRIPE_PRICE_ESSENCIAL": "price_..."})
-    def test_placeholder_stripe_price_is_rejected(self):
-        with self.assertRaises(HTTPException) as caught:
-            main._stripe_line_item("essencial")
-        self.assertEqual(caught.exception.status_code, 503)
+    def test_stripe_line_item_uses_server_side_plan_price(self):
+        item = main._stripe_line_item("essencial")
+        self.assertEqual(item["price_data"]["currency"], "brl")
+        self.assertEqual(item["price_data"]["unit_amount"], 2990)
+        self.assertEqual(item["price_data"]["recurring"], {"interval": "month"})
+        self.assertEqual(item["price_data"]["product_data"]["metadata"], {"plan": "essencial"})
 
 
 if __name__ == "__main__":
