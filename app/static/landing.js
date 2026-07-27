@@ -88,13 +88,17 @@ function showPaymentNext(plan, verified = false) {
 function bindSiteNavigation() {
   const closeMenu = () => {
     $('#site-nav').classList.remove('open');
+    document.body.classList.remove('menu-open');
     $('#menu-toggle').setAttribute('aria-expanded', 'false');
+    $('#menu-toggle').setAttribute('aria-label', 'Abrir menu');
     $('#menu-toggle').textContent = '☰';
   };
   window.addEventListener('scroll', () => $('.site-header').classList.toggle('scrolled', scrollY > 24), { passive: true });
   $('#menu-toggle').onclick = () => {
     const open = $('#site-nav').classList.toggle('open');
+    document.body.classList.toggle('menu-open', open);
     $('#menu-toggle').setAttribute('aria-expanded', String(open));
+    $('#menu-toggle').setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
     $('#menu-toggle').textContent = open ? '×' : '☰';
   };
   $$('#site-nav a').forEach((link) => {
@@ -108,7 +112,11 @@ function bindSiteNavigation() {
   });
   $('#modal-close').onclick = closeAuth;
   $('#modal-backdrop').onclick = closeAuth;
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeAuth(); });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    closeAuth();
+    closeMenu();
+  });
 }
 
 async function bindAuth() {
