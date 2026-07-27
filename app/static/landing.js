@@ -184,6 +184,11 @@ async function bindAuth() {
   };
   $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
+  $$('[data-google-login]').forEach((button) => {
+    button.onclick = () => toast(button.dataset.googleMode === 'register'
+      ? 'Cadastro com Google será conectado em breve.'
+      : 'Login com Google será conectado em breve.');
+  });
   $('#verification-login').onclick = () => {
     $('#email').value = pendingVerificationEmail;
     showAuth('login');
