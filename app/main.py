@@ -132,9 +132,9 @@ async def security_and_rate_limit(request: Request, call_next):
 def health(): return {"status":"ok"}
 
 STRIPE_PLANS = {
-    "essencial": {"name": "CortaFlow Essencial", "amount": 2990},
-    "profissional": {"name": "CortaFlow Profissional", "amount": 4490},
-    "premium": {"name": "CortaFlow Premium", "amount": 6490},
+    "essencial": {"name": "CortaFlow Essencial", "amount": 2990, "price_env": "STRIPE_PRICE_ESSENCIAL"},
+    "profissional": {"name": "CortaFlow Profissional", "amount": 4490, "price_env": "STRIPE_PRICE_PROFISSIONAL"},
+    "premium": {"name": "CortaFlow Premium", "amount": 6490, "price_env": "STRIPE_PRICE_PREMIUM"},
 }
 
 @app.post("/api/billing/checkout")
@@ -168,19 +168,21 @@ def create_checkout(data: dict, request: Request, user=Depends(authenticated_use
             customer_id = customer.id
             one("UPDATE barbearias SET stripe_customer_id=%s WHERE id=%s RETURNING id",
                 (customer_id, shop["id"]))
+        price_id = os.getenv(plan_data["price_env"], "").strip()
+        line_item = {"price": price_id, "quantity": 1} if price_id else {
+            "price_data": {
+                "currency": "brl",
+                "unit_amount": plan_data["amount"],
+                "recurring": {"interval": "month"},
+                "product_data": {"name": plan_data["name"]},
+            },
+            "quantity": 1,
+        }
         session = stripe.checkout.Session.create(
             mode="subscription",
             customer=customer_id,
             client_reference_id=str(user["id"]),
-            line_items=[{
-                "price_data": {
-                    "currency": "brl",
-                    "unit_amount": plan_data["amount"],
-                    "recurring": {"interval": "month"},
-                    "product_data": {"name": plan_data["name"]},
-                },
-                "quantity": 1,
-            }],
+            line_items=[line_item],
             success_url=f"{site_url}/painel?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{site_url}/painel?checkout=cancelado",
             allow_promotion_codes=True,
