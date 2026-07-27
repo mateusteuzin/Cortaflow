@@ -344,6 +344,11 @@ def _configuration_status() -> dict:
             "client_secret_configured": bool(google_client_secret),
             "redirect_uri_configured": bool(google_redirect_uri),
             "redirect_uri_valid": google_redirect_valid,
+            "redirect_scheme_valid": google_redirect.scheme == "https",
+            "redirect_host_present": bool(google_redirect.netloc),
+            "redirect_path_valid": google_redirect.path == "/api/auth/google/callback",
+            "redirect_query_empty": not google_redirect.query,
+            "redirect_fragment_empty": not google_redirect.fragment,
             "public_base_matches": google_public_base_matches,
         },
     }
