@@ -163,6 +163,7 @@ function bindAuth() {
     $('#toggle-password').textContent = showing ? 'Mostrar' : 'Ocultar';
     $('#toggle-password').setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
   };
+  $('#forgot-password').onclick = () => toast('A recuperação por e-mail será ativada com o Resend.');
   $('#show-register').onclick = (event) => { event.preventDefault(); location.href = '/#planos'; };
   $('#show-login').onclick = (event) => { event.preventDefault(); $('#register-form').classList.add('hidden'); $('#login-form').classList.remove('hidden'); };
   $$('[data-google-login]').forEach((button) => {
