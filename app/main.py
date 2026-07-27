@@ -319,7 +319,6 @@ def _configuration_status() -> dict:
             "configured": (
                 os.getenv("RESEND_API_KEY", "").strip().startswith("re_")
                 and _env_configured("EMAIL_FROM")
-                and _env_configured("PUBLIC_BASE_URL")
             ),
         },
         "google_oauth": {
