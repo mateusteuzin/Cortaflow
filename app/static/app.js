@@ -165,6 +165,11 @@ function bindAuth() {
   };
   $('#show-register').onclick = (event) => { event.preventDefault(); location.href = '/#planos'; };
   $('#show-login').onclick = (event) => { event.preventDefault(); $('#register-form').classList.add('hidden'); $('#login-form').classList.remove('hidden'); };
+  $$('[data-google-login]').forEach((button) => {
+    button.onclick = () => toast(button.dataset.googleMode === 'register'
+      ? 'Cadastro com Google será conectado em breve.'
+      : 'Login com Google será conectado em breve.');
+  });
   $('#logout').onclick = logout;
   $('#login-form').onsubmit = async (event) => {
     event.preventDefault();
@@ -775,7 +780,7 @@ function completeReportPoints(report, month, year) {
   });
 }
 
-function renderAttendanceChart(points) {
+function renderAttendanceChartLegacy(points) {
   const width = 760, height = 270, left = 42, right = 18, top = 22, bottom = 38;
   const chartWidth = width - left - right, chartHeight = height - top - bottom;
   const maximum = Math.max(1, ...points.map((point) => point.value));
@@ -812,6 +817,37 @@ async function loadReports() {
   renderAttendanceChart(completeReportPoints(report, month, year));
   $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
   $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
+}
+
+// Bar chart: one column per period makes daily volume easier to compare than a smoothed line.
+function renderAttendanceChart(points) {
+  const width = 760, height = 270, left = 42, right = 18, top = 22, bottom = 42;
+  const chartWidth = width - left - right, chartHeight = height - top - bottom;
+  const maximum = Math.max(1, ...points.map((point) => point.value));
+  const scaleMax = Math.max(4, Math.ceil(maximum / 4) * 4);
+  const slot = chartWidth / Math.max(points.length, 1);
+  const barWidth = Math.max(5, Math.min(28, slot * .62));
+  const x = (index) => left + slot * index + slot / 2;
+  const y = (value) => top + chartHeight - (value / scaleMax * chartHeight);
+  const labelStep = Math.max(1, Math.ceil(points.length / 9));
+  const grid = Array.from({ length: 5 }, (_, index) => {
+    const value = Math.round(scaleMax * (4 - index) / 4);
+    const py = top + chartHeight * index / 4;
+    return `<line x1="${left}" y1="${py}" x2="${width - right}" y2="${py}"/><text x="${left - 9}" y="${py + 3}">${value}</text>`;
+  }).join('');
+  const labels = points.map((point, index) => (index % labelStep === 0 || index === points.length - 1)
+    ? `<text x="${x(index)}" y="${height - 14}" text-anchor="middle">${escapeHTML(point.label)}</text>` : '').join('');
+  const bestValue = Math.max(...points.map((point) => point.value), 0);
+  const bars = points.map((point, index) => {
+    const barHeight = point.value ? Math.max(3, point.value / scaleMax * chartHeight) : 0;
+    const barX = x(index) - barWidth / 2;
+    const barY = top + chartHeight - barHeight;
+    const best = point.value === bestValue && bestValue > 0 ? ' is-best' : '';
+    const valueLabel = point.value > 0 && (point.value === bestValue || points.length <= 12)
+      ? `<text class="chart-value" x="${x(index)}" y="${barY - 7}" text-anchor="middle">${point.value}</text>` : '';
+    return `<rect class="chart-bar${best}" x="${barX.toFixed(1)}" y="${barY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="2"><title>${escapeHTML(point.label)}: ${point.value} atendimento${point.value === 1 ? '' : 's'}</title></rect>${valueLabel}`;
+  }).join('');
+  $('#attendance-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><g class="chart-bars">${bars}</g></svg>`;
 }
 
 bindAuth();
