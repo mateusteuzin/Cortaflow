@@ -340,41 +340,115 @@ def send_subscription_confirmation(
 def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
     candidate = (logo_url or "").strip()
     parsed = urlparse(candidate)
-    has_public_logo = parsed.scheme == "https" and bool(parsed.netloc)
-    image_url = escape(candidate if has_public_logo else BRAND_ICON_URL, quote=True)
-    image_alt = escape(f"Logo da {title}" if has_public_logo else "CortaFlow", quote=True)
-    return f"""<div style="background:#151511;color:#fff;padding:24px 28px">
-      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="vertical-align:middle;padding-right:16px">
-          <div style="width:58px;height:58px;border-radius:50%;background:#f3e2b4;border:2px solid #d5a93f;text-align:center">
-            <img src="{image_url}" width="58" height="58" alt="{image_alt}" style="display:block;box-sizing:border-box;width:58px;height:58px;padding:3px;border-radius:50%;object-fit:contain;background:#fff">
-          </div>
-        </td>
-        <td style="vertical-align:middle"><small style="color:#d5a93f;letter-spacing:2px">{escape(label)}</small>
-          <h1 style="margin:7px 0 0;font-size:26px;line-height:1.1">{escape(title)}</h1>
-          <span style="display:block;margin-top:6px;color:#aaa;font-size:12px">Agendamento por CortaFlow</span>
-        </td>
-      </tr></table>
-    </div>"""
+    has_remote_logo = parsed.scheme == "https" and bool(parsed.netloc)
+    has_local_logo = candidate.startswith("/assets/")
+    image_url = candidate if has_remote_logo else _public_url(candidate) if has_local_logo else BRAND_ICON_URL
+    image_alt = f"Logo da {title}" if has_remote_logo or has_local_logo else "CortaFlow"
+    return f"""
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#151713;">
+        <tr>
+          <td class="booking-header" style="padding:28px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="76" style="width:76px;vertical-align:middle;">
+                  <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td align="center" valign="middle" style="width:62px;height:62px;border:2px solid #d5a93f;border-radius:50%;background:#ffffff;">
+                        <img src="{escape(image_url, quote=True)}" width="54" height="54" alt="{escape(image_alt, quote=True)}" style="display:block;width:54px;max-width:54px;height:54px;margin:2px auto;border-radius:50%;object-fit:contain;">
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0 0 7px;color:#d8ae54;font-size:10px;line-height:1.3;font-weight:700;text-transform:uppercase;">{escape(label)}</p>
+                  <h1 class="booking-shop-name" style="margin:0;color:#ffffff;font-size:25px;line-height:1.15;font-weight:700;">{escape(title)}</h1>
+                  <p style="margin:7px 0 0;color:#aeb2aa;font-size:12px;line-height:1.4;">Agendamento realizado pelo CortaFlow</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>"""
 
 
 def _format_date(value: datetime) -> tuple[str, str]:
-    weekdays = ("segunda-feira", "terÃ§a-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sÃ¡bado", "domingo")
-    months = ("janeiro", "fevereiro", "marÃ§o", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+    weekdays = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo")
+    months = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
     return f"{weekdays[value.weekday()]}, {value.day} de {months[value.month - 1]}", value.strftime("%H:%M")
 
 
 def _email_html(item: dict) -> str:
     day, hour = _format_date(item["data_hora"])
-    shop = item["barbearia_nome"]
-    return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
-    <div style="max-width:600px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
-      {_brand_header('RESERVA CONFIRMADA', shop, item.get('barbearia_logo_url'))}
-      <div style="padding:30px"><p>OlÃ¡, <strong>{escape(item['cliente_nome'])}</strong>.</p><p>Seu horÃ¡rio foi reservado com sucesso.</p>
-      <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;margin:24px 0;line-height:1.8">
-        <strong>{escape(item['servico'])}</strong><br>{escape(day)} Ã s {hour}<br>Profissional: {escape(item['barbeiro_nome'])}<br>Valor: R$ {item['preco']:.2f}<br>Reserva: #{item['id']:04d}
-      </div><p style="font-size:13px;color:#6d6b64">Caso precise alterar o horÃ¡rio, entre em contato diretamente com a barbearia.</p></div>
-    </div></body></html>"""
+    shop = str(item["barbearia_nome"])
+    amount = f"{float(item['preco']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Reserva confirmada na {escape(shop)}</title>
+  <style>
+    body,table,td,a {{ -webkit-text-size-adjust:100%;-ms-text-size-adjust:100%; }}
+    table,td {{ mso-table-lspace:0pt;mso-table-rspace:0pt; }}
+    table {{ border-collapse:collapse!important; }}
+    img {{ -ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none; }}
+    @media only screen and (max-width:620px) {{
+      .booking-wrap {{ padding:0!important; }}
+      .booking-card {{ width:100%!important;border-left:0!important;border-right:0!important; }}
+      .booking-header {{ padding:24px 20px!important; }}
+      .booking-content {{ padding:28px 20px 12px!important; }}
+      .booking-footer {{ padding:20px 20px 28px!important; }}
+      .booking-shop-name {{ font-size:22px!important; }}
+      .detail-label {{ width:105px!important; }}
+    }}
+  </style>
+</head>
+<body style="margin:0;padding:0;width:100%;background:#f2f0ea;color:#171915;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
+    Sua reserva na {escape(shop)} está confirmada para {escape(day)}, às {hour}.
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f2f0ea;">
+    <tr>
+      <td class="booking-wrap" align="center" style="padding:32px 12px;">
+        <table role="presentation" class="booking-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #ddd9cf;">
+          <tr><td>{_brand_header('Reserva confirmada', shop, item.get('barbearia_logo_url'))}</td></tr>
+          <tr>
+            <td class="booking-content" style="padding:34px 32px 12px;">
+              <p style="margin:0 0 12px;color:#171915;font-size:16px;line-height:1.6;">Olá, <strong>{escape(str(item['cliente_nome']))}</strong>.</p>
+              <p style="margin:0;color:#565a52;font-size:15px;line-height:1.7;">Seu horário foi reservado com sucesso. Confira os detalhes:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#faf8f3;border:1px solid #e5dfd1;border-left:4px solid #d5a93f;">
+                <tr>
+                  <td style="padding:20px 18px;">
+                    <p style="margin:0 0 16px;color:#171915;font-size:18px;line-height:1.35;font-weight:700;">{escape(str(item['servico']))}</p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Data</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{escape(day)}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Horário</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{hour}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Profissional</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{escape(str(item['barbeiro_nome']))}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Valor</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">R$ {amount}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Reserva</td><td style="padding:5px 0;color:#8b6418;font-size:13px;font-weight:700;">#{int(item['id']):04d}</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f4;border:1px solid #e3e4de;">
+                <tr><td style="padding:15px 17px;color:#60645c;font-size:13px;line-height:1.6;">Precisa alterar o horário? Entre em contato diretamente com a barbearia antes do atendimento.</td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="booking-footer" style="padding:22px 32px 32px;color:#858980;font-size:11px;line-height:1.6;">
+              <p style="margin:0 0 6px;">Mensagem automática enviada pela {escape(shop)}.</p>
+              <p style="margin:0;">Agendamentos e gestão por <strong style="color:#725316;">CortaFlow</strong>.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
 
 
 def _owner_whatsapp_url(item: dict) -> str | None:

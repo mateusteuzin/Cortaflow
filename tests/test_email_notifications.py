@@ -111,7 +111,7 @@ class OwnerEmailNotificationTests(unittest.TestCase):
     def test_customer_email_contains_circular_brand_logo(self):
         html = _email_html(notification_item())
         self.assertIn("https://cdn.example.com/blackbarber.png", html)
-        self.assertIn("Agendamento por CortaFlow", html)
+        self.assertIn("Agendamento realizado pelo CortaFlow", html)
 
     def test_uses_cortaflow_logo_when_shop_has_no_logo(self):
         item = notification_item()
