@@ -15,6 +15,14 @@ CREATE TABLE IF NOT EXISTS barbearias (
  subscription_current_period_end TIMESTAMPTZ,
  subscription_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
  criado_em TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS cadastros_pendentes (
+ id SERIAL PRIMARY KEY, email VARCHAR(160) UNIQUE NOT NULL, senha_hash TEXT NOT NULL,
+ nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), barbearia_nome VARCHAR(160) NOT NULL,
+ plano VARCHAR(24) NOT NULL, email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
+ email_verification_token_hash VARCHAR(64), email_verification_expires_at TIMESTAMPTZ,
+ checkout_token_hash VARCHAR(64), checkout_token_expires_at TIMESTAMPTZ,
+ stripe_checkout_session_id VARCHAR(160), usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+ concluido_em TIMESTAMPTZ, criado_em TIMESTAMPTZ DEFAULT NOW(), atualizado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbeiros (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), comissao_percentual NUMERIC(5,2) DEFAULT 40,

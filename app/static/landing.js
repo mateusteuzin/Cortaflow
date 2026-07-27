@@ -132,9 +132,27 @@ async function bindAuth() {
   const confirmedPlan = params.get('plan');
   const verificationCode = params.get('code');
   const checkout = params.get('checkout');
+  const checkoutSessionId = params.get('session_id');
   const resetToken = params.get('reset_password');
   if (resetToken) showAuth('reset');
-  if (checkout === 'sucesso') toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
+  if (checkout === 'sucesso' && checkoutSessionId) {
+    toast('Pagamento confirmado. Preparando seu painel...');
+    try {
+      const result = await api('/auth/concluir-pagamento', {
+        method: 'POST',
+        body: JSON.stringify({ session_id: checkoutSessionId })
+      });
+      localStorage.setItem('token', result.access_token);
+      localStorage.setItem('name', result.nome || 'gestor');
+      location.href = '/painel?checkout=sucesso';
+      return;
+    } catch (error) {
+      showAuth('login');
+      $('#login-error').textContent = error.message;
+    }
+  } else if (checkout === 'sucesso') {
+    toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
+  }
   if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobranÃ§a foi feita.');
   if (confirmation) {
     showAuth('login');
@@ -167,6 +185,10 @@ async function bindAuth() {
         method: 'POST',
         body: JSON.stringify({ code: verificationCode })
       });
+      if (result.checkout_url) {
+        location.href = result.checkout_url;
+        return;
+      }
       localStorage.setItem('token', result.access_token);
       localStorage.setItem('name', result.nome || 'gestor');
       const plan = confirmedPlan || result.subscription_plan;
