@@ -291,6 +291,23 @@ def _google_oauth_settings() -> dict | None:
 
 
 def _configuration_status() -> dict:
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+    google_redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
+    google_redirect = urlparse(google_redirect_uri)
+    google_public_base = urlparse(os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/"))
+    google_redirect_valid = (
+        bool(google_redirect.netloc)
+        and google_redirect.scheme == "https"
+        and google_redirect.path == "/api/auth/google/callback"
+        and not google_redirect.query
+        and not google_redirect.fragment
+    )
+    google_public_base_matches = (
+        not google_public_base.netloc
+        or (google_redirect.scheme, google_redirect.netloc)
+        == (google_public_base.scheme, google_public_base.netloc)
+    )
     webhook_configured = (
         os.getenv("STRIPE_WEBHOOK_SECRET", "").strip().startswith("whsec_")
         and len(os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()) >= 16
@@ -323,6 +340,11 @@ def _configuration_status() -> dict:
         },
         "google_oauth": {
             "configured": _google_oauth_settings() is not None,
+            "client_id_configured": bool(google_client_id),
+            "client_secret_configured": bool(google_client_secret),
+            "redirect_uri_configured": bool(google_redirect_uri),
+            "redirect_uri_valid": google_redirect_valid,
+            "public_base_matches": google_public_base_matches,
         },
     }
 
