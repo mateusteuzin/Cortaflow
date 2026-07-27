@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>CortaFlow</title>
+  <rect width="64" height="64" rx="16" fill="#10130f"/>
+  <circle cx="21" cy="22" r="8" fill="none" stroke="#d5a744" stroke-width="5"/>
+  <circle cx="21" cy="42" r="8" fill="none" stroke="#d5a744" stroke-width="5"/>
+  <path d="M27 27 50 14M27 37 50 50M28 32h25" fill="none" stroke="#f1cd72" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+</svg>
