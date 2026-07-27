@@ -55,6 +55,24 @@ Para executar os testes sem enviar mensagens reais:
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
+## Login com Google
+
+O fluxo OAuth 2.0/OpenID Connect já está implementado. Para ativá-lo:
+
+1. Crie um cliente OAuth do tipo **Aplicativo da Web** no Google Cloud.
+2. Cadastre `https://cortaflow.com.br/api/auth/google/callback` como URI de redirecionamento autorizada.
+3. Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_REDIRECT_URI` na Vercel.
+4. Faça um novo deploy. O botão Google é habilitado automaticamente quando a configuração estiver completa.
+
+O login Google utiliza apenas `openid email profile` e atende contas CortaFlow que já concluíram a assinatura.
+
+## Stripe
+
+Produção exige `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` e os três IDs `STRIPE_PRICE_*`.
+O endpoint `/api/config/status` informa apenas se a integração está pronta, sem revelar credenciais.
+O webhook deve ouvir `checkout.session.completed`, `customer.subscription.updated`,
+`customer.subscription.deleted` e `invoice.payment_failed`.
+
 ## Produção na Vercel
 
 O projeto possui entrada FastAPI para a Vercel, armazenamento persistente de imagens no
