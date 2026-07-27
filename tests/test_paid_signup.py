@@ -1,16 +1,17 @@
 import unittest
-from pathlib import Path
 from unittest.mock import Mock, patch
 
+from pydantic import ValidationError
+
 from app import main
-from app.schemas import Register, VerificationSession
+from app.schemas import CheckoutSessionRequest, Register, VerificationSession
 
 
 def registration():
     return Register(
         nome="Mateus",
         email="dono@gmail.com",
-        senha="segredo123",
+        senha="segredo12345",
         telefone="88999999999",
         barbearia_nome="Barbearia Teste",
         plano="profissional",
@@ -63,11 +64,13 @@ class PaidSignupTests(unittest.TestCase):
         mocked_hash.assert_not_called()
         self.assertTrue(result["existing_pending_account"])
 
-    def test_frontend_finishes_paid_signup_before_opening_panel(self):
-        script = Path("app/static/landing.js").read_text(encoding="utf-8")
-        self.assertIn("/auth/concluir-pagamento", script)
-        self.assertIn("result.checkout_url", script)
-        self.assertIn("location.href = '/painel?checkout=sucesso'", script)
+    def test_paid_signup_accepts_only_stripe_checkout_session_ids(self):
+        self.assertEqual(
+            CheckoutSessionRequest(session_id="cs_test_checkout123").session_id,
+            "cs_test_checkout123",
+        )
+        with self.assertRaises(ValidationError):
+            CheckoutSessionRequest(session_id="sessao-inventada")
 
 
 if __name__ == "__main__":

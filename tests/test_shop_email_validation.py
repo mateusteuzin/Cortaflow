@@ -24,10 +24,9 @@ class ShopEmailValidationTests(unittest.TestCase):
     def test_accepts_empty_email(self):
         self.assertIsNone(ShopUpdate(**shop_data(None)).email_notificacoes)
 
-    def test_rejects_non_google_provider(self):
-        with self.assertRaises(ValidationError) as captured:
-            ShopUpdate(**shop_data("dono@outlook.com"))
-        self.assertIn("Use um e-mail oficial do Gmail", str(captured.exception))
+    def test_accepts_professional_notification_email(self):
+        profile = ShopUpdate(**shop_data("Financeiro@Empresa.com.br"))
+        self.assertEqual(str(profile.email_notificacoes), "financeiro@empresa.com.br")
 
 
 if __name__ == "__main__":

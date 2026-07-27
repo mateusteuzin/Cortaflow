@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
  email_verification_token_hash VARCHAR(64), email_verification_expires_at TIMESTAMPTZ,
  password_reset_token_hash VARCHAR(64), password_reset_expires_at TIMESTAMPTZ,
+ auth_version INTEGER NOT NULL DEFAULT 1,
  criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbearias (
  id SERIAL PRIMARY KEY, usuario_id INTEGER UNIQUE NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -22,7 +23,13 @@ CREATE TABLE IF NOT EXISTS cadastros_pendentes (
  email_verification_token_hash VARCHAR(64), email_verification_expires_at TIMESTAMPTZ,
  checkout_token_hash VARCHAR(64), checkout_token_expires_at TIMESTAMPTZ,
  stripe_checkout_session_id VARCHAR(160), usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+ status VARCHAR(32) NOT NULL DEFAULT 'pending_email', checkout_idempotency_key VARCHAR(64),
  concluido_em TIMESTAMPTZ, criado_em TIMESTAMPTZ DEFAULT NOW(), atualizado_em TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+ event_id VARCHAR(255) PRIMARY KEY, event_type VARCHAR(120) NOT NULL,
+ status VARCHAR(20) NOT NULL DEFAULT 'processing', attempts INTEGER NOT NULL DEFAULT 1,
+ last_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ processed_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbeiros (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), comissao_percentual NUMERIC(5,2) DEFAULT 40,

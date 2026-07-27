@@ -2,6 +2,7 @@ import unittest
 import json
 from datetime import datetime
 from decimal import Decimal
+from urllib.error import URLError
 from unittest.mock import patch
 
 from app.services.email import (
@@ -9,6 +10,7 @@ from app.services.email import (
     _email_html,
     _owner_email_html,
     _owner_whatsapp_url,
+    send_account_verification,
     send_password_reset,
     send_subscription_confirmation,
 )
@@ -36,14 +38,55 @@ class OwnerEmailNotificationTests(unittest.TestCase):
         "PUBLIC_BASE_URL": "https://cortaflow.com.br",
     })
     @patch("app.services.email.urlopen")
+    def test_account_verification_has_text_fallback_and_safe_mobile_html(self, mocked_urlopen):
+        mocked_urlopen.return_value.__enter__.return_value.read.return_value = b'{"id":"email_1"}'
+
+        sent = send_account_verification(
+            "dono@gmail.com",
+            "Mateus <script>alert(1)</script>",
+            "token/com espaço?",
+        )
+
+        self.assertTrue(sent)
+        request = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(payload["subject"], "Confirme seu e-mail | CortaFlow")
+        self.assertEqual(payload["from"], "CortaFlow <contato@cortaflow.com.br>")
+        self.assertEqual(payload["to"], ["dono@gmail.com"])
+        self.assertEqual(payload["headers"]["Auto-Submitted"], "auto-generated")
+        self.assertEqual(payload["headers"]["X-Auto-Response-Suppress"], "All")
+        self.assertTrue(payload["headers"]["X-Entity-Ref-ID"].startswith("cortaflow-"))
+        self.assertIn("token%2Fcom%20espa%C3%A7o%3F", payload["html"])
+        self.assertIn("token%2Fcom%20espa%C3%A7o%3F", payload["text"])
+        self.assertIn("&lt;script&gt;", payload["html"])
+        self.assertNotIn("<script>alert(1)</script>", payload["html"])
+        self.assertIn('<meta name="viewport"', payload["html"])
+        self.assertIn("@media only screen and (max-width: 640px)", payload["html"])
+        self.assertIn("Sua conta só será ativada depois da confirmação do pagamento.", payload["text"])
+        for marker in ("Ã", "Â", "â€"):
+            self.assertNotIn(marker, payload["html"])
+            self.assertNotIn(marker, payload["text"])
+
+    @patch.dict("os.environ", {
+        "RESEND_API_KEY": "re_test",
+        "EMAIL_FROM": "CortaFlow <contato@cortaflow.com.br>",
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+    })
+    @patch("app.services.email.urlopen")
     def test_password_reset_email_contains_secure_action(self, mocked_urlopen):
         mocked_urlopen.return_value.__enter__.return_value.read.return_value = b'{"id":"email_1"}'
         self.assertTrue(send_password_reset("dono@gmail.com", "Mateus", "token-seguro-1234567890"))
         request = mocked_urlopen.call_args.args[0]
         payload = json.loads(request.data)
-        self.assertEqual(payload["subject"], "Redefina sua senha CortaFlow")
+        self.assertEqual(payload["subject"], "Redefinição de senha | CortaFlow")
         self.assertIn("/api/auth/redefinir-senha?token=", payload["html"])
-        self.assertIn("Criar nova senha", payload["html"])
+        self.assertIn("Definir nova senha", payload["html"])
+        self.assertIn("uso único", payload["text"])
+        self.assertIn("expira em 24 horas", payload["text"])
+        self.assertEqual(payload["headers"]["Auto-Submitted"], "auto-generated")
+        for marker in ("Ã", "Â", "â€"):
+            self.assertNotIn(marker, payload["html"])
+            self.assertNotIn(marker, payload["text"])
 
     def test_builds_brazilian_whatsapp_deep_link(self):
         url = _owner_whatsapp_url(notification_item())
@@ -99,9 +142,48 @@ class OwnerEmailNotificationTests(unittest.TestCase):
         request = mocked_urlopen.call_args.args[0]
         payload = json.loads(request.data)
         self.assertEqual(payload["to"], ["dono@gmail.com"])
+        self.assertEqual(
+            payload["subject"],
+            "Pagamento confirmado | CortaFlow Profissional",
+        )
         self.assertIn("CortaFlow Profissional", payload["html"])
         self.assertIn("R$ 44,90", payload["html"])
         self.assertIn("23/08/2026", payload["html"])
+        self.assertIn("CortaFlow Profissional", payload["text"])
+        self.assertIn("R$ 44,90", payload["text"])
+        self.assertIn("https://cortaflow.com.br/painel", payload["text"])
+        self.assertIn("Cobrança protegida pela Stripe", payload["html"])
+        for marker in ("Ã", "Â", "â€"):
+            self.assertNotIn(marker, payload["html"])
+            self.assertNotIn(marker, payload["text"])
+
+    @patch.dict("os.environ", {
+        "RESEND_API_KEY": "re_test",
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+    })
+    @patch("app.services.email.logger.warning")
+    @patch("app.services.email.urlopen", side_effect=URLError("offline"))
+    def test_failed_transactional_email_does_not_log_token(
+        self,
+        _mocked_urlopen,
+        mocked_warning,
+    ):
+        token = "segredo-que-nao-pode-aparecer"
+
+        sent = send_password_reset("dono@gmail.com", "Mateus", token)
+
+        self.assertFalse(sent)
+        logged_call = repr(mocked_warning.call_args)
+        self.assertNotIn(token, logged_call)
+        self.assertNotIn("token=", logged_call)
+
+    @patch.dict("os.environ", {"RESEND_API_KEY": ""})
+    @patch("app.services.email.urlopen")
+    def test_transactional_email_is_not_requested_without_resend_key(self, mocked_urlopen):
+        sent = send_password_reset("dono@gmail.com", "Mateus", "token")
+
+        self.assertFalse(sent)
+        mocked_urlopen.assert_not_called()
 
 
 if __name__ == "__main__":
