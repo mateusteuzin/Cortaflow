@@ -585,6 +585,26 @@ body.modal-open { overflow: hidden; }
   font-size: 9px;
   font-weight: 700;
 }
+.google-register {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 54px;
+  padding: 0 12px 0 16px;
+}
+.google-register > span {
+  min-width: 0;
+  justify-self: center;
+  white-space: nowrap;
+}
+.google-register small {
+  margin-left: 0;
+  padding: 6px 9px;
+  border: 1px solid #e3d7bd;
+  background: #f7f0df;
+  color: #725316;
+  white-space: nowrap;
+}
 .google-mark { width: 18px; height: 18px; flex: 0 0 18px; }
 .auth-switch {
   display: flex;
@@ -1050,6 +1070,24 @@ body.modal-open { overflow: hidden; }
   .form-secondary,
   .google-login,
   .auth-form input { min-height: 52px; }
+  .google-register {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 2px 11px;
+    min-height: 64px;
+    padding: 9px 14px;
+  }
+  .google-register > span {
+    justify-self: start;
+  }
+  .google-register small {
+    grid-column: 2;
+    justify-self: start;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 9px;
+  }
   .state-illustration { width: 64px; height: 64px; margin-bottom: 19px; }
   .verification-help li { align-items: flex-start; line-height: 1.45; }
   .login-payment-next { align-items: flex-start; }
