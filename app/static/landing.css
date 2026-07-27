@@ -1023,15 +1023,32 @@ body.modal-open { overflow: hidden; }
 }
 
 @media (max-width: 520px) {
-  .auth-modal { display: block; padding: 0; }
+  .auth-modal {
+    display: block;
+    height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+  }
   .auth-panel {
     width: 100%;
+    height: 100dvh;
     max-height: 100dvh;
-    min-height: 100dvh;
+    min-height: 0;
+    grid-template-rows: minmax(0,1fr);
     border: 0;
     border-radius: 0;
   }
-  .auth-content { min-height: 100dvh; }
+  .auth-content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
   .modal-close {
     position: fixed;
     top: max(12px,env(safe-area-inset-top));
@@ -1047,7 +1064,9 @@ body.modal-open { overflow: hidden; }
   .auth-mobile-brand span { display: none; }
   .auth-form {
     width: 100%;
+    max-width: none;
     padding: 30px 20px calc(28px + env(safe-area-inset-bottom));
+    overflow-wrap: anywhere;
   }
   .auth-form-header { margin-bottom: 22px; }
   .auth-form h2,
@@ -1069,7 +1088,15 @@ body.modal-open { overflow: hidden; }
   .form-submit,
   .form-secondary,
   .google-login,
-  .auth-form input { min-height: 52px; }
+  .auth-form input {
+    min-height: 52px;
+    font-size: 16px;
+  }
+  .password-field input { padding-right: 84px; }
+  .password-toggle {
+    min-width: 70px;
+    min-height: 44px;
+  }
   .google-register {
     grid-template-columns: 20px minmax(0, 1fr);
     gap: 2px 11px;
@@ -1103,10 +1130,11 @@ body.modal-open { overflow: hidden; }
 }
 
 @media (max-width: 360px) {
-  .auth-form { padding-inline: 16px; }
+  .auth-form { padding-inline: 14px; }
   .signup-progress span em { display: none; }
   .signup-progress { grid-template-columns: 25px 1fr 25px 1fr 25px; }
-  .register-plan-picker strong { font-size: 11px; }
+  .register-plan-picker label { padding-inline: 11px; }
+  .register-plan-picker strong { font-size: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
