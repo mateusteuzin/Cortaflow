@@ -125,7 +125,10 @@ function logout() {
 function show(view) {
   $$('.view').forEach((element) => element.classList.toggle('hidden', element.id !== view));
   $$('nav button[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
-  $('#title').textContent = { dashboard: 'Resumo do dia', agenda: 'Agenda', clientes: 'Clientes', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
+  const label = { dashboard: 'Resumo do dia', agenda: 'Agenda', clientes: 'Clientes', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
+  $('#title').textContent = label;
+  const breadcrumb = $('#breadcrumb-current');
+  if (breadcrumb) breadcrumb.textContent = label;
   closeSidebar();
   const loaders = { agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
   if (loaders[view]) loaders[view]().catch((error) => toast(error.message));
@@ -291,7 +294,10 @@ function bindPricing() {
 async function start() {
   $('#login').classList.add('hidden');
   $('#app').classList.remove('hidden');
-  $('#owner-name').textContent = (localStorage.getItem('name') || 'gestor').split(' ')[0];
+  const ownerName = (localStorage.getItem('name') || 'gestor').split(' ')[0];
+  $('#owner-name').textContent = ownerName;
+  const avatar = $('#topbar-avatar');
+  if (avatar) avatar.textContent = ownerName.slice(0, 1).toUpperCase();
   $('#today').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   $('#agenda-date').value = localDate();
   try {
@@ -529,7 +535,12 @@ async function loadDashboard() {
   $('#cuts').textContent = report.total.cortes;
   const upcoming = appointments.filter((appointment) => new Date(appointment.data_hora) > new Date() && !['cancelado', 'concluido', 'realizado', 'nao_compareceu'].includes(appointment.status));
   $('#upcoming-count').textContent = upcoming.length;
-  $('#upcoming').innerHTML = upcoming.slice(0, 6).map(appointmentHTML).join('') || '<div class="empty">Nenhum próximo atendimento hoje.</div>';
+  $('#upcoming').innerHTML = upcoming.slice(0, 6).map(appointmentHTML).join('') || `<div class="list-empty">
+    <span class="list-empty-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
+    <b>Nenhum próximo atendimento hoje</b>
+    <small>Sua agenda está livre. Que tal criar um novo agendamento agora?</small>
+    <button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+  </div>`;
   const nextAppointment = upcoming[0];
   $('#hero-next').textContent = nextAppointment
     ? new Date(nextAppointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -582,7 +593,12 @@ async function loadAppointments() {
   let query = '?data=' + $('#agenda-date').value;
   if ($('#agenda-barber').value) query += '&barbeiro_id=' + $('#agenda-barber').value;
   const appointments = await api('/agendamentos' + query);
-  $('#appointments').innerHTML = appointments.map(appointmentHTML).join('') || '<div class="empty">Agenda livre nesta data.</div>';
+  $('#appointments').innerHTML = appointments.map(appointmentHTML).join('') || `<div class="list-empty">
+    <span class="list-empty-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
+    <b>Agenda livre nesta data</b>
+    <small>Não há atendimentos marcados para o dia selecionado.</small>
+    <button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+  </div>`;
 }
 
 function renderClients(query = '') {
