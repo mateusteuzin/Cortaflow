@@ -17,10 +17,14 @@ html { scroll-behavior: smooth; scroll-padding-top: 80px; }
 body { margin: 0; min-width: 320px; overflow-x: hidden; background: var(--bg); color: var(--cream); font: 500 14px/1.65 var(--sans); }
 body.modal-open { overflow: hidden; }
 button, input { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 button { cursor: pointer; }
 a { color: inherit; }
 .hidden { display: none !important; }
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid var(--gold-light);
+  outline-offset: 4px;
+}
 .container { width: min(1220px, calc(100% - 48px)); margin-inline: auto; }
 .section { position: relative; padding: 118px 0; }
 .kicker { display: inline-flex; align-items: center; gap: 10px; color: var(--gold-light); font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
@@ -205,6 +209,19 @@ a { color: inherit; }
   .footer-grid { grid-template-columns:1fr; }.footer-brand { grid-column:auto; }.auth-modal { padding:0; }.auth-panel { width:100%; max-height:100vh; min-height:100vh; padding:24px 18px 30px; border-width:0; }.auth-brand { margin-bottom:16px; }.auth-brand img { width:145px; }.auth-form h2 { font-size:29px; }.form-grid { grid-template-columns:1fr; }.register-plan-picker { grid-template-columns:1fr; }.register-plan-picker label { min-height:56px; }.signup-progress { gap:5px; }.signup-progress span { font-size:7px; }.signup-progress b { width:20px; height:20px; }.mail-illustration { width:64px; height:64px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
+
+/* Mobile interaction polish: the open menu owns the viewport and never scrolls the page behind it. */
+@media (max-width: 820px) {
+  body.menu-open { overflow: hidden; }
+  .site-nav a:focus-visible,
+  .mobile-nav-actions button:focus-visible,
+  .menu-toggle:focus-visible { outline-offset: -3px; }
+}
+
+/* iOS Safari zooms focused controls below 16px; keep auth fields stable on iPhone. */
+.auth-form input,
+.auth-form select,
+.auth-form textarea { font-size: 16px; }
 
 /* Direção de marca: menos efeito, mais produto. */
 .hero-bg { opacity: .46; filter: saturate(.28) contrast(1.04); }
