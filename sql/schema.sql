@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
  email_verification_token_hash VARCHAR(64), email_verification_expires_at TIMESTAMPTZ,
  password_reset_token_hash VARCHAR(64), password_reset_expires_at TIMESTAMPTZ,
- auth_version INTEGER NOT NULL DEFAULT 1,
+ auth_version INTEGER NOT NULL DEFAULT 1, google_subject VARCHAR(255),
  criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbearias (
  id SERIAL PRIMARY KEY, usuario_id INTEGER UNIQUE NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS cadastros_pendentes (
  checkout_token_hash VARCHAR(64), checkout_token_expires_at TIMESTAMPTZ,
  stripe_checkout_session_id VARCHAR(160), usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
  status VARCHAR(32) NOT NULL DEFAULT 'pending_email', checkout_idempotency_key VARCHAR(64),
+ google_subject VARCHAR(255),
  concluido_em TIMESTAMPTZ, criado_em TIMESTAMPTZ DEFAULT NOW(), atualizado_em TIMESTAMPTZ DEFAULT NOW());
+CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google_subject ON usuarios(google_subject) WHERE google_subject IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cadastros_pendentes_google_subject ON cadastros_pendentes(google_subject) WHERE google_subject IS NOT NULL AND usuario_id IS NULL;
 CREATE TABLE IF NOT EXISTS stripe_webhook_events (
  event_id VARCHAR(255) PRIMARY KEY, event_type VARCHAR(120) NOT NULL,
  status VARCHAR(20) NOT NULL DEFAULT 'processing', attempts INTEGER NOT NULL DEFAULT 1,

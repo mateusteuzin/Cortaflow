@@ -145,8 +145,11 @@ async function loadPublicConfiguration() {
   } catch {
     googleOAuthConfigured = false;
   }
-  $$('[data-google-login]').forEach((button) => {
+  $$('[data-google-login], [data-google-register]').forEach((button) => {
     button.setAttribute('aria-disabled', String(!googleOAuthConfigured));
+  });
+  updateGoogleRegisterButton();
+  $$('[data-google-login]').forEach((button) => {
     const helper = $('small', button);
     if (helper) helper.textContent = googleOAuthConfigured ? 'Seguro' : 'Configurar';
   });
@@ -166,6 +169,15 @@ function updateSelectedPlan(plan = selectedPlan()) {
   const input = $(`#register-form input[name="plano"][value="${plan}"]`);
   if (input) input.checked = true;
   localStorage.setItem('selectedPlan', plan);
+  updateGoogleRegisterButton(plan);
+}
+
+function updateGoogleRegisterButton(plan = selectedPlan()) {
+  const button = $('[data-google-register]');
+  if (!button) return;
+  const selected = plans[plan] || plans.profissional;
+  const helper = $('small', button);
+  if (helper) helper.textContent = googleOAuthConfigured ? `Plano ${selected.name}` : 'Configurar Google';
 }
 
 function updateAuthContext(mode) {
@@ -526,6 +538,8 @@ async function handleReturnRoute() {
   const google = params.get('google');
   resetToken = params.get('reset_password') || '';
 
+  if (confirmedPlan && plans[confirmedPlan]) updateSelectedPlan(confirmedPlan);
+
   if (google === 'conta_nao_encontrada') {
     cleanReturnUrl();
     showAuth('login');
@@ -533,6 +547,55 @@ async function handleReturnRoute() {
       '#verification-notice',
       'Este Google ainda não possui uma assinatura CortaFlow. Crie sua conta e conclua o pagamento primeiro.'
     );
+    return;
+  }
+
+  if (google === 'checkout_cancelado') {
+    cleanReturnUrl();
+    showAuth('register');
+    showMessage(
+      '#register-error',
+      'O cadastro com Google foi interrompido antes do pagamento. Seu plano continua selecionado e nenhuma cobranca foi feita.'
+    );
+    announce('Cadastro interrompido. Nenhuma cobranca foi feita.');
+    return;
+  }
+
+  if (google === 'conta_existente') {
+    cleanReturnUrl();
+    showAuth('login');
+    showMessage(
+      '#verification-notice',
+      'Este e-mail Google ja possui uma conta CortaFlow. Entre com o Google para acessar seu painel.'
+    );
+    announce('Conta existente encontrada. Entre com o Google.');
+    return;
+  }
+
+  if (google === 'login_cancelado') {
+    cleanReturnUrl();
+    showAuth('login');
+    showMessage('#verification-notice', 'O acesso com Google foi cancelado. Nenhuma alteracao foi feita.');
+    announce('Acesso com Google cancelado.');
+    return;
+  }
+
+  if (google) {
+    const googleRegisterErrors = {
+      plano_invalido: 'Nao foi possivel identificar o plano escolhido. Selecione um plano e tente novamente.',
+      email_indisponivel: 'Este e-mail Google nao esta disponivel para um novo cadastro.',
+      cadastro_cancelado: 'O cadastro com Google foi cancelado. Voce pode tentar novamente quando quiser.',
+      cadastro_erro: 'Nao foi possivel iniciar seu cadastro com Google. Revise o plano e tente novamente.',
+      erro_cadastro: 'Nao foi possivel concluir seu cadastro com Google. Tente novamente em instantes.',
+      erro: 'O Google nao conseguiu concluir o cadastro. Tente novamente em instantes.'
+    };
+    cleanReturnUrl();
+    showAuth('register');
+    showMessage(
+      '#register-error',
+      googleRegisterErrors[google] || 'Nao foi possivel concluir o cadastro com Google. Tente novamente.'
+    );
+    announce('Nao foi possivel concluir o cadastro com Google.');
     return;
   }
 
@@ -578,7 +641,6 @@ async function handleReturnRoute() {
   }
 
   if (!confirmation) return;
-  if (confirmedPlan && plans[confirmedPlan]) updateSelectedPlan(confirmedPlan);
   cleanReturnUrl();
 
   if (confirmation === 'sucesso' && verificationCode) {
@@ -623,6 +685,19 @@ function bindAuthActions() {
         return;
       }
       toast('Login Google pronto. Falta configurar as credenciais no ambiente.');
+    });
+  });
+
+  $$('[data-google-register]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const plan = selectedPlan();
+      clearMessage('#register-error');
+      if (!googleOAuthConfigured) {
+        toast('Cadastro com Google indisponivel enquanto as credenciais nao estiverem configuradas.');
+        return;
+      }
+      const query = new URLSearchParams({ mode: 'register', plan });
+      location.assign(`/api/auth/google/iniciar?${query.toString()}`);
     });
   });
 

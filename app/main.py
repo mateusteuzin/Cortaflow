@@ -53,6 +53,8 @@ AUTH_RATE_LIMITS = {
     "/api/auth/esqueci-senha": (5, 900),
     "/api/auth/redefinir-senha": (10, 900),
     "/api/auth/confirmar-sessao": (10, 600),
+    "/api/auth/google/iniciar": (20, 600),
+    "/api/auth/google/callback": (30, 600),
 }
 static = Path(__file__).parent/'static'
 uploads = static/'uploads'
@@ -80,6 +82,9 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_reset_token_hash VARCHAR(64)")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 1")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS google_subject VARCHAR(255)")
+        cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google_subject
+            ON usuarios(google_subject) WHERE google_subject IS NOT NULL""")
         cur.execute("""CREATE TABLE IF NOT EXISTS cadastros_pendentes (
             id SERIAL PRIMARY KEY,
             email VARCHAR(160) UNIQUE NOT NULL,
@@ -103,6 +108,10 @@ def ensure_current_schema():
             ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'pending_email'""")
         cur.execute("""ALTER TABLE cadastros_pendentes
             ADD COLUMN IF NOT EXISTS checkout_idempotency_key VARCHAR(64)""")
+        cur.execute("ALTER TABLE cadastros_pendentes ADD COLUMN IF NOT EXISTS google_subject VARCHAR(255)")
+        cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_cadastros_pendentes_google_subject
+            ON cadastros_pendentes(google_subject)
+            WHERE google_subject IS NOT NULL AND usuario_id IS NULL""")
         cur.execute("""CREATE INDEX IF NOT EXISTS idx_cadastros_pendentes_status
             ON cadastros_pendentes(status) WHERE usuario_id IS NULL""")
         cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_cadastros_pendentes_checkout_session
@@ -382,12 +391,19 @@ def _google_json_request(request: UrlRequest) -> dict:
 
 
 @app.get("/api/auth/google/iniciar")
-def start_google_oidc():
+def start_google_oidc(
+    mode: str = "login",
+    plan: str = "",
+):
     settings = _google_oauth_settings()
     if not settings:
         raise HTTPException(503, "Login com Google ainda não está configurado.")
+    if mode not in {"login", "register"}:
+        raise HTTPException(422, "Modo de acesso Google invalido.")
+    if mode == "register" and plan not in STRIPE_PLANS:
+        raise HTTPException(422, "Escolha um plano valido para criar sua conta.")
     nonce = secrets.token_urlsafe(32)
-    state = oidc_state(nonce)
+    state = oidc_state(nonce, mode=mode, plan=plan)
     query = urlencode({
         "client_id": settings["client_id"],
         "redirect_uri": settings["redirect_uri"],
@@ -413,12 +429,15 @@ def start_google_oidc():
 @app.get("/api/auth/google/callback")
 def google_oidc_callback(
     request: Request,
-    code: str = Query(min_length=8, max_length=2048),
-    state: str = Query(min_length=20, max_length=4096),
+    code: str = "",
+    state: str = "",
+    error: str = "",
 ):
     settings = _google_oauth_settings()
     if not settings:
         raise HTTPException(503, "Login com Google ainda não está configurado.")
+    if len(code) > 2048 or len(state) > 4096 or len(error) > 120:
+        raise HTTPException(400, "Resposta OAuth invalida.")
     cookie_state = request.cookies.get(GOOGLE_STATE_COOKIE, "")
     if not cookie_state or not secrets.compare_digest(cookie_state, state):
         raise HTTPException(400, "State OAuth inválido ou expirado.")
@@ -426,6 +445,13 @@ def google_oidc_callback(
         state_claims = decode_oidc_state(state)
     except JWTError as error:
         raise HTTPException(400, "State OAuth inválido ou expirado.") from error
+    if error:
+        result = "cadastro_cancelado" if state_claims.get("mode") == "register" else "login_cancelado"
+        response = RedirectResponse(f"/?google={result}", status_code=303)
+        response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+        return response
+    if len(code) < 8:
+        raise HTTPException(400, "Codigo OAuth ausente ou invalido.")
     token_request = UrlRequest(
         GOOGLE_TOKEN_ENDPOINT,
         data=urlencode({
@@ -461,13 +487,65 @@ def google_oidc_callback(
     if not valid_identity:
         raise HTTPException(401, "Identidade Google inválida ou expirada.")
     email = str(identity.get("email") or "").strip().lower()
+    google_subject = str(identity.get("sub") or "").strip()
+    if not email or not google_subject:
+        raise HTTPException(401, "O Google nao retornou uma identidade completa.")
+    if state_claims.get("mode") == "register":
+        plan = str(state_claims.get("plan") or "")
+        existing_user = one(
+            "SELECT id FROM usuarios WHERE email=%s OR google_subject=%s",
+            (email, google_subject),
+        )
+        if existing_user:
+            response = RedirectResponse("/?google=conta_existente", status_code=303)
+            response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+            return response
+        pending_by_subject = one(
+            """SELECT id,email FROM cadastros_pendentes
+            WHERE google_subject=%s AND usuario_id IS NULL""",
+            (google_subject,),
+        )
+        if pending_by_subject and pending_by_subject["email"] != email:
+            raise HTTPException(409, "Esta identidade Google ja esta vinculada a outro cadastro.")
+        name = str(identity.get("name") or email.split("@", 1)[0]).strip()[:120]
+        business_name = f"Barbearia de {name.split()[0]}"[:160]
+        disabled_password = hash_password(secrets.token_urlsafe(32))
+        checkout_key = secrets.token_hex(24)
+        pending = one(
+            """INSERT INTO cadastros_pendentes(
+                email,senha_hash,nome,telefone,barbearia_nome,plano,email_verificado,
+                google_subject,status,checkout_idempotency_key,atualizado_em)
+            VALUES(%s,%s,%s,'',%s,%s,TRUE,%s,'email_verified',%s,NOW())
+            ON CONFLICT(email) DO UPDATE SET
+                nome=EXCLUDED.nome, plano=EXCLUDED.plano, email_verificado=TRUE,
+                google_subject=EXCLUDED.google_subject, status='email_verified',
+                email_verification_token_hash=NULL,email_verification_expires_at=NULL,
+                checkout_token_hash=NULL,checkout_token_expires_at=NULL,
+                stripe_checkout_session_id=NULL,
+                checkout_idempotency_key=EXCLUDED.checkout_idempotency_key,
+                atualizado_em=NOW()
+            WHERE cadastros_pendentes.usuario_id IS NULL
+              AND (cadastros_pendentes.google_subject IS NULL
+                   OR cadastros_pendentes.google_subject=EXCLUDED.google_subject)
+            RETURNING *""",
+            (email, disabled_password, name, business_name, plan, google_subject, checkout_key),
+        )
+        if not pending:
+            raise HTTPException(409, "Este e-mail ja esta vinculado a outro cadastro.")
+        session = _create_pending_checkout(pending, request)
+        response = RedirectResponse(session.url, status_code=303)
+        response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+        return response
     user = one("""SELECT u.id,u.email,u.nome,b.subscription_plan
         FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id
-        WHERE u.email=%s AND u.email_verificado""", (email,))
+        WHERE (u.google_subject=%s OR (u.google_subject IS NULL AND u.email=%s))
+          AND u.email_verificado""", (google_subject, email))
     if not user:
         response = RedirectResponse("/?google=conta_nao_encontrada", status_code=303)
         response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
         return response
+    one("""UPDATE usuarios SET google_subject=COALESCE(google_subject,%s)
+        WHERE id=%s RETURNING id""", (google_subject, user["id"]))
     login_code = secrets.token_urlsafe(32)
     login_hash = hashlib.sha256(login_code.encode()).hexdigest()
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
@@ -633,9 +711,11 @@ def _activate_pending_signup(pending_id: int, session, subscription):
                 (pending["usuario_id"],))
             return cur.fetchone()
         status = str(subscription.get("status"))
-        cur.execute("""INSERT INTO usuarios(email,senha_hash,nome,telefone,email_verificado)
-            VALUES(%s,%s,%s,%s,TRUE) RETURNING id""",
-            (pending["email"], pending["senha_hash"], pending["nome"], pending["telefone"]))
+        cur.execute("""INSERT INTO usuarios(
+                email,senha_hash,nome,telefone,email_verificado,google_subject)
+            VALUES(%s,%s,%s,%s,TRUE,%s) RETURNING id""",
+            (pending["email"], pending["senha_hash"], pending["nome"],
+             pending["telefone"], pending.get("google_subject")))
         user_id = cur.fetchone()["id"]
         shop_slug = unique_shop_slug(cur, pending["barbearia_nome"])
         cur.execute("""INSERT INTO barbearias(usuario_id,nome,slug,telefone,plano_ativo,

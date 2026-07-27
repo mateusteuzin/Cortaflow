@@ -102,6 +102,94 @@ class BackendSecurityTests(unittest.TestCase):
         self.assertTrue(params["nonce"][0])
         self.assertIn("HttpOnly", response.headers["set-cookie"])
 
+    @patch.dict("os.environ", {
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+        "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "google-secret-value",
+        "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+    }, clear=False)
+    def test_google_register_state_carries_signed_plan(self):
+        response = main.start_google_oidc(mode="register", plan="premium")
+        params = parse_qs(urlparse(response.headers["location"]).query)
+        claims = security.decode_oidc_state(params["state"][0])
+        self.assertEqual(claims["mode"], "register")
+        self.assertEqual(claims["plan"], "premium")
+
+    @patch.dict("os.environ", {
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+        "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "google-secret-value",
+        "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+    }, clear=False)
+    def test_google_register_requires_a_valid_plan(self):
+        with self.assertRaises(HTTPException) as caught:
+            main.start_google_oidc(mode="register", plan="")
+        self.assertEqual(caught.exception.status_code, 422)
+
+    @patch.dict("os.environ", {
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+        "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "google-secret-value",
+        "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+    }, clear=False)
+    @patch("app.main._create_pending_checkout")
+    @patch("app.main.one")
+    @patch("app.main._google_json_request")
+    @patch("app.main.decode_oidc_state")
+    def test_google_register_stays_pending_until_stripe_payment(
+        self, decode_state, google_request, database_one, create_checkout
+    ):
+        state = "signed-state-value-with-enough-characters"
+        decode_state.return_value = {
+            "nonce": "expected-nonce",
+            "mode": "register",
+            "plan": "profissional",
+        }
+        google_request.side_effect = [
+            {"id_token": "google-id-token"},
+            {
+                "iss": "https://accounts.google.com",
+                "aud": "client.apps.googleusercontent.com",
+                "nonce": "expected-nonce",
+                "email_verified": "true",
+                "exp": int(time.time()) + 600,
+                "email": "gestor@example.com",
+                "sub": "google-subject-123",
+                "name": "Gestor CortaFlow",
+            },
+        ]
+        pending = {
+            "id": 321,
+            "email": "gestor@example.com",
+            "plano": "profissional",
+        }
+        database_one.side_effect = [None, None, pending]
+        create_checkout.return_value = Mock(url="https://checkout.stripe.com/session")
+        request = Request({
+            "type": "http",
+            "method": "GET",
+            "path": "/api/auth/google/callback",
+            "raw_path": b"/api/auth/google/callback",
+            "query_string": b"",
+            "headers": [(b"cookie", f"{main.GOOGLE_STATE_COOKIE}={state}".encode())],
+            "client": ("203.0.113.10", 1234),
+            "server": ("testserver", 80),
+            "scheme": "https",
+        })
+
+        response = main.google_oidc_callback(
+            request=request,
+            code="authorization-code",
+            state=state,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "https://checkout.stripe.com/session")
+        create_checkout.assert_called_once_with(pending, request)
+        queries = " ".join(str(call.args[0]) for call in database_one.call_args_list)
+        self.assertIn("INSERT INTO cadastros_pendentes", queries)
+        self.assertNotIn("INSERT INTO usuarios", queries)
+
     def test_pending_activation_rejects_mismatched_checkout(self):
         pending = {
             "id": 91,

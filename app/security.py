@@ -72,12 +72,18 @@ def token(user_id: int, auth_version: int = 1) -> str:
     return jwt.encode(claims, SECRET, algorithm=JWT_ALGORITHM)
 
 
-def oidc_state(nonce: str) -> str:
+def oidc_state(nonce: str, mode: str = "login", plan: str = "") -> str:
+    if mode not in {"login", "register"}:
+        raise ValueError("Modo OAuth invalido")
+    if plan and plan not in {"essencial", "profissional", "premium"}:
+        raise ValueError("Plano OAuth invalido")
     now = datetime.now(timezone.utc)
     return jwt.encode(
         {
             "type": "oidc_state",
             "nonce": nonce,
+            "mode": mode,
+            "plan": plan,
             "iss": JWT_ISSUER,
             "aud": OIDC_STATE_AUDIENCE,
             "iat": now,
@@ -103,6 +109,10 @@ def decode_oidc_state(value: str) -> dict:
         raise JWTError("Tipo de state inválido")
     if not claims.get("nonce"):
         raise JWTError("Nonce ausente")
+    if claims.get("mode", "login") not in {"login", "register"}:
+        raise JWTError("Modo OAuth invalido")
+    if claims.get("plan") and claims["plan"] not in {"essencial", "profissional", "premium"}:
+        raise JWTError("Plano OAuth invalido")
     return claims
 
 
