@@ -180,6 +180,27 @@
         <button id="verification-resend" class="form-submit" type="button">Reenviar e-mail</button>
         <button id="verification-login" class="form-secondary" type="button">Já confirmei — continuar</button>
       </section>
+      <form id="forgot-form" class="auth-form hidden">
+        <span class="form-kicker">RECUPERAR ACESSO</span>
+        <h2>Esqueceu sua senha?</h2>
+        <p>Informe o Gmail da sua conta. Enviaremos um link seguro para criar uma nova senha.</p>
+        <label>Seu Gmail<input id="forgot-email" type="email" autocomplete="email" required placeholder="voce@gmail.com"></label>
+        <button class="form-submit" type="submit">Enviar link de recuperação</button>
+        <p id="forgot-error" class="form-error"></p>
+        <p id="forgot-notice" class="form-notice hidden" role="status"></p>
+        <button id="forgot-back" class="form-secondary" type="button">Voltar para entrar</button>
+      </form>
+      <form id="reset-form" class="auth-form hidden">
+        <span class="form-kicker">NOVA SENHA</span>
+        <h2>Proteja sua conta.</h2>
+        <p>Crie uma nova senha com pelo menos 6 caracteres.</p>
+        <label>Nova senha<input id="reset-password" type="password" autocomplete="new-password" minlength="6" maxlength="72" required></label>
+        <label>Confirme a nova senha<input id="reset-password-confirmation" type="password" autocomplete="new-password" minlength="6" maxlength="72" required></label>
+        <button class="form-submit" type="submit">Atualizar minha senha</button>
+        <p id="reset-error" class="form-error"></p>
+        <p id="reset-notice" class="form-notice hidden" role="status"></p>
+        <button id="reset-back" class="form-secondary" type="button">Voltar para entrar</button>
+      </form>
     </div>
   </div>
   <div id="toast" class="site-toast" role="status"></div>

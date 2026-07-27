@@ -9,6 +9,7 @@ from app.services.email import (
     _email_html,
     _owner_email_html,
     _owner_whatsapp_url,
+    send_password_reset,
     send_subscription_confirmation,
 )
 
@@ -29,6 +30,21 @@ def notification_item(phone="(11) 99999-8888"):
 
 
 class OwnerEmailNotificationTests(unittest.TestCase):
+    @patch.dict("os.environ", {
+        "RESEND_API_KEY": "re_test",
+        "EMAIL_FROM": "CortaFlow <contato@cortaflow.com.br>",
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+    })
+    @patch("app.services.email.urlopen")
+    def test_password_reset_email_contains_secure_action(self, mocked_urlopen):
+        mocked_urlopen.return_value.__enter__.return_value.read.return_value = b'{"id":"email_1"}'
+        self.assertTrue(send_password_reset("dono@gmail.com", "Mateus", "token-seguro-1234567890"))
+        request = mocked_urlopen.call_args.args[0]
+        payload = json.loads(request.data)
+        self.assertEqual(payload["subject"], "Redefina sua senha CortaFlow")
+        self.assertIn("/api/auth/redefinir-senha?token=", payload["html"])
+        self.assertIn("Criar nova senha", payload["html"])
+
     def test_builds_brazilian_whatsapp_deep_link(self):
         url = _owner_whatsapp_url(notification_item())
         self.assertTrue(url.startswith("https://wa.me/5511999998888?text="))

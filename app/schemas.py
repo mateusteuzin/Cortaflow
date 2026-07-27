@@ -41,6 +41,18 @@ class ResendVerification(BaseModel):
 class VerificationSession(BaseModel):
     code: str = Field(min_length=20, max_length=200)
 
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def validate_google_email(cls, value):
+        return validate_google_email_address(value)
+
+class ResetPassword(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    senha: str = Field(min_length=6, max_length=72)
+
 class Barber(BaseModel):
     nome: str
     telefone: str = ""

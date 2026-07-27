@@ -46,15 +46,21 @@ function showAuth(mode = 'login') {
   const login = $('#login-form');
   const register = $('#register-form');
   const verification = $('#verification-step');
+  const forgot = $('#forgot-form');
+  const reset = $('#reset-form');
   login.classList.toggle('hidden', mode !== 'login');
   register.classList.toggle('hidden', mode !== 'register');
   verification.classList.toggle('hidden', mode !== 'verification');
+  forgot.classList.toggle('hidden', mode !== 'forgot');
+  reset.classList.toggle('hidden', mode !== 'reset');
   $('#auth-modal').classList.remove('hidden');
   document.body.classList.add('modal-open');
   if (mode === 'register') updateSelectedPlan();
   setTimeout(() => {
     if (mode === 'login') $('#email').focus();
     if (mode === 'register') $('#register-name').focus();
+    if (mode === 'forgot') $('#forgot-email').focus();
+    if (mode === 'reset') $('#reset-password').focus();
   }, 50);
 }
 
@@ -126,6 +132,8 @@ async function bindAuth() {
   const confirmedPlan = params.get('plan');
   const verificationCode = params.get('code');
   const checkout = params.get('checkout');
+  const resetToken = params.get('reset_password');
+  if (resetToken) showAuth('reset');
   if (checkout === 'sucesso') toast('Assinatura confirmada. Bem-vindo ao CortaFlow!');
   if (checkout === 'cancelado') toast('Checkout cancelado. Nenhuma cobranÃ§a foi feita.');
   if (confirmation) {
@@ -148,7 +156,7 @@ async function bindAuth() {
     }
     if (confirmation !== 'sucesso') $('#resend-verification').classList.remove('hidden');
   }
-  if (confirmation || checkout) history.replaceState({}, '', '/');
+  if (confirmation || checkout || resetToken) history.replaceState({}, '', '/');
 
   if (confirmation === 'sucesso' && verificationCode) {
     const submit = $('#login-form .form-submit');
@@ -182,7 +190,14 @@ async function bindAuth() {
     input.type = input.type === 'password' ? 'text' : 'password';
     $('#toggle-password').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
-  $('#forgot-password').onclick = () => toast('A recuperaÃ§Ã£o por e-mail serÃ¡ ativada com o Resend.');
+  $('#forgot-password').onclick = () => {
+    $('#forgot-email').value = $('#email').value.trim();
+    $('#forgot-error').textContent = '';
+    $('#forgot-notice').classList.add('hidden');
+    showAuth('forgot');
+  };
+  $('#forgot-back').onclick = () => showAuth('login');
+  $('#reset-back').onclick = () => showAuth('login');
   $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
   $$('[data-google-login]').forEach((button) => {
@@ -195,6 +210,57 @@ async function bindAuth() {
     showAuth('login');
     $('#verification-notice').textContent = 'Depois de confirmar pelo Gmail, entre para continuar ao pagamento.';
     $('#verification-notice').classList.remove('hidden');
+  };
+
+  $('#forgot-form').onsubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    $('#forgot-error').textContent = '';
+    $('#forgot-notice').classList.add('hidden');
+    try {
+      const result = await api('/auth/esqueci-senha', {
+        method: 'POST',
+        body: JSON.stringify({ email: $('#forgot-email').value.trim() })
+      });
+      $('#forgot-notice').textContent = result.message;
+      $('#forgot-notice').classList.remove('hidden');
+      button.textContent = 'Link solicitado';
+    } catch (error) {
+      $('#forgot-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  $('#reset-form').onsubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('[type="submit"]');
+    const password = $('#reset-password').value;
+    $('#reset-error').textContent = '';
+    $('#reset-notice').classList.add('hidden');
+    if (password !== $('#reset-password-confirmation').value) {
+      $('#reset-error').textContent = 'As senhas não são iguais.';
+      return;
+    }
+    button.disabled = true;
+    try {
+      const result = await api('/auth/redefinir-senha', {
+        method: 'POST',
+        body: JSON.stringify({ token: resetToken, senha: password })
+      });
+      form.reset();
+      $('#reset-notice').textContent = result.message;
+      $('#reset-notice').classList.remove('hidden');
+      button.classList.add('hidden');
+      $('#reset-back').textContent = 'Entrar com a nova senha';
+    } catch (error) {
+      $('#reset-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
   };
 
   $('#login-form').onsubmit = async (event) => {

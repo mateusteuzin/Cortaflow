@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
  id SERIAL PRIMARY KEY, email VARCHAR(160) UNIQUE NOT NULL, senha_hash TEXT NOT NULL,
  nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
  email_verification_token_hash VARCHAR(64), email_verification_expires_at TIMESTAMPTZ,
+ password_reset_token_hash VARCHAR(64), password_reset_expires_at TIMESTAMPTZ,
  criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbearias (
  id SERIAL PRIMARY KEY, usuario_id INTEGER UNIQUE NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,

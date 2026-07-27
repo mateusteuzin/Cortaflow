@@ -18,6 +18,7 @@ from .services.email import (
     send_account_verification,
     send_appointment_confirmation,
     send_owner_notification,
+    send_password_reset,
     send_subscription_confirmation,
 )
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
@@ -56,6 +57,8 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login_token_hash VARCHAR(64)")
         cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login_expires_at TIMESTAMPTZ")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_reset_token_hash VARCHAR(64)")
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS logo_url TEXT")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS email_notificacoes VARCHAR(254)")
         cur.execute("ALTER TABLE barbearias ADD COLUMN IF NOT EXISTS notificar_novos_agendamentos BOOLEAN NOT NULL DEFAULT TRUE")
@@ -443,6 +446,34 @@ def resend_email_verification(data: ResendVerification):
             WHERE id=%s RETURNING id""", (token_hash, expires_at, user["id"]))
         send_account_verification(user["email"], user["nome"], raw_token)
     return {"message":"Se existir uma conta pendente, enviaremos um novo link de confirmação."}
+
+
+@app.post("/api/auth/esqueci-senha")
+def forgot_password(data: ForgotPassword):
+    user = one("SELECT id,email,nome,email_verificado FROM usuarios WHERE email=%s", (data.email.lower(),))
+    if user and user["email_verificado"]:
+        raw_token, token_hash, expires_at = _new_email_verification()
+        one("""UPDATE usuarios SET password_reset_token_hash=%s,password_reset_expires_at=%s
+            WHERE id=%s RETURNING id""", (token_hash, expires_at, user["id"]))
+        send_password_reset(user["email"], user["nome"], raw_token)
+    return {"message": "Se esse Gmail estiver cadastrado, enviaremos um link para criar uma nova senha."}
+
+
+@app.get("/api/auth/redefinir-senha")
+def password_reset_page(token: str = Query(min_length=20, max_length=200)):
+    return RedirectResponse(url=f"/?reset_password={quote(token)}", status_code=303)
+
+
+@app.post("/api/auth/redefinir-senha")
+def reset_password(data: ResetPassword):
+    token_hash = hashlib.sha256(data.token.encode()).hexdigest()
+    user = one("""UPDATE usuarios SET senha_hash=%s,password_reset_token_hash=NULL,
+        password_reset_expires_at=NULL WHERE password_reset_token_hash=%s
+        AND password_reset_expires_at>NOW() RETURNING id,email""",
+        (hash_password(data.senha), token_hash))
+    if not user:
+        raise HTTPException(400, "Este link de recuperação é inválido ou expirou.")
+    return {"message": "Senha atualizada com sucesso. Você já pode entrar."}
 
 
 @app.get("/api/auth/verificar-email")

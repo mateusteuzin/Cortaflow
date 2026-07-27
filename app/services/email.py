@@ -55,6 +55,50 @@ def send_account_verification(email: str, owner_name: str, verification_token: s
         return False
 
 
+def send_password_reset(email: str, owner_name: str, reset_token: str) -> bool:
+    """Envia um link de uso único para redefinir a senha."""
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
+    base_url = os.getenv("PUBLIC_BASE_URL", "https://cortaflow.com.br").strip().rstrip("/")
+    if not api_key:
+        logger.warning("RESEND_API_KEY não configurada; recuperação de senha não enviada")
+        return False
+    reset_url = f"{base_url}/api/auth/redefinir-senha?token={quote(reset_token)}"
+    safe_url = escape(reset_url, quote=True)
+    html = f"""<!doctype html><html lang="pt-BR"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;background:#f2eee5;font-family:Arial,Helvetica,sans-serif;color:#171713">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2eee5;padding:28px 12px"><tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#fffaf0;border:1px solid #ded4bf">
+      <tr><td style="background:#11140f;padding:30px;text-align:center">
+        <img src="{BRAND_ICON_URL}" width="64" height="64" alt="CortaFlow" style="display:block;margin:0 auto 14px;border-radius:50%;background:#fff;padding:4px">
+        <div style="color:#c99b35;font-size:11px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase">Segurança da conta</div>
+        <h1 style="margin:10px 0 0;color:#fff;font-size:28px;line-height:1.15">Crie uma nova senha</h1>
+      </td></tr>
+      <tr><td style="padding:34px 30px 12px">
+        <p style="margin:0 0 14px;font-size:16px;line-height:1.65">Olá, <strong>{escape(owner_name)}</strong>.</p>
+        <p style="margin:0;color:#55584f;font-size:15px;line-height:1.7">Recebemos uma solicitação para redefinir a senha da sua conta CortaFlow.</p>
+        <div style="margin:26px 0;text-align:center"><a href="{safe_url}" style="display:inline-block;min-width:220px;background:#171713;color:#fff;text-decoration:none;font-weight:800;padding:16px 24px;border-radius:4px">Criar nova senha</a></div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#f6edd8;border:1px solid #e1c982"><tr><td style="padding:16px 18px;color:#654a16;font-size:13px;line-height:1.6"><strong>Importante:</strong> este link é de uso único e expira em 24 horas.</td></tr></table>
+        <p style="margin:0 0 8px;color:#6c6e66;font-size:12px;line-height:1.6">Se o botão não abrir, copie e cole este endereço no navegador:</p>
+        <p style="word-break:break-all;margin:0;color:#8a6420;font-size:12px;line-height:1.6">{safe_url}</p>
+      </td></tr>
+      <tr><td style="padding:22px 30px 30px;color:#8b8d85;font-size:12px;line-height:1.6">Não solicitou essa alteração? Ignore esta mensagem. Sua senha continuará a mesma.</td></tr>
+    </table></td></tr></table></body></html>"""
+    payload = json.dumps({
+        "from": sender, "to": [email], "subject": "Redefina sua senha CortaFlow", "html": html,
+    }).encode()
+    request = Request("https://api.resend.com/emails", data=payload, method="POST", headers={
+        "Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "CortaFlow/1.0",
+    })
+    try:
+        with urlopen(request, timeout=15) as response:
+            response.read()
+        return True
+    except (HTTPError, URLError, TimeoutError, ValueError) as error:
+        logger.warning("Falha ao enviar recuperação de senha para %s: %s", email, error)
+        return False
+
+
 def send_subscription_confirmation(
     email: str,
     owner_name: str,
