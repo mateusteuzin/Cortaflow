@@ -270,6 +270,17 @@ def _stripe_mode() -> str:
     return "unconfigured"
 
 
+def _stripe_secret_diagnostics() -> dict[str, bool]:
+    secret = os.getenv("STRIPE_SECRET_KEY", "")
+    trimmed = secret.strip()
+    return {
+        "present": bool(trimmed),
+        "supported_prefix": trimmed.startswith(("sk_live_", "sk_test_")),
+        "complete_value": bool(trimmed) and len(trimmed) >= 24 and "..." not in trimmed,
+        "no_whitespace": bool(trimmed) and not any(char.isspace() for char in trimmed),
+    }
+
+
 def _google_oauth_settings() -> dict | None:
     settings = {
         "client_id": os.getenv("GOOGLE_CLIENT_ID", "").strip(),
@@ -338,6 +349,7 @@ def _configuration_status() -> dict:
                 and all(stripe_prices.values())
             ),
             "live_mode": _stripe_mode() == "live",
+            "secret_key_diagnostics": _stripe_secret_diagnostics(),
             "webhook_configured": webhook_configured,
             "prices_configured": stripe_prices,
         },
