@@ -1586,6 +1586,14 @@ async def whatsapp_webhook(request:Request):
 def booking_page(slug:str):
     return FileResponse(static/'cliente.html')
 
+@app.get("/sitemap.xml",include_in_schema=False)
+def sitemap():
+    return FileResponse(static/'sitemap.xml',media_type="application/xml")
+
+@app.get("/robots.txt",include_in_schema=False)
+def robots():
+    return FileResponse(static/'robots.txt',media_type="text/plain")
+
 @app.get("/",include_in_schema=False)
 def landing_page():
     return FileResponse(static/'landing.html')

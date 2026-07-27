@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /painel
+
+Sitemap: https://cortaflow.com.br/sitemap.xml
