@@ -18,6 +18,7 @@ let businessHours = [];
 let subscription = null;
 let loyaltyClients = [];
 let toastTimer;
+let agendaWeekAnchor = null;
 
 function setTheme(theme) {
   const dark = theme === 'dark';
@@ -240,8 +241,11 @@ function bindNavigation() {
   $('#menu-close').onclick = closeSidebar;
   $('#overlay').onclick = closeSidebar;
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeSidebar(); });
-  $('#agenda-date').onchange = () => loadAppointments().catch((error) => toast(error.message));
+  $('#agenda-date').onchange = () => { agendaWeekAnchor = startOfWeek(new Date($('#agenda-date').value + 'T12:00:00')); loadAppointments().catch((error) => toast(error.message)); };
   $('#agenda-barber').onchange = () => loadAppointments().catch((error) => toast(error.message));
+  $('#agenda-prev').onclick = () => { agendaWeekAnchor = addDays(agendaWeekAnchor || new Date($('#agenda-date').value + 'T12:00:00'), -7); $('#agenda-date').value = isoDate(agendaWeekAnchor); loadAppointments().catch((error) => toast(error.message)); };
+  $('#agenda-next').onclick = () => { agendaWeekAnchor = addDays(agendaWeekAnchor || new Date($('#agenda-date').value + 'T12:00:00'), 7); $('#agenda-date').value = isoDate(agendaWeekAnchor); loadAppointments().catch((error) => toast(error.message)); };
+  $('#agenda-today').onclick = () => { agendaWeekAnchor = new Date(); $('#agenda-date').value = localDate(); loadAppointments().catch((error) => toast(error.message)); };
   $('#account-logo-file').onchange = (event) => {
     const file = event.target.files?.[0];
     if (file) $('#account-logo-preview').src = URL.createObjectURL(file);
@@ -589,7 +593,7 @@ async function loadDashboard() {
   $$('[data-attention-view]').forEach((button) => { button.onclick = () => show(button.dataset.attentionView); });
 }
 
-async function loadAppointments() {
+async function loadAppointmentsLegacy() {
   let query = '?data=' + $('#agenda-date').value;
   if ($('#agenda-barber').value) query += '&barbeiro_id=' + $('#agenda-barber').value;
   const appointments = await api('/agendamentos' + query);
@@ -599,6 +603,20 @@ async function loadAppointments() {
     <small>Não há atendimentos marcados para o dia selecionado.</small>
     <button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button>
   </div>`;
+}
+
+const isoDate = (date) => { const d = new Date(date); const offset = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - offset).toISOString().slice(0, 10); };
+const addDays = (date, days) => { const next = new Date(date); next.setDate(next.getDate() + days); return next; };
+const startOfWeek = (date) => { const d = new Date(date); d.setHours(12, 0, 0, 0); const day = d.getDay(); d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); return d; };
+async function loadAppointments() {
+  const selected = new Date($('#agenda-date').value + 'T12:00:00'); agendaWeekAnchor = startOfWeek(selected);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(agendaWeekAnchor, index)); const barber = $('#agenda-barber').value;
+  const responses = await Promise.all(days.map((day) => api('/agendamentos?data=' + isoDate(day) + (barber ? '&barbeiro_id=' + barber : '')))); const appointments = responses.flat();
+  $('#agenda-range').textContent = `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${days[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  const today = localDate(); const byDay = (day) => appointments.filter((item) => isoDate(new Date(item.data_hora)) === isoDate(day)).sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+  const card = (item) => { const status = item.status || 'agendado'; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')} · ${escapeHTML(item.barbeiro_nome || 'Equipe')}</span><small>${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions"><button type="button" data-action="complete" data-id="${item.id}">✓</button><button type="button" data-action="cancel" data-id="${item.id}">×</button></div></article>`; };
+  $('#agenda-week').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<div class="agenda-day ${key === today ? 'is-today' : ''}"><header><span>${day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span><b>${day.getDate()}</b><small>${list.length} ${list.length === 1 ? 'atendimento' : 'atendimentos'}</small></header><div class="agenda-day-list">${list.map(card).join('') || '<div class="agenda-empty">Horários livres</div>'}</div></div>`; }).join('');
+  $('#agenda-mobile-list').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<section class="agenda-mobile-day ${key === today ? 'is-today' : ''}"><h3>${day.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</h3>${list.map(card).join('') || '<p class="agenda-empty">Horários livres</p>'}</section>`; }).join('');
 }
 
 function renderClients(query = '') {

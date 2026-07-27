@@ -193,8 +193,9 @@
 
       <section id="agenda" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button></div>
-        <div class="toolbar"><label for="agenda-date">Dia<input id="agenda-date" type="date"></label><label for="agenda-barber">Profissional<select id="agenda-barber"><option value="">Todos os barbeiros</option></select></label></div>
-        <div class="panel"><div id="appointments" class="appointment-list"></div></div>
+        <div class="agenda-toolbar"><div class="agenda-nav"><button id="agenda-prev" class="icon-button" type="button" aria-label="Semana anterior">‹</button><button id="agenda-today" class="button button-outline" type="button">Hoje</button><button id="agenda-next" class="icon-button" type="button" aria-label="Próxima semana">›</button><strong id="agenda-range">Semana atual</strong></div><div class="agenda-filters"><label for="agenda-date">Data<input id="agenda-date" type="date"></label><label for="agenda-barber">Profissional<select id="agenda-barber"><option value="">Todos os profissionais</option></select></label></div></div>
+        <div class="agenda-calendar panel"><div id="agenda-week" class="agenda-week"></div><div id="agenda-mobile-list" class="agenda-mobile-list"></div></div>
+        <div id="appointments" class="hidden"></div>
       </section>
 
       <section id="clientes" class="view hidden">
