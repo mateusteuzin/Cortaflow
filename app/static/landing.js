@@ -182,6 +182,7 @@ async function bindAuth() {
     input.type = input.type === 'password' ? 'text' : 'password';
     $('#toggle-password').textContent = input.type === 'password' ? 'Mostrar' : 'Ocultar';
   };
+  $('#forgot-password').onclick = () => toast('A recuperação por e-mail será ativada com o Resend.');
   $('#show-register').onclick = () => showAuth('register');
   $('#show-login').onclick = () => showAuth('login');
   $$('[data-google-login]').forEach((button) => {

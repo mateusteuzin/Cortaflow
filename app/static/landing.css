@@ -254,6 +254,8 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .google-login { display: inline-flex; width: 100%; min-height: 47px; align-items: center; justify-content: center; gap: 9px; margin-top: 9px; border: 1px solid #d4d1c8; background: #fff; color: #35362f; font-size: 10px; font-weight: 800; }
 .google-login:hover { border-color: #bcb7ab; background: #faf9f6; }
 .google-mark { display: block; width: 18px; height: 18px; flex: 0 0 18px; }
+.forgot-password { display: block; margin: 11px 0 0 auto; border: 0; background: transparent; color: #89631d; font-size: 9px; font-weight: 800; }
+.forgot-password:hover { color: #5c4317; text-decoration: underline; }
 
 /* Editorial hero — barbearia contemporânea */
 .site-header {

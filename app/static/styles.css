@@ -87,6 +87,8 @@ a { color: inherit; }
 .auth-google { display: inline-flex; width: 100%; min-height: 46px; align-items: center; justify-content: center; gap: 9px; margin-top: 9px; border: 1px solid #d6d2c8; border-radius: 0; background: #fff; color: #35362f; font-size: 10px; font-weight: 800; }
 .auth-google:hover { border-color: #bcb7ab; background: #faf9f6; }
 .google-mark { display: block; width: 18px; height: 18px; flex: 0 0 18px; }
+.forgot-password { display: block; margin: 11px 0 0 auto; border: 0; background: transparent; color: #89631d; font-size: 9px; font-weight: 800; }
+.forgot-password:hover { color: #5c4317; text-decoration: underline; }
 .password-field { position: relative; display: block; }
 .password-field input { padding-right: 70px; }
 .password-field button { position: absolute; top: 7px; right: 0; bottom: 0; width: 66px; border: 0; background: transparent; color: #86621f; font-size: 8px; font-weight: 800; text-transform: uppercase; }
