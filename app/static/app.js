@@ -933,6 +933,16 @@ function renderAttendanceChart(points) {
   $('#attendance-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><g class="chart-bars">${bars}</g></svg>`;
 }
 
+const modal = $('#modal');
+const modalClose = $('#modal-close');
+if (modal && modalClose) {
+  modalClose.addEventListener('click', () => modal.close());
+  modal.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    modal.close();
+  });
+}
+
 bindAuth();
 bindNavigation();
 bindTheme();

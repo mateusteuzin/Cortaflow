@@ -474,9 +474,10 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 
 #toast { position: fixed; z-index: 30; right: 22px; bottom: 22px; max-width: min(360px, calc(100% - 32px)); padding: 14px 18px; border: 1px solid rgba(213,167,46,.3); border-radius: var(--radius-md); background: var(--panel-surface-2); color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 17px 35px rgba(0,0,0,.28); opacity: 0; pointer-events: none; transform: translateY(10px); transition: .25s ease; }
 #toast.show { opacity: 1; transform: none; }
-dialog { width: min(560px, calc(100% - 24px)); padding: 0; border: 1px solid #d4c49e; border-radius: var(--radius-lg); background: var(--paper); box-shadow: 0 30px 100px rgba(0,0,0,.34); }
+dialog { box-sizing: border-box; width: min(560px, calc(100% - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; padding: 0; border: 1px solid #d4c49e; border-radius: var(--radius-lg); background: var(--paper); box-shadow: 0 30px 100px rgba(0,0,0,.34); }
 dialog::backdrop { background: rgba(8,9,8,.78); backdrop-filter: blur(7px); }
 #modal-form { padding: 26px; }
+#modal-form, #modal-fields { min-width: 0; }
 .modal-head { display: flex; align-items: start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .modal-head h2 { margin: 6px 0 0; font: 600 26px/1.15 var(--display); }
 .modal-close { border-color: var(--line); color: var(--muted); }
@@ -493,6 +494,15 @@ dialog::backdrop { background: rgba(8,9,8,.78); backdrop-filter: blur(7px); }
 .confirm-modal-actions .is-loading::after { content: '…'; display: inline-block; margin-left: 6px; animation: confirm-pulse 1s infinite; }
 @keyframes confirm-pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
 @media (max-width: 520px) { .confirm-modal-form { padding: 22px; } .confirm-modal-actions { flex-direction: column-reverse; } .confirm-modal-actions .button { width: 100%; } }
+@media (max-width: 520px) {
+  dialog { width: calc(100vw - 20px); max-width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  #modal-form { padding: 20px 16px; }
+  .modal-head { gap: 10px; }
+  .modal-head h2 { font-size: 23px; }
+  #modal-fields .grid2 { grid-template-columns: minmax(0, 1fr); }
+  #modal input, #modal select, #modal textarea { box-sizing: border-box; max-width: 100%; }
+  #modal .upload-picker { min-width: 0; }
+}
 
 /* Tema escuro do painel */
 html[data-theme="dark"] { color-scheme: dark; }
