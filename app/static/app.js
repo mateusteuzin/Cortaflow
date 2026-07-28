@@ -261,6 +261,9 @@ function bindNavigation() {
     if (!actionButton) return;
     const action = actionButton.dataset.action;
     const id = Number(actionButton.dataset.id);
+    if (action === 'add-barber') openBarber();
+    if (action === 'add-service') openService();
+    if (action === 'add-product') openProduct();
     if (action === 'complete') concludeAppointment(id);
     if (action === 'cancel') cancelAppointment(id);
     if (action === 'remove-appointment') removeAppointment(id);
@@ -268,6 +271,7 @@ function bindNavigation() {
     if (action === 'remove-barber') removeBarber(id);
     if (action === 'edit-service') openService(id);
     if (action === 'remove-service') removeService(id);
+    if (action === 'edit-product') openProduct(id);
     if (action === 'remove-product') removeProduct(id);
   });
 }
@@ -797,7 +801,8 @@ async function loadServices() {
 }
 
 function openService(id) {
-  const service = services.find((item) => item.id === id);
+  const service = id ? services.find((item) => item.id === id) : null;
+  if (id && !service) return toast('Serviço não encontrado.');
   const value = (key, fallback = '') => escapeHTML(service?.[key] ?? fallback);
   fields(`<label>Nome do serviço<input name="nome" value="${value('nome')}" required></label><label>Descrição<input name="descricao" value="${value('descricao')}" placeholder="Ex.: corte com acabamento"></label>${imageUploadField('imagem_url', service?.imagem_url || '', 'Foto do corte ou serviço')}<div class="grid2"><label>Duração (minutos)<input name="duracao_minutos" type="number" min="10" max="480" value="${value('duracao_minutos', 30)}" required></label><label>Preço<input name="preco" type="number" min="0" step=".01" value="${value('preco', 45)}" required></label></div>`, service ? 'Editar serviço' : 'Novo serviço', async (data) => {
     const file = data.imagem_url_arquivo;
@@ -825,6 +830,8 @@ function openProduct() {
     await loadProducts();
   });
 }
+
+Object.assign(window, { openBarber, openService, openProduct });
 
 async function removeProduct(id) {
   if (!confirm('Excluir produto?')) return;
