@@ -871,7 +871,27 @@ function bindPricing() {
   });
 }
 
+function initializeMotion() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const targets = $$('[data-reveal], .transform-grid article, .feature-card, .price-card, .proof-grid article, .security-list article');
+  if (!targets.length) return;
+  document.documentElement.classList.add('motion-ready');
+  if (!('IntersectionObserver' in window)) {
+    targets.forEach((target) => target.classList.add('is-visible'));
+    return;
+  }
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: .14, rootMargin: '0px 0px -7% 0px' });
+  requestAnimationFrame(() => targets.forEach((target) => observer.observe(target)));
+}
+
 async function initialize() {
+  initializeMotion();
   bindSiteNavigation();
   bindPasswordFields();
   bindPhoneFormatting();
