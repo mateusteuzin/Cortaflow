@@ -42,9 +42,19 @@ EMAIL_FROM=CortaFlow <nao-responda@cortaflow.com.br>
 CRON_SECRET=OUTRA_CHAVE_FORTE
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+WHATSAPP_API_URL=https://graph.facebook.com/v23.0
+WHATSAPP_ACCESS_TOKEN=SEU_TOKEN_PERMANENTE
+WHATSAPP_PHONE_NUMBER_ID=ID_DO_NUMERO
+WHATSAPP_BUSINESS_ACCOUNT_ID=ID_DA_CONTA_WHATSAPP_BUSINESS
+WHATSAPP_TEMPLATE_NAME=confirmacao_agendamento
+WHATSAPP_TEMPLATE_LANGUAGE=pt_BR
+WHATSAPP_WEBHOOK_VERIFY_TOKEN=UM_SEGREDO_DE_VERIFICACAO
+WHATSAPP_APP_SECRET=SEGREDO_DO_APLICATIVO_META
 ```
 
-As variáveis `WHATSAPP_*` são opcionais até a integração da Meta estar pronta. Para gerar
+As variáveis `WHATSAPP_*` são opcionais até a integração da Meta estar pronta. O template
+`confirmacao_agendamento` deve estar aprovado em `pt_BR` e conter, nesta ordem, seis
+variáveis no corpo: nome do cliente, serviço, data, horário, profissional e código. Para gerar
 segredos no PowerShell:
 
 ```powershell
@@ -74,6 +84,13 @@ TXT/MX coexistem com os registros da Vercel. Depois use o remetente
 ## 6. WhatsApp em ambiente serverless
 
 O envio inicial é disparado junto à requisição de agendamento. Retentativas ficam no banco.
+Na Meta, assine o campo `messages` e configure:
+
+```text
+Callback URL: https://cortaflow.com.br/api/whatsapp/webhook
+Verify token: o mesmo valor de WHATSAPP_WEBHOOK_VERIFY_TOKEN
+```
+
 O endpoint abaixo processa até dez itens pendentes e exige `CRON_SECRET`:
 
 ```text

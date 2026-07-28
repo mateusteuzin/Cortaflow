@@ -364,6 +364,11 @@ def _configuration_status() -> dict:
         )
         for plan, config in STRIPE_PLANS.items()
     }
+    whatsapp_access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
+    whatsapp_phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+    whatsapp_business_account_id = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID", "").strip()
+    whatsapp_verify_token = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "").strip()
+    whatsapp_app_secret = os.getenv("WHATSAPP_APP_SECRET", "").strip()
     return {
         "stripe": {
             "configured": (
@@ -381,6 +386,20 @@ def _configuration_status() -> dict:
                 os.getenv("RESEND_API_KEY", "").strip().startswith("re_")
                 and _env_configured("EMAIL_FROM")
             ),
+        },
+        "whatsapp": {
+            "configured": bool(
+                whatsapp_access_token
+                and whatsapp_phone_number_id
+                and whatsapp_business_account_id
+                and whatsapp_verify_token
+                and whatsapp_app_secret
+            ),
+            "access_token_configured": bool(whatsapp_access_token),
+            "phone_number_id_configured": bool(whatsapp_phone_number_id),
+            "business_account_id_configured": bool(whatsapp_business_account_id),
+            "webhook_verify_token_configured": bool(whatsapp_verify_token),
+            "app_secret_configured": bool(whatsapp_app_secret),
         },
         "google_oauth": {
             "configured": _google_oauth_settings() is not None,
@@ -1402,18 +1421,27 @@ def delete_service(service_id:int,user=Depends(current_user)):
     return {"ok":True}
 
 def insert_appointment(data, shop_id):
-    service=one("""SELECT id,nome,duracao_minutos,preco FROM servicos
-      WHERE barbearia_id=%s AND ativo AND (id=%s OR (%s::int IS NULL AND nome=%s))
-      ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",(shop_id,data.servico_id,data.servico_id,data.servico,data.servico_id))
-    if not service: raise HTTPException(404,"Serviço não encontrado")
     try:
-        row = one("""INSERT INTO agendamentos(
-          barbearia_id,barbeiro_id,servico_id,cliente_nome,cliente_telefone,cliente_email,data_hora,duracao_minutos,servico,preco,whatsapp_autorizado)
-          SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
-          WHERE EXISTS(SELECT 1 FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo)
-          RETURNING *""",(shop_id,data.barbeiro_id,service["id"],data.cliente_nome,data.cliente_telefone,data.cliente_email,data.data_hora,service["duracao_minutos"],service["nome"],service["preco"],data.whatsapp_autorizado,data.barbeiro_id,shop_id))
-        if row and data.cliente_telefone:
-            one("""INSERT INTO clientes(
+        with db() as cur:
+            cur.execute("""SELECT id,nome,duracao_minutos,preco FROM servicos
+              WHERE barbearia_id=%s AND ativo AND (id=%s OR (%s::int IS NULL AND nome=%s))
+              ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+              (shop_id,data.servico_id,data.servico_id,data.servico,data.servico_id))
+            service=cur.fetchone()
+            if not service:
+                raise HTTPException(404,"Serviço não encontrado")
+            cur.execute("""INSERT INTO agendamentos(
+              barbearia_id,barbeiro_id,servico_id,cliente_nome,cliente_telefone,cliente_email,
+              data_hora,duracao_minutos,servico,preco,whatsapp_autorizado)
+              SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+              WHERE EXISTS(SELECT 1 FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo)
+              RETURNING *""",
+              (shop_id,data.barbeiro_id,service["id"],data.cliente_nome,data.cliente_telefone,
+               data.cliente_email,data.data_hora,service["duracao_minutos"],service["nome"],
+               service["preco"],data.whatsapp_autorizado,data.barbeiro_id,shop_id))
+            row=cur.fetchone()
+            if row and data.cliente_telefone:
+                cur.execute("""INSERT INTO clientes(
               barbearia_id,nome,telefone,email,whatsapp_autorizado,atualizado_em)
               VALUES(%s,%s,%s,%s,%s,NOW())
               ON CONFLICT(barbearia_id,telefone) DO UPDATE SET
@@ -1421,14 +1449,27 @@ def insert_appointment(data, shop_id):
                 email=COALESCE(EXCLUDED.email,clientes.email),
                 whatsapp_autorizado=clientes.whatsapp_autorizado OR EXCLUDED.whatsapp_autorizado,
                 atualizado_em=NOW()
-              RETURNING id""",(shop_id,data.cliente_nome,data.cliente_telefone,data.cliente_email,
-                data.whatsapp_autorizado))
-        return row
-    except IntegrityError: raise HTTPException(409,"Este horário acabou de ser ocupado")
+              RETURNING id""",
+              (shop_id,data.cliente_nome,data.cliente_telefone,data.cliente_email,
+               data.whatsapp_autorizado))
+            return row
+    except IntegrityError as error:
+        raise HTTPException(409,"Este horário acabou de ser ocupado") from error
 
 @app.get("/api/agendamentos")
 def appointments(data:date|None=None,barbeiro_id:int|None=None,user=Depends(current_user)):
-    return all_rows("SELECT a.*,b.nome barbeiro_nome FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id WHERE a.barbearia_id=%s AND (%s::date IS NULL OR a.data_hora::date=%s) AND (%s::int IS NULL OR a.barbeiro_id=%s) ORDER BY a.data_hora",(user["barbearia_id"],data,data,barbeiro_id,barbeiro_id))
+    clauses=["a.barbearia_id=%s"]
+    params=[user["barbearia_id"]]
+    if data is not None:
+        clauses.extend(["a.data_hora>=%s","a.data_hora<%s"])
+        params.extend([datetime.combine(data,datetime.min.time()),
+                       datetime.combine(data+timedelta(days=1),datetime.min.time())])
+    if barbeiro_id is not None:
+        clauses.append("a.barbeiro_id=%s")
+        params.append(barbeiro_id)
+    return all_rows(f"""SELECT a.*,b.nome barbeiro_nome FROM agendamentos a
+      JOIN barbeiros b ON b.id=a.barbeiro_id
+      WHERE {' AND '.join(clauses)} ORDER BY a.data_hora""",tuple(params))
 
 @app.post("/api/agendamentos",status_code=201)
 def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=Depends(current_user)):
@@ -1446,11 +1487,17 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,user=Depends(cu
             raise HTTPException(404,"Agendamento não encontrado")
         except InvalidAppointmentStatusError:
             raise HTTPException(409,"Agendamento cancelado não pode ser concluído")
-    current=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",(appointment_id,user["barbearia_id"]))
-    if not current: raise HTTPException(404,"Agendamento não encontrado")
     values=data.model_dump(exclude_none=True)
     if data.status and data.status not in ('agendado','confirmado','em_andamento','cancelado','nao_compareceu'): raise HTTPException(422,"Status inválido")
-    for key,value in values.items(): current=one(f"UPDATE agendamentos SET {key}=%s WHERE id=%s RETURNING *",(value,appointment_id))
+    if not values:
+        current=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",
+            (appointment_id,user["barbearia_id"]))
+    else:
+        assignments=",".join(f"{key}=%s" for key in values)
+        current=one(f"""UPDATE agendamentos SET {assignments},atualizado_em=NOW()
+          WHERE id=%s AND barbearia_id=%s RETURNING *""",
+          (*values.values(),appointment_id,user["barbearia_id"]))
+    if not current: raise HTTPException(404,"Agendamento não encontrado")
     return current
 
 @app.patch("/api/agendamentos/{appointment_id}/concluir")
@@ -1485,7 +1532,15 @@ def remove_cancelled_appointment(appointment_id:int,user=Depends(current_user)):
 def available(shop_id:int, day:date, barber_id:int|None, duration:int=30):
     weekday=day.weekday(); hours=one("SELECT hora_inicio,hora_fim FROM horarios_funcionamento WHERE barbearia_id=%s AND dia_semana=%s",(shop_id,weekday))
     if not hours:return []
-    busy=all_rows("SELECT data_hora,duracao_minutos FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status<>'cancelado' AND (%s::int IS NULL OR barbeiro_id=%s)",(shop_id,day,barber_id,barber_id))
+    day_start=datetime.combine(day,datetime.min.time())
+    day_end=day_start+timedelta(days=1)
+    clauses=["barbearia_id=%s","data_hora>=%s","data_hora<%s","status<>'cancelado'"]
+    params=[shop_id,day_start,day_end]
+    if barber_id is not None:
+        clauses.append("barbeiro_id=%s")
+        params.append(barber_id)
+    busy=all_rows(f"""SELECT data_hora,duracao_minutos FROM agendamentos
+      WHERE {' AND '.join(clauses)}""",tuple(params))
     cursor=datetime.combine(day,hours["hora_inicio"]); end=datetime.combine(day,hours["hora_fim"]); slots=[]
     while cursor+timedelta(minutes=duration)<=end:
         candidate_end=cursor+timedelta(minutes=duration)

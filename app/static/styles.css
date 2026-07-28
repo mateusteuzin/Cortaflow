@@ -829,12 +829,12 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
 /* Fechamento visual do painel: entrada mais legível e operacional. */
 .hero-card {
   min-height: 300px;
-  grid-template-columns: minmax(400px,620px) minmax(240px,1fr);
+  grid-template-columns: minmax(360px,480px) minmax(240px,1fr);
   align-items: end;
-  padding: 38px clamp(28px,3.5vw,52px);
+  padding: 38px clamp(26px,2.8vw,42px);
   background:
-    linear-gradient(90deg,#090c0a 0%,rgba(9,12,10,.96) 35%,rgba(9,12,10,.48) 67%,rgba(9,12,10,.16) 100%),
-    url('/assets/barber-hero.webp') 83% 32% / cover no-repeat;
+    linear-gradient(90deg,#090c0a 0%,rgba(9,12,10,.99) 43%,rgba(9,12,10,.62) 61%,rgba(9,12,10,.14) 100%),
+    url('/assets/barber-hero.webp') 91% 32% / cover no-repeat;
   box-shadow: 0 22px 58px rgba(0,0,0,.3);
 }
 .hero-card-overlay {
@@ -856,7 +856,13 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
   height: 1px;
   background: linear-gradient(90deg,#d9c893 0%,rgba(217,200,147,.16) 42%,transparent 76%);
 }
-.hero-card-main { align-self: center; max-width: 620px; }
+.hero-card-main {
+  width: 100%;
+  max-width: 460px;
+  align-self: center;
+  justify-self: start;
+  text-align: left;
+}
 .hero-card h2 {
   max-width: 560px;
   margin-top: 10px;
@@ -867,7 +873,8 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
 .hero-card h2 span { color: #dfcd9c; }
 .hero-card p { color: rgba(245,243,234,.68); font-size: 14px; }
 .hero-mini-stats {
-  max-width: 540px;
+  width: 100%;
+  max-width: 450px;
   margin-top: 26px;
   border-color: rgba(255,255,255,.13);
 }
