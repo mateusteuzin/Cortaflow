@@ -239,6 +239,92 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .security-list article > i { border-radius: 0; }
 .final-cta { background: #c69c43; }
 .final-cta .btn-gold { border-color: #171a15; background: #171a15; color: #fff; }
+
+/* Últimos ajustes de movimento (após os estilos de acabamento). */
+.transform-grid article:hover,
+.feature-card:hover,
+.proof-grid article:hover,
+.price-card:hover,
+.security-list article:hover { transform: translateY(-4px); }
+.price-card.featured:hover { transform: translateY(-16px); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-copy > *, .product-visual, .trust-strip span { opacity: 1; }
+  .transform-grid article:hover, .feature-card:hover, .proof-grid article:hover,
+  .price-card:hover, .price-card.featured:hover, .security-list article:hover,
+  .product-visual:hover .real-panel-frame { transform: none !important; }
+}
+
+/* Movimento de entrada e micro-interações — mantido sutil para não competir com o conteúdo. */
+@keyframes cf-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cf-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cf-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.hero-copy > * { opacity: 0; animation: cf-fade-up .7s cubic-bezier(.22,.8,.26,1) forwards; }
+.hero-copy .kicker { animation-delay: .08s; }
+.hero-copy h1 { animation-delay: .16s; }
+.hero-copy > p { animation-delay: .24s; }
+.hero-copy .hero-actions { animation-delay: .32s; }
+.hero-copy .assurances { animation-delay: .4s; }
+.product-visual { opacity: 0; animation: cf-fade-in .9s ease .22s forwards; }
+.real-panel-frame { transition: transform .45s cubic-bezier(.2,.7,.2,1), box-shadow .45s ease; }
+.product-visual:hover .real-panel-frame { transform: translateY(-5px); box-shadow: 16px 34px 70px rgba(0,0,0,.5); }
+.float-card.confirm { animation: cf-float 5s ease-in-out 1.2s infinite; }
+.float-card.insight { animation: cf-float 6s ease-in-out 1.5s infinite reverse; }
+.trust-strip span { opacity: 0; animation: cf-fade-up .55s ease forwards; }
+.trust-strip span:nth-child(1) { animation-delay: .1s; }
+.trust-strip span:nth-child(2) { animation-delay: .18s; }
+.trust-strip span:nth-child(3) { animation-delay: .26s; }
+.trust-strip span:nth-child(4) { animation-delay: .34s; }
+.trust-strip span:nth-child(5) { animation-delay: .42s; }
+
+.transform-grid article,
+.feature-card,
+.proof-grid article,
+.price-card,
+.security-list article { transition: transform .28s cubic-bezier(.2,.7,.2,1), box-shadow .28s ease, border-color .28s ease; }
+.transform-grid article:hover,
+.feature-card:hover,
+.proof-grid article:hover,
+.price-card:hover,
+.security-list article:hover { transform: translateY(-4px); }
+.price-card.featured:hover { transform: translateY(-16px); }
+.price-card button, .btn { position: relative; overflow: hidden; }
+.price-card button::after, .btn-gold::after {
+  position: absolute; inset: 0; width: 45%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  content: ""; transform: translateX(-130%); transition: transform .55s ease;
+}
+.price-card button:hover::after, .btn-gold:hover::after { transform: translateX(250%); }
+.section-intro.centered, .section-heading, .how-grid, .security-grid, .faq-grid, .final-cta .container {
+  animation: cf-fade-up .7s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-copy > *, .product-visual, .trust-strip span { opacity: 1; }
+  .transform-grid article:hover, .feature-card:hover, .proof-grid article:hover,
+  .price-card:hover, .price-card.featured:hover, .security-list article:hover,
+  .product-visual:hover .real-panel-frame { transform: none; }
+}
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 17px 0 0; color: #9b9a91; font-size: 9px; text-transform: uppercase; }
 .auth-divider::before, .auth-divider::after { height: 1px; flex: 1; background: #dedbd2; content: ""; }
 .google-login { display: inline-flex; width: 100%; min-height: 47px; align-items: center; justify-content: center; gap: 9px; margin-top: 9px; border: 1px solid #d4d1c8; background: #fff; color: #35362f; font-size: 10px; font-weight: 800; }

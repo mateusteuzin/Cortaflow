@@ -716,9 +716,50 @@ function openAppointment() {
   });
 }
 
+function confirmAction({ title = 'Confirmar ação', message = '', confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', tone = 'danger' } = {}) {
+  let dialog = document.querySelector('#confirm-modal');
+  if (!dialog) {
+    dialog = document.createElement('dialog');
+    dialog.id = 'confirm-modal';
+    dialog.innerHTML = `<form method="dialog" class="confirm-modal-form">
+      <div class="confirm-modal-icon" aria-hidden="true">!</div>
+      <div class="confirm-modal-copy"><span class="eyebrow">CONFIRMAÇÃO</span><h2 id="confirm-modal-title"></h2><p id="confirm-modal-message"></p></div>
+      <div class="confirm-modal-actions"><button type="button" class="button button-ghost" data-confirm-cancel></button><button type="button" class="button button-primary" data-confirm-ok></button></div>
+    </form>`;
+    document.body.appendChild(dialog);
+  }
+  const form = dialog.querySelector('form');
+  const ok = dialog.querySelector('[data-confirm-ok]');
+  const cancel = dialog.querySelector('[data-confirm-cancel]');
+  const icon = dialog.querySelector('.confirm-modal-icon');
+  dialog.querySelector('#confirm-modal-title').textContent = title;
+  dialog.querySelector('#confirm-modal-message').textContent = message;
+  ok.textContent = confirmLabel;
+  cancel.textContent = cancelLabel;
+  icon.className = `confirm-modal-icon ${tone}`;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => { if (settled) return; settled = true; dialog.close(); resolve(value); };
+    const onCancel = (event) => { event.preventDefault(); finish(false); };
+    const onKey = (event) => { if (event.key === 'Escape') { event.preventDefault(); finish(false); } };
+    const onOk = async () => {
+      ok.disabled = true; cancel.disabled = true; ok.classList.add('is-loading');
+      await new Promise((r) => setTimeout(r, 220));
+      finish(true);
+    };
+    dialog.addEventListener('cancel', onCancel, { once: true });
+    dialog.addEventListener('keydown', onKey, { once: false });
+    cancel.onclick = () => finish(false);
+    ok.onclick = onOk;
+    dialog.addEventListener('close', () => { dialog.removeEventListener('keydown', onKey); ok.disabled = false; cancel.disabled = false; ok.classList.remove('is-loading'); }, { once: true });
+    dialog.showModal();
+    ok.focus();
+  });
+}
+
 async function concludeAppointment(id) {
   const warning = 'Ao concluir este agendamento, o e-mail e o telefone associados serão removidos permanentemente. Deseja continuar?';
-  if (!confirm(warning)) return;
+  if (!await confirmAction({ title: 'Concluir atendimento?', message: warning, confirmLabel: 'Concluir atendimento', cancelLabel: 'Voltar', tone: 'success' })) return;
   try {
     const result = await api('/agendamentos/' + id + '/concluir', { method: 'PATCH' });
     toast(result.message || 'Agendamento concluído e dados de contato removidos com sucesso.');

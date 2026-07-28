@@ -481,6 +481,18 @@ dialog::backdrop { background: rgba(8,9,8,.78); backdrop-filter: blur(7px); }
 .modal-head h2 { margin: 6px 0 0; font: 600 26px/1.15 var(--display); }
 .modal-close { border-color: var(--line); color: var(--muted); }
 #modal .button { width: 100%; margin-top: 16px; }
+.confirm-modal-form { width: min(460px, calc(100vw - 32px)); padding: 30px; display: grid; grid-template-columns: auto 1fr; gap: 16px; }
+.confirm-modal-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: #fff3d1; color: #a66b00; font-weight: 900; font-size: 22px; }
+.confirm-modal-icon.success { background: #e3f5e9; color: #177245; }
+.confirm-modal-copy h2 { margin: 5px 0 8px; font: 600 25px/1.15 var(--display); }
+.confirm-modal-copy p { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+.confirm-modal-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.confirm-modal-actions .button { min-height: 44px; padding-inline: 18px; }
+.confirm-modal-actions .button-ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); }
+.confirm-modal-actions .is-loading { opacity: .7; pointer-events: none; }
+.confirm-modal-actions .is-loading::after { content: '…'; display: inline-block; margin-left: 6px; animation: confirm-pulse 1s infinite; }
+@keyframes confirm-pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+@media (max-width: 520px) { .confirm-modal-form { padding: 22px; } .confirm-modal-actions { flex-direction: column-reverse; } .confirm-modal-actions .button { width: 100%; } }
 
 /* Tema escuro do painel */
 html[data-theme="dark"] { color-scheme: dark; }
