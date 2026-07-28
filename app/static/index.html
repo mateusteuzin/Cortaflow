@@ -193,7 +193,11 @@
 
       <section id="agenda" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button></div>
-        <div class="agenda-toolbar"><div class="agenda-nav"><button id="agenda-prev" class="icon-button" type="button" aria-label="Semana anterior">‹</button><button id="agenda-today" class="button button-outline" type="button">Hoje</button><button id="agenda-next" class="icon-button" type="button" aria-label="Próxima semana">›</button><strong id="agenda-range">Semana atual</strong></div><div class="agenda-filters"><label for="agenda-date">Data<input id="agenda-date" type="date"></label><label for="agenda-barber">Profissional<select id="agenda-barber"><option value="">Todos os profissionais</option></select></label></div></div>
+        <div class="agenda-toolbar"><div class="agenda-nav"><button id="agenda-prev" class="icon-button" type="button" aria-label="Semana anterior">‹</button><button id="agenda-today" class="button button-outline" type="button">Hoje</button><button id="agenda-next" class="icon-button" type="button" aria-label="Próxima semana">›</button><strong id="agenda-range">Semana atual</strong></div><div class="agenda-filters"><label for="agenda-date">Ir para a data<input id="agenda-date" type="date"></label><select id="agenda-barber" class="agenda-barber-native" aria-label="Profissional"><option value="">Todos os profissionais</option></select></div></div>
+        <div class="professional-filter-wrap">
+          <div class="professional-filter-head"><div><span class="eyebrow">FILTRAR AGENDA</span><strong>Escolha um profissional</strong></div><small>A semana atualiza automaticamente</small></div>
+          <div id="agenda-professional-filter" class="agenda-professional-filter" role="group" aria-label="Filtrar agenda por profissional"></div>
+        </div>
         <div class="agenda-calendar panel"><div id="agenda-week" class="agenda-week"></div><div id="agenda-mobile-list" class="agenda-mobile-list"></div></div>
         <div id="appointments" class="hidden"></div>
       </section>

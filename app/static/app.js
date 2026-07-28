@@ -242,7 +242,13 @@ function bindNavigation() {
   $('#overlay').onclick = closeSidebar;
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeSidebar(); });
   $('#agenda-date').onchange = () => { agendaWeekAnchor = startOfWeek(new Date($('#agenda-date').value + 'T12:00:00')); loadAppointments().catch((error) => toast(error.message)); };
-  $('#agenda-barber').onchange = () => loadAppointments().catch((error) => toast(error.message));
+  $('#agenda-professional-filter').onclick = (event) => {
+    const button = event.target.closest('[data-agenda-professional]');
+    if (!button) return;
+    $('#agenda-barber').value = button.dataset.agendaProfessional;
+    localStorage.setItem('agendaProfessional', button.dataset.agendaProfessional);
+    loadAppointments().catch((error) => toast(error.message));
+  };
   $('#agenda-prev').onclick = () => { agendaWeekAnchor = addDays(agendaWeekAnchor || new Date($('#agenda-date').value + 'T12:00:00'), -7); $('#agenda-date').value = isoDate(agendaWeekAnchor); loadAppointments().catch((error) => toast(error.message)); };
   $('#agenda-next').onclick = () => { agendaWeekAnchor = addDays(agendaWeekAnchor || new Date($('#agenda-date').value + 'T12:00:00'), 7); $('#agenda-date').value = isoDate(agendaWeekAnchor); loadAppointments().catch((error) => toast(error.message)); };
   $('#agenda-today').onclick = () => { agendaWeekAnchor = new Date(); $('#agenda-date').value = localDate(); loadAppointments().catch((error) => toast(error.message)); };
@@ -521,6 +527,9 @@ async function loadBarbers() {
   const active = barbers.filter((barber) => barber.ativo);
   $('#team-count').textContent = active.length;
   $('#agenda-barber').innerHTML = '<option value="">Todos os barbeiros</option>' + active.map((barber) => `<option value="${barber.id}">${escapeHTML(barber.nome)}</option>`).join('');
+  const savedProfessional = localStorage.getItem('agendaProfessional') || '';
+  $('#agenda-barber').value = active.some((barber) => String(barber.id) === savedProfessional) ? savedProfessional : '';
+  renderAgendaProfessionalFilter([]);
   $('#barber-grid').innerHTML = active.map((barber) => `<article class="media-card professional-card"><div class="admin-card-photo professional-admin-photo">${barber.foto_url ? `<img src="${escapeHTML(barber.foto_url)}" alt="Foto de ${escapeHTML(barber.nome)}" loading="lazy">` : `<span>${escapeHTML(barber.nome.slice(0, 2).toUpperCase())}</span>`}<i class="photo-status"></i></div><div class="admin-card-body"><span class="badge">Ativo</span><h3>${escapeHTML(barber.nome)}</h3><p>${escapeHTML(barber.telefone || 'Sem telefone')}</p><footer><b>${Number(barber.comissao_percentual)}% comissão</b><button class="link" type="button" data-action="edit-barber" data-id="${barber.id}">Editar</button><button class="danger" type="button" data-action="remove-barber" data-id="${barber.id}">Desativar</button></footer></div></article>`).join('') || '<p class="empty">Adicione o primeiro profissional.</p>';
 }
 
@@ -614,10 +623,37 @@ async function loadAppointmentsLegacy() {
 const isoDate = (date) => { const d = new Date(date); const offset = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - offset).toISOString().slice(0, 10); };
 const addDays = (date, days) => { const next = new Date(date); next.setDate(next.getDate() + days); return next; };
 const startOfWeek = (date) => { const d = new Date(date); d.setHours(12, 0, 0, 0); const day = d.getDay(); d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)); return d; };
+function renderAgendaProfessionalFilter(appointments) {
+  const active = barbers.filter((barber) => barber.ativo);
+  const selected = $('#agenda-barber').value;
+  const option = (id, name, photo, count) => {
+    const value = String(id);
+    const isActive = selected === value;
+    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+    const avatar = photo ? `<img src="${escapeHTML(photo)}" alt="">` : `<span>${escapeHTML(initials)}</span>`;
+    return `<button class="professional-filter-button ${isActive ? 'is-active' : ''}" type="button" data-agenda-professional="${escapeHTML(value)}" aria-pressed="${isActive}">
+      <i class="professional-filter-avatar">${avatar}</i>
+      <b>${escapeHTML(name)}</b>
+      <small>${count} ${count === 1 ? 'horário' : 'horários'}</small>
+      <em aria-hidden="true">✓</em>
+    </button>`;
+  };
+  const all = option('', 'Toda a equipe', '', appointments.length);
+  const professionals = active.map((barber) => option(
+    barber.id,
+    barber.nome,
+    barber.foto_url,
+    appointments.filter((item) => Number(item.barbeiro_id) === Number(barber.id)).length
+  )).join('');
+  $('#agenda-professional-filter').innerHTML = all + professionals;
+}
 async function loadAppointments() {
   const selected = new Date($('#agenda-date').value + 'T12:00:00'); agendaWeekAnchor = startOfWeek(selected);
   const days = Array.from({ length: 7 }, (_, index) => addDays(agendaWeekAnchor, index)); const barber = $('#agenda-barber').value;
-  const responses = await Promise.all(days.map((day) => api('/agendamentos?data=' + isoDate(day) + (barber ? '&barbeiro_id=' + barber : '')))); const appointments = responses.flat();
+  const responses = await Promise.all(days.map((day) => api('/agendamentos?data=' + isoDate(day))));
+  const allAppointments = responses.flat();
+  renderAgendaProfessionalFilter(allAppointments);
+  const appointments = barber ? allAppointments.filter((item) => Number(item.barbeiro_id) === Number(barber)) : allAppointments;
   $('#agenda-range').textContent = `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${days[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   const today = localDate(); const byDay = (day) => appointments.filter((item) => isoDate(new Date(item.data_hora)) === isoDate(day)).sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
   const card = (item) => { const status = item.status || 'agendado'; const finished = ['concluido', 'realizado'].includes(status); const actions = finished ? '<span class="agenda-completed" title="Atendimento concluído">✓</span>' : status === 'cancelado' ? '' : `<button type="button" data-action="complete" data-id="${item.id}" title="Concluir atendimento">✓</button><button type="button" data-action="cancel" data-id="${item.id}" title="Cancelar atendimento">×</button>`; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${actions}</div></article>`; };
