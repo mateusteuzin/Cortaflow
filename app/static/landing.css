@@ -1919,7 +1919,7 @@ body.modal-open { overflow: hidden; }
 
 .pricing-grid { gap: 22px; }
 .price-card {
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 6px;
   background: linear-gradient(155deg,#fbf9f4,#efebe1);
@@ -1945,6 +1945,16 @@ body.modal-open { overflow: hidden; }
   box-shadow:
     inset 0 0 0 1px rgba(213,167,68,.55),
     0 30px 70px rgba(47,36,14,.24);
+  z-index: 1;
+}
+.price-card .popular {
+  z-index: 2;
+  top: -14px;
+  min-width: max-content;
+  white-space: nowrap;
+  border: 1px solid rgba(21,22,17,.12);
+  border-radius: 3px;
+  line-height: 1.2;
 }
 .price-card button {
   border-radius: 3px;
@@ -1990,6 +2000,14 @@ body.modal-open { overflow: hidden; }
   .price-card.featured { transform: none; }
 }
 @media (max-width: 520px) {
+  .pricing-section .container { width: min(100% - 28px, 760px); }
+  .pricing-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .price-card { min-width: 0; padding: 30px 22px; }
+  .price-card.featured { margin-top: 8px; }
+  .price-card .popular { top: -13px; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+  .plan-head p { min-height: 0; }
+  .plan-price strong { font-size: clamp(48px, 16vw, 58px); }
+  .price-card li { overflow-wrap: anywhere; }
   .transform-grid article,
   .proof-grid article,
   .security-list article { border-radius: 4px; }
