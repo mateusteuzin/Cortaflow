@@ -329,6 +329,14 @@ body { background: var(--agency-bg); }
 .pricing-grid { align-items:stretch; }
 .price-card.featured { transform:translateY(-16px); }
 
+.trial-banner { display:flex; width:max-content; max-width:100%; align-items:center; gap:10px; margin:24px auto 0; padding:10px 15px; border:1px solid #d2b56f; border-radius:999px; background:#f7f0df; color:#6f5219; font-size:11px; }
+.trial-banner strong { font-weight:850; }
+.trial-banner > span:last-child { color:#8b8069; }
+.trial-spark { display:grid; width:20px; height:20px; place-items:center; border-radius:50%; background:#d5a744; color:#201b10; font-size:12px; }
+.trial-pill { width:max-content; margin-bottom:18px; padding:6px 9px; border:1px solid #d7b86c; border-radius:999px; background:#f5e8c7; color:#765416; font-size:8px; font-weight:850; letter-spacing:.1em; }
+.featured .trial-pill { border-color:rgba(213,167,68,.55); background:rgba(213,167,68,.14); color:#e6c976; }
+.register-plan-picker legend small { margin-left:8px; color:#8b661e; font-size:9px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+
 .final-cta { overflow:hidden; padding:130px 0; background:#101510; color:#f0eee7; text-align:left; }
 .final-cta::before { position:absolute;right:-10%;bottom:-70%;width:700px;height:700px;border:1px solid rgba(202,165,87,.18);border-radius:50%;box-shadow:0 0 0 80px rgba(202,165,87,.025),0 0 0 160px rgba(202,165,87,.018);content:"" }
 .final-cta-grid { display:grid; grid-template-columns:.35fr 1.25fr .4fr;align-items:center;gap:50px; }
