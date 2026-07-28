@@ -71,6 +71,11 @@ class BackendSecurityTests(unittest.TestCase):
         "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
         "GOOGLE_CLIENT_SECRET": "google-secret-value",
         "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+        "WHATSAPP_ACCESS_TOKEN": "meta-access-token",
+        "WHATSAPP_PHONE_NUMBER_ID": "123456789",
+        "WHATSAPP_BUSINESS_ACCOUNT_ID": "987654321",
+        "WHATSAPP_WEBHOOK_VERIFY_TOKEN": "webhook-verify-token",
+        "WHATSAPP_APP_SECRET": "meta-app-secret",
     }, clear=False)
     def test_public_configuration_status_contains_only_booleans(self):
         result = main.configuration_status()
@@ -83,6 +88,7 @@ class BackendSecurityTests(unittest.TestCase):
                 self.assertIsInstance(value, bool)
 
         assert_boolean_tree(result)
+        self.assertTrue(result["whatsapp"]["configured"])
         serialized = str(result)
         self.assertNotIn("sk_live_", serialized)
         self.assertNotIn("google-secret-value", serialized)

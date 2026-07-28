@@ -50,4 +50,8 @@ O Compose inicia somente a API. A inicialização será interrompida se `DATABAS
 
 ## Validação
 
+Execute também `sql/004_database_performance.sql` no SQL Editor. A migração é idempotente
+e adiciona índices para agenda, clientes, profissionais, serviços, vendas e pagamentos sem
+alterar os dados existentes.
+
 Depois de iniciar a API, abra `http://localhost:8000/api/health`. Em seguida, crie uma conta pelo painel. Se os dois computadores estiverem usando a mesma `DATABASE_URL`, ambos verão os mesmos cadastros e agendamentos.

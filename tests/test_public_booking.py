@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fastapi import BackgroundTasks, HTTPException
 from psycopg2 import IntegrityError
@@ -121,12 +121,28 @@ class PublicBookingIsolationTests(unittest.TestCase):
             main.public_create("barbearia-gold", appointment_data(), BackgroundTasks())
         self.assertEqual(caught.exception.status_code, 409)
 
-    @patch("app.main.one")
-    def test_occupied_slot_returns_conflict(self, mocked_one):
-        mocked_one.side_effect = [{"id": 4, "nome": "Corte", "duracao_minutos": 30, "preco": Decimal("40")}, IntegrityError()]
+    @patch("app.main.db")
+    def test_occupied_slot_returns_conflict(self, mocked_db):
+        cursor=MagicMock()
+        mocked_db.return_value.__enter__.return_value=cursor
+        cursor.fetchone.return_value={"id":4,"nome":"Corte","duracao_minutos":30,"preco":Decimal("40")}
+        cursor.execute.side_effect=[None,IntegrityError()]
         with self.assertRaises(HTTPException) as caught:
             main.insert_appointment(appointment_data(), ACTIVE_SHOP["id"])
         self.assertEqual(caught.exception.status_code, 409)
+
+    @patch("app.main.db")
+    def test_appointment_and_customer_are_written_in_one_transaction(self, mocked_db):
+        cursor=MagicMock()
+        mocked_db.return_value.__enter__.return_value=cursor
+        cursor.fetchone.side_effect=[
+            {"id":4,"nome":"Corte","duracao_minutos":30,"preco":Decimal("40")},
+            {"id":52},
+        ]
+        result=main.insert_appointment(appointment_data(),ACTIVE_SHOP["id"])
+        self.assertEqual(result["id"],52)
+        self.assertEqual(cursor.execute.call_count,3)
+        mocked_db.assert_called_once()
 
     def test_booking_page_is_served_for_slug_url(self):
         response = main.booking_page("barbearia-gold")

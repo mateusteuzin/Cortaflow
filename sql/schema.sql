@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS agendamentos (
  email_dono_message_id TEXT, email_dono_erro TEXT);
 CREATE UNIQUE INDEX IF NOT EXISTS agenda_slot_ativo ON agendamentos(barbeiro_id, data_hora) WHERE status <> 'cancelado';
 CREATE INDEX IF NOT EXISTS idx_agenda_whatsapp_fila ON agendamentos(whatsapp_status,whatsapp_proxima_tentativa) WHERE whatsapp_autorizado AND NOT whatsapp_enviado;
+CREATE TABLE IF NOT EXISTS clientes (
+ id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+ nome VARCHAR(120) NOT NULL, telefone VARCHAR(30) NOT NULL, email VARCHAR(254),
+ total_visitas INTEGER NOT NULL DEFAULT 0, total_gasto NUMERIC(12,2) NOT NULL DEFAULT 0,
+ ultima_visita TIMESTAMPTZ, ultimo_servico VARCHAR(120), faltas INTEGER NOT NULL DEFAULT 0,
+ cancelamentos INTEGER NOT NULL DEFAULT 0, whatsapp_autorizado BOOLEAN NOT NULL DEFAULT FALSE,
+ criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(), atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(barbearia_id, telefone));
 CREATE TABLE IF NOT EXISTS produtos (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  nome VARCHAR(120) NOT NULL, preco NUMERIC(10,2) NOT NULL, quantidade_estoque INTEGER DEFAULT 0, criado_em TIMESTAMPTZ DEFAULT NOW());
@@ -78,3 +86,10 @@ CREATE TABLE IF NOT EXISTS pagamentos (
  id SERIAL PRIMARY KEY, agendamento_id INTEGER NOT NULL REFERENCES agendamentos(id), valor NUMERIC(10,2) NOT NULL,
  status VARCHAR(20) DEFAULT 'pendente', chave_pix VARCHAR(160), referencia VARCHAR(80) UNIQUE NOT NULL, criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE INDEX IF NOT EXISTS idx_agenda_data ON agendamentos(barbearia_id, data_hora);
+CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_barbeiro_data_ativa ON agendamentos(barbearia_id, barbeiro_id, data_hora) WHERE status <> 'cancelado';
+CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_status_data ON agendamentos(barbearia_id, status, data_hora);
+CREATE INDEX IF NOT EXISTS idx_clientes_barbearia_atualizado ON clientes(barbearia_id, atualizado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativos ON barbeiros(barbearia_id, nome) WHERE ativo;
+CREATE INDEX IF NOT EXISTS idx_servicos_barbearia_ativos ON servicos(barbearia_id, nome) WHERE ativo;
+CREATE INDEX IF NOT EXISTS idx_vendas_produto_agendamento ON vendas_produto(agendamento_id);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_agendamento ON pagamentos(agendamento_id);
