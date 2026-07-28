@@ -333,7 +333,8 @@ body { background: var(--agency-bg); }
 .trial-experience::before { position:absolute; top:0; right:0; left:0; height:2px; background:linear-gradient(90deg,transparent 0,#d5a744 38%,#f0d994 50%,#d5a744 62%,transparent 100%); background-size:200% 100%; content:""; animation:trial-shine 5s linear infinite; }
 .trial-number { display:flex; align-items:center; gap:8px; border-right:1px solid rgba(255,255,255,.11); }
 .trial-number strong { color:#e1bc65; font:750 70px/.85 var(--display); }
-.trial-number span { color:#9d9f98; font-size:9px; font-weight:850; letter-spacing:.16em; writing-mode:vertical-rl; transform:rotate(180deg); }
+.trial-number span { display:grid; gap:3px; color:#9d9f98; font-size:9px; font-weight:850; letter-spacing:.16em; }
+.trial-number span b { color:#e1bc65; font-size:11px; }
 .trial-copy { min-width:0; }
 .trial-eyebrow { color:#d1aa51; font-size:8px; font-weight:850; letter-spacing:.15em; }
 .trial-copy h3 { margin:7px 0 14px; color:#f6f3eb; font:650 24px/1.15 var(--display); }
