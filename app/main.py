@@ -1430,6 +1430,19 @@ def insert_appointment(data, shop_id):
 def appointments(data:date|None=None,barbeiro_id:int|None=None,user=Depends(current_user)):
     return all_rows("SELECT a.*,b.nome barbeiro_nome FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id WHERE a.barbearia_id=%s AND (%s::date IS NULL OR a.data_hora::date=%s) AND (%s::int IS NULL OR a.barbeiro_id=%s) ORDER BY a.data_hora",(user["barbearia_id"],data,data,barbeiro_id,barbeiro_id))
 
+@app.get("/api/agendamentos/semana")
+def weekly_appointments(
+    inicio: date,
+    fim: date,
+    user=Depends(current_user),
+):
+    if fim < inicio or (fim - inicio).days > 7:
+        raise HTTPException(422, "Período da agenda inválido")
+    return all_rows("""SELECT a.*,b.nome barbeiro_nome
+      FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
+      WHERE a.barbearia_id=%s AND a.data_hora::date BETWEEN %s AND %s
+      ORDER BY a.data_hora""",(user["barbearia_id"],inicio,fim))
+
 @app.post("/api/agendamentos",status_code=201)
 def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=Depends(current_user)):
     row=insert_appointment(data,user["barbearia_id"])
