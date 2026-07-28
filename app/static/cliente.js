@@ -71,8 +71,14 @@ async function init() {
     $('#shop-address').textContent = shop.endereco || 'Agendamento online';
     $$('.shop-brand-name').forEach((element) => { element.textContent = shop.nome; });
     $$('.shop-logo').forEach((image) => {
-      image.src = shop.logo_url || '/assets/cortaflow-icon-default.png';
-      image.alt = shop.logo_url ? `Logo da ${shop.nome}` : '';
+      const fallback = '/assets/cortaflow-icon-default.png';
+      image.src = shop.logo_url || fallback;
+      image.alt = shop.logo_url ? `Logo da ${shop.nome}` : 'CortaFlow';
+      image.addEventListener('error', () => {
+        if (image.src.endsWith(fallback)) return;
+        image.src = fallback;
+        image.alt = 'CortaFlow';
+      }, { once: true });
     });
     document.title = `Agende seu horário · ${shop.nome}`;
     $('#loading').classList.add('hidden');
