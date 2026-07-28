@@ -1188,6 +1188,117 @@ body { background: var(--agency-bg); }
   .trust-stripe img { width: 116px; }
 }
 
+/* Faixa de confiança: uma assinatura contínua, não uma coleção de cards. */
+.footer-trust {
+  display: grid;
+  grid-template-columns: minmax(190px,.72fr) minmax(0,2.28fr);
+  align-items: center;
+  gap: clamp(28px,4vw,64px);
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+.footer-trust-copy span {
+  color: #d8c28c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+.footer-trust-copy p {
+  max-width: 230px;
+  margin: 7px 0 0;
+  color: #747c75;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.footer-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 0;
+  min-height: 58px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 14px;
+  background: rgba(255,255,255,.018);
+  overflow: hidden;
+}
+.trust-badge {
+  min-width: 0;
+  min-height: 58px;
+  padding: 10px clamp(12px,1.4vw,20px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.trust-badge + .trust-badge { border-left: 1px solid rgba(255,255,255,.075); }
+.trust-badge:hover { border-color: rgba(255,255,255,.075); background: rgba(255,255,255,.035); }
+.trust-badge > i {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 0;
+  background: transparent;
+}
+.trust-badge > span { min-width: 0; }
+.trust-badge small {
+  display: block;
+  margin-bottom: 4px;
+  color: #646c65;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  line-height: 1;
+}
+.trust-badge b,
+.trust-badge > b {
+  display: block;
+  overflow: hidden;
+  color: #e4e7e3;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.google-provider-logo {
+  width: 26px !important;
+  height: 26px !important;
+  border: 0 !important;
+  border-radius: 6px;
+  background: #fff;
+}
+.google-provider-logo svg { width: 17px; height: 17px; }
+.trust-stripe {
+  justify-content: flex-start;
+  background: transparent;
+}
+.trust-stripe:hover { background: rgba(255,255,255,.035); }
+.trust-stripe img { width: 94px; }
+.trust-whatsapp > i svg { width: 27px; height: 27px; }
+.trust-https > i {
+  border: 1px solid rgba(81,177,116,.28);
+  border-radius: 7px;
+  background: rgba(81,177,116,.075);
+}
+
+@media (max-width: 1050px) {
+  .footer-trust { grid-template-columns: 1fr; gap: 18px; }
+  .footer-trust-copy p { max-width: none; }
+}
+
+@media (max-width: 720px) {
+  .footer-trust-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .trust-badge:nth-child(3) { border-left: 0; border-top: 1px solid rgba(255,255,255,.075); }
+  .trust-badge:nth-child(4) { border-top: 1px solid rgba(255,255,255,.075); }
+}
+
+@media (max-width: 420px) {
+  .footer-trust { padding-top: 25px; padding-bottom: 25px; }
+  .footer-trust-grid { grid-template-columns: 1fr; border-radius: 12px; }
+  .trust-badge { min-height: 55px; padding-inline: 14px; }
+  .trust-badge + .trust-badge,
+  .trust-badge:nth-child(3) { border-top: 1px solid rgba(255,255,255,.075); border-left: 0; }
+}
+
 /* Encerramento definitivo: simples, direto e sem imagens ou ornamentos. */
 .final-cta {
   min-height: 0;
