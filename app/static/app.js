@@ -528,7 +528,8 @@ function appointmentHTML(appointment) {
   const status = appointment.status || 'agendado';
   const actions = !['concluido', 'realizado', 'cancelado', 'nao_compareceu'].includes(status)
     ? `<button type="button" data-action="complete" data-id="${appointment.id}">Concluir</button><button class="danger" type="button" data-action="cancel" data-id="${appointment.id}">Cancelar</button>`
-    : status === 'cancelado' ? `<button class="danger" type="button" data-action="remove-appointment" data-id="${appointment.id}">Apagar</button>` : '';
+    : status === 'cancelado' ? `<button class="danger" type="button" data-action="remove-appointment" data-id="${appointment.id}">Apagar</button>`
+    : ['concluido', 'realizado'].includes(status) ? '<span class="appointment-completed">✓ Concluído</span>' : '';
   return `<div class="appointment"><div class="appointment-time">${new Date(appointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="appointment-info"><b>${escapeHTML(appointment.cliente_nome)}</b><small><strong>Responsável:</strong> ${escapeHTML(appointment.barbeiro_nome || 'Equipe')} · ${escapeHTML(appointment.servico)} · ${money(appointment.preco)}</small></div><span class="badge status-${escapeHTML(status)}">${escapeHTML(statusLabel[status] || status)}</span><div class="appointment-actions">${actions}</div></div>`;
 }
 
@@ -619,7 +620,7 @@ async function loadAppointments() {
   const responses = await Promise.all(days.map((day) => api('/agendamentos?data=' + isoDate(day) + (barber ? '&barbeiro_id=' + barber : '')))); const appointments = responses.flat();
   $('#agenda-range').textContent = `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${days[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   const today = localDate(); const byDay = (day) => appointments.filter((item) => isoDate(new Date(item.data_hora)) === isoDate(day)).sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
-  const card = (item) => { const status = item.status || 'agendado'; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions"><button type="button" data-action="complete" data-id="${item.id}">✓</button><button type="button" data-action="cancel" data-id="${item.id}">×</button></div></article>`; };
+  const card = (item) => { const status = item.status || 'agendado'; const finished = ['concluido', 'realizado'].includes(status); const actions = finished ? '<span class="agenda-completed" title="Atendimento concluído">✓</span>' : status === 'cancelado' ? '' : `<button type="button" data-action="complete" data-id="${item.id}" title="Concluir atendimento">✓</button><button type="button" data-action="cancel" data-id="${item.id}" title="Cancelar atendimento">×</button>`; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${actions}</div></article>`; };
   $('#agenda-week').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<div class="agenda-day ${key === today ? 'is-today' : ''}"><header><span>${day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span><b>${day.getDate()}</b><small>${list.length} ${list.length === 1 ? 'atendimento' : 'atendimentos'}</small></header><div class="agenda-day-list">${list.map(card).join('') || '<div class="agenda-empty">Horários livres</div>'}</div></div>`; }).join('');
   $('#agenda-mobile-list').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<section class="agenda-mobile-day ${key === today ? 'is-today' : ''}"><h3>${day.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</h3>${list.map(card).join('') || '<p class="agenda-empty">Horários livres</p>'}</section>`; }).join('');
 }
@@ -783,12 +784,25 @@ function confirmAction({ title = 'Confirmar ação', message = '', confirmLabel 
 async function concludeAppointment(id) {
   const warning = 'Ao concluir este agendamento, o e-mail e o telefone associados serão removidos permanentemente. Deseja continuar?';
   if (!await confirmAction({ title: 'Concluir atendimento?', message: warning, confirmLabel: 'Concluir atendimento', cancelLabel: 'Voltar', tone: 'success' })) return;
+  const actionButton = document.querySelector(`[data-action="complete"][data-id="${id}"]`);
   try {
+    if (actionButton) {
+      actionButton.disabled = true;
+      actionButton.textContent = 'Concluindo...';
+    }
     const result = await api('/agendamentos/' + id + '/concluir', { method: 'PATCH' });
+    if (actionButton) {
+      actionButton.classList.add('is-completed');
+      actionButton.textContent = '✓ Concluído';
+    }
     toast(result.message || 'Agendamento concluído e dados de contato removidos com sucesso.');
     await loadDashboard();
     if (!$('#agenda').classList.contains('hidden')) await loadAppointments();
   } catch (error) {
+    if (actionButton) {
+      actionButton.disabled = false;
+      actionButton.textContent = 'Concluir';
+    }
     toast(error.message || 'Não foi possível concluir o agendamento. Os dados foram preservados.');
   }
 }

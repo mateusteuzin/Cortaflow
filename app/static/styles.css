@@ -421,6 +421,10 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 .appointment-actions button:hover, .link:hover { border-color: var(--gold); background: var(--gold-wash); }
 .appointment-actions .danger, .danger { border-color: #ead4d0; color: var(--red); }
 .appointment-actions .danger:hover, .danger:hover { border-color: var(--red); background: #fbeae7; }
+.appointment-completed, .agenda-completed, .appointment-actions button.is-completed { display: inline-flex; min-height: 32px; align-items: center; padding: 0 10px; border: 1px solid #8fc09d; border-radius: var(--radius-sm); background: #e3f3e7; color: #2f7043; font-size: 10px; font-weight: 850; white-space: nowrap; }
+.agenda-completed { width: 24px; min-height: 24px; justify-content: center; padding: 0; border-radius: 6px; }
+.agenda-card.status-concluido, .agenda-card.status-realizado { border-left-color: #4e9a66; background: #f3fbf5; }
+.agenda-card.status-concluido .agenda-card-status, .agenda-card.status-realizado .agenda-card-status { background: #dcefe1; color: #357049; }
 .link { border-color: #dbc99e; color: #795a20; }
 .empty { margin: 0; padding: 34px 0 14px; color: var(--muted); font-size: 13px; text-align: center; }
 
