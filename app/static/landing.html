@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/landing.css?v=20260727-agency">
-  <link rel="stylesheet" href="/landing-agency.css?v=20260727-monochrome-v3">
+  <link rel="stylesheet" href="/landing-agency.css?v=20260727-connected-v5">
 </head>
 <body>
   <header class="site-header">
@@ -100,7 +100,84 @@
       </div>
     </section>
 
-    <section id="recursos" class="section features-section">
+    <section id="recursos" class="section connected-section">
+      <div class="container connected-shell">
+        <header class="connected-heading" data-reveal>
+          <div>
+            <span class="connected-kicker">TUDO CONECTADO</span>
+            <h2>Do primeiro horário<br>ao fechamento. <em>Um único fluxo.</em></h2>
+          </div>
+          <p>O que acontece no balcão, na agenda e no caixa continua no mesmo lugar — claro para você e para toda a equipe.</p>
+        </header>
+
+        <div class="connected-layout">
+          <article class="flow-stage" data-reveal aria-label="Fluxo integrado do CortaFlow">
+            <div class="flow-stage-top">
+              <span class="flow-live"><i></i> Operação ao vivo</span>
+              <span>Hoje · 27 jul</span>
+            </div>
+
+            <div class="flow-canvas">
+              <div class="flow-track" aria-hidden="true"><i></i></div>
+
+              <div class="flow-node flow-node-client">
+                <span class="flow-step">01</span>
+                <div class="flow-avatar">MC</div>
+                <div><small>CLIENTE</small><b>Marcos confirmou</b><span>09:30 · Corte + barba</span></div>
+                <i class="flow-check">✓</i>
+              </div>
+
+              <div class="flow-node flow-node-agenda">
+                <span class="flow-step">02</span>
+                <div class="flow-date"><small>JUL</small><b>27</b></div>
+                <div><small>AGENDA</small><b>Horário reservado</b><span>Sem conflito na equipe</span></div>
+                <span class="flow-status">CONFIRMADO</span>
+              </div>
+
+              <div class="flow-node flow-node-pro">
+                <span class="flow-step">03</span>
+                <img src="/assets/professional-mateus.webp" alt="">
+                <div><small>RESPONSÁVEL</small><b>Mateus</b><span>Próximo atendimento</span></div>
+                <span class="flow-time">09:30</span>
+              </div>
+            </div>
+
+            <footer class="flow-stage-footer">
+              <span><i></i> Confirmação enviada</span>
+              <span><i></i> Agenda atualizada</span>
+              <span><i></i> Resultado registrado</span>
+            </footer>
+          </article>
+
+          <aside class="connected-insights">
+            <article class="insight-card insight-primary" data-reveal>
+              <span class="insight-label">VISÃO DO DIA</span>
+              <div class="insight-value"><strong>12</strong><span>horários<br>confirmados</span></div>
+              <div class="insight-progress"><i></i></div>
+              <p>Equipe e agenda olhando para a mesma operação.</p>
+            </article>
+
+            <article class="insight-card insight-result" data-reveal>
+              <div>
+                <span class="insight-label">FECHAMENTO DO MÊS</span>
+                <strong>R$ 18.420</strong>
+                <small>resultado consolidado</small>
+              </div>
+              <svg viewBox="0 0 220 72" role="img" aria-label="Evolução do resultado no mês">
+                <path class="insight-grid-line" d="M0 60H220M0 34H220"/>
+                <path class="insight-line" d="M0 59 C24 55 31 43 54 46 S87 31 110 36 S145 17 166 24 S198 9 220 11"/>
+              </svg>
+            </article>
+          </aside>
+        </div>
+
+        <div class="connected-note" data-reveal>
+          <span>01 — AGENDA</span><i></i><span>02 — EQUIPE</span><i></i><span>03 — RESULTADO</span>
+        </div>
+      </div>
+    </section>
+
+    <template id="recursos-legado">
       <div class="container">
         <div class="section-heading"><div class="section-intro"><span class="kicker">TUDO CONECTADO</span><h2>Do primeiro horário ao fechamento do mês.</h2></div><p>Recursos pensados para reduzir tarefas repetitivas e dar clareza sobre o que acontece na barbearia.</p></div>
         <div class="feature-grid">
@@ -139,7 +216,7 @@
           </article>
         </div>
       </div>
-    </section>
+    </template>
 
     <section class="section how-section"><div class="container how-grid"><div><span class="kicker dark">PARA COMEÇAR HOJE</span><h2>Você configura uma vez e já pode abrir a agenda.</h2><p>Sem treinamento longo. O painel acompanha o jeito que sua barbearia trabalha.</p><button class="btn btn-dark" data-auth="register" type="button">Criar minha conta <span>→</span></button></div><ol><li><span>01</span><div><h3>Coloque sua marca</h3><p>Nome, logo, serviços, preços e horários em poucos minutos.</p></div></li><li><span>02</span><div><h3>Convide a equipe</h3><p>Cada profissional enxerga a própria agenda e comissão.</p></div></li><li><span>03</span><div><h3>Envie o link</h3><p>O cliente escolhe o serviço e recebe a confirmação.</p></div></li></ol></div></section>
 
