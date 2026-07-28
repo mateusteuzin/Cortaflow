@@ -579,6 +579,7 @@ STRIPE_PLANS = {
     "profissional": {"name": "CortaFlow Profissional", "amount": 4490, "price_env": "STRIPE_PRICE_PROFISSIONAL"},
     "premium": {"name": "CortaFlow Premium", "amount": 6490, "price_env": "STRIPE_PRICE_PREMIUM"},
 }
+STRIPE_TRIAL_DAYS = 14
 
 def _public_site_url(request: Request) -> str:
     configured = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
@@ -622,7 +623,10 @@ def create_checkout(data: CheckoutRequest, request: Request, user=Depends(authen
             cancel_url=f"{site_url}/painel?checkout=cancelado",
             allow_promotion_codes=True,
             metadata={"plan": plan, "barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
-            subscription_data={"metadata": {"plan": plan, "barbearia_id": str(shop["id"])}},
+            subscription_data={
+                "trial_period_days": STRIPE_TRIAL_DAYS,
+                "metadata": {"plan": plan, "barbearia_id": str(shop["id"])},
+            },
         )
     except stripe.error.StripeError as error:
         logging.exception("Stripe checkout error")
@@ -675,7 +679,10 @@ def _create_pending_checkout(pending, request: Request):
             cancel_url=f"{site_url}/?checkout=cancelado",
             allow_promotion_codes=True,
             metadata={"plan": plan, "pending_signup_id": str(pending["id"])},
-            subscription_data={"metadata": {"plan": plan, "pending_signup_id": str(pending["id"])}},
+            subscription_data={
+                "trial_period_days": STRIPE_TRIAL_DAYS,
+                "metadata": {"plan": plan, "pending_signup_id": str(pending["id"])},
+            },
             idempotency_key=f"pending-checkout-{pending['id']}-{idempotency_key}",
         )
     except stripe.error.StripeError as error:
