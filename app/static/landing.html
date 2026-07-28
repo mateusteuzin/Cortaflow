@@ -73,7 +73,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/landing.css?v=20260727-agency">
-  <link rel="stylesheet" href="/landing-agency.css?v=20260727-finish-v6">
+  <link rel="stylesheet" href="/landing-agency.css?v=20260727-footer-v7">
 </head>
 <body>
   <header class="site-header">
@@ -286,21 +286,52 @@
 
     <section class="final-cta">
       <div class="container final-cta-grid">
-        <span class="section-index">05 / PRÓXIMO PASSO</span>
         <div class="final-cta-copy" data-reveal>
-          <h2>Sua próxima fase começa com uma agenda no lugar.</h2>
-          <p>Configure sua barbearia, convide a equipe e abra os horários. O CortaFlow cuida do fluxo enquanto você cuida do cliente.</p>
+          <span class="kicker"><i></i> PRÓXIMO PASSO</span>
+          <h2>Sua barbearia merece uma agenda à altura.</h2>
+          <p>Configure seu espaço, convide a equipe e abra os horários. O CortaFlow organiza o fluxo para você se concentrar em quem está na cadeira.</p>
           <div class="final-actions">
             <button class="btn btn-gold" data-auth="register" type="button">Criar minha conta <span>→</span></button>
             <a class="final-plans-link" href="#planos">Ver planos</a>
           </div>
         </div>
-        <div class="final-seal" aria-hidden="true"><span>CORTAFLOW</span><b>CF</b><small>GESTÃO QUE FLUI</small></div>
+        <div class="barber-tools" aria-hidden="true">
+          <div class="barber-tools-head"><span>FERRAMENTAS DO OFÍCIO</span><small>Precisão em cada etapa</small></div>
+          <div class="barber-tool barber-tool-scissors">
+            <svg viewBox="0 0 160 160"><circle cx="43" cy="116" r="18"/><circle cx="91" cy="116" r="18"/><path d="m54 102 70-70M79 101 36 35M68 91l56 36"/><circle cx="68" cy="91" r="5"/></svg>
+            <span><b>01</b>Tesoura</span>
+          </div>
+          <div class="barber-tool barber-tool-clipper">
+            <svg viewBox="0 0 160 160"><path d="M54 48h52l-5 77a13 13 0 0 1-13 12H72a13 13 0 0 1-13-12Z"/><path d="M59 48V30h7v18M73 48V26h7v22M87 48V26h7v22M101 48V30h7v18M66 74h28M68 88h24"/><circle cx="80" cy="111" r="7"/></svg>
+            <span><b>02</b>Máquina</span>
+          </div>
+          <div class="barber-tool barber-tool-comb">
+            <svg viewBox="0 0 160 160"><path d="M30 50h100v60H30zM42 50v38M54 50v50M66 50v38M78 50v50M90 50v38M102 50v50M114 50v38"/></svg>
+            <span><b>03</b>Pente</span>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer"><div class="container footer-top"><div class="footer-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><p>A operação da sua barbearia, no ritmo certo.</p></div><nav aria-label="Links do rodapé"><a href="#produto">Produto</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas</a></nav><button data-auth="login" type="button">Entrar no painel ↗</button></div><div class="container footer-bottom"><span>© 2026 CortaFlow</span><a href="mailto:suporte@cortaflow.com.br">suporte@cortaflow.com.br</a><span>Brasil · Pagamentos via Stripe</span></div></footer>
+  <footer class="site-footer">
+    <div class="container footer-trust">
+      <div class="footer-trust-title"><span>INFRAESTRUTURA CONFIÁVEL</span><p>Integrações reais usadas pelo CortaFlow.</p></div>
+      <div class="footer-trust-grid">
+        <span class="trust-badge"><i><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.4c0 4.7 3.1 8.1 7.5 9.6 4.4-1.5 7.5-4.9 7.5-9.6V6Z"/><path d="m8.8 12 2.1 2.1 4.5-4.5"/></svg></i><span><small>ACESSO</small><b>Google OAuth</b></span></span>
+        <span class="trust-badge"><i><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg></i><span><small>PAGAMENTO</small><b>Stripe Checkout</b></span></span>
+        <span class="trust-badge"><i><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></i><span><small>CONEXÃO</small><b>HTTPS protegido</b></span></span>
+        <span class="trust-badge"><i><svg viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.6 2.5 2 4 4.6 5"/></svg></i><span><small>COMUNICAÇÃO</small><b>WhatsApp API</b></span></span>
+      </div>
+    </div>
+    <div class="container footer-main">
+      <div class="footer-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><p>Agenda, equipe e resultados no ritmo da sua barbearia.</p><span><i></i> Plataforma disponível</span></div>
+      <nav aria-label="Produto"><strong>PRODUTO</strong><a href="#produto">Como funciona</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a></nav>
+      <nav aria-label="Suporte"><strong>SUPORTE</strong><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas frequentes</a><a href="mailto:suporte@cortaflow.com.br">Falar com a equipe</a></nav>
+      <div class="footer-access"><span>JÁ USA O CORTAFLOW?</span><b>Sua operação continua daqui.</b><button data-auth="login" type="button">Entrar no painel <span>↗</span></button></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 CortaFlow</span><a href="mailto:suporte@cortaflow.com.br">suporte@cortaflow.com.br</a><span>Feito para barbearias no Brasil</span></div>
+  </footer>
 
   <div id="auth-modal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <button id="modal-backdrop" class="modal-backdrop" type="button" aria-label="Fechar"></button>

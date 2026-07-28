@@ -866,3 +866,236 @@ body { background: var(--agency-bg); }
     overflow: visible;
   }
 }
+
+/* Encerramento com linguagem visual de barbearia, sem órbitas genéricas. */
+.final-cta {
+  padding: clamp(88px,9vw,136px) 0;
+  background:
+    linear-gradient(105deg,rgba(7,10,8,.99),rgba(12,17,13,.97) 58%,rgba(23,31,26,.96)),
+    url('/assets/barber-hero.webp') center / cover no-repeat;
+}
+.final-cta::before {
+  background:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(90deg,#000,rgba(0,0,0,.45) 74%,transparent);
+}
+.final-cta::after,
+.final-orbit,
+.final-seal { display: none; }
+.final-cta-grid {
+  grid-template-columns: minmax(0,.92fr) minmax(430px,1.08fr);
+  gap: clamp(52px,8vw,118px);
+}
+.final-cta-copy h2 {
+  max-width: 690px;
+  margin-top: 23px;
+  font-size: clamp(50px,5.4vw,78px);
+  line-height: .96;
+  letter-spacing: -.062em;
+}
+.final-cta-copy p { max-width: 580px; color: #a2aaa2; font-size: 16px; }
+.barber-tools {
+  position: relative;
+  display: grid;
+  min-height: 510px;
+  grid-template-columns: repeat(3,1fr);
+  align-items: end;
+  gap: 12px;
+  padding: 76px 20px 20px;
+  border: 1px solid rgba(255,255,255,.1);
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),
+    rgba(9,13,10,.64);
+  background-size: 40px 40px;
+  box-shadow: 0 34px 80px rgba(0,0,0,.34);
+  backdrop-filter: blur(14px);
+  perspective: 1000px;
+}
+.barber-tools::before {
+  position: absolute;
+  top: 55px;
+  right: 8%;
+  left: 8%;
+  height: 1px;
+  background: linear-gradient(90deg,transparent,#d8c28c,transparent);
+  content: "";
+}
+.barber-tools-head {
+  position: absolute;
+  top: 19px;
+  right: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.barber-tools-head span { color: #d8c28c; font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+.barber-tools-head small { color: #687168; font-size: 9px; }
+.barber-tool {
+  position: relative;
+  display: flex;
+  min-height: 370px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 20px 15px 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: linear-gradient(155deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
+  transform: rotateY(-5deg) translateY(0);
+  transition: transform .35s ease,border-color .35s ease,background .35s ease;
+}
+.barber-tool:nth-child(3) { transform: translateY(-22px); }
+.barber-tool:nth-child(4) { transform: rotateY(5deg) translateY(-7px); }
+.barber-tool:hover {
+  border-color: rgba(216,194,140,.38);
+  background: linear-gradient(155deg,rgba(216,194,140,.09),rgba(255,255,255,.018));
+  transform: translateY(-10px);
+}
+.barber-tool svg {
+  width: 100%;
+  height: 245px;
+  fill: none;
+  stroke: #d8ddd8;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 15px 22px rgba(0,0,0,.34));
+}
+.barber-tool span { display: flex; align-items: center; gap: 10px; color: #c5cbc5; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.barber-tool span b { color: #778078; font-size: 8px; letter-spacing: .12em; }
+
+/* Rodapé SaaS: confiança primeiro, navegação clara e excelente leitura móvel. */
+.site-footer { padding: 0 0 22px; border-color: rgba(255,255,255,.08); background: #070a08; }
+.footer-trust {
+  display: grid;
+  grid-template-columns: minmax(190px,.75fr) minmax(0,2.25fr);
+  gap: 42px;
+  padding-top: 34px;
+  padding-bottom: 34px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.footer-trust-title span { color: #d8c28c; font-size: 9px; font-weight: 800; letter-spacing: .15em; }
+.footer-trust-title p { margin: 8px 0 0; color: #697169; font-size: 11px; }
+.footer-trust-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 9px; }
+.trust-badge {
+  display: flex;
+  min-width: 0;
+  min-height: 66px;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.025);
+}
+.trust-badge > i { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border: 1px solid rgba(216,194,140,.2); color: #c9d0ca; }
+.trust-badge svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.trust-badge > span { min-width: 0; }
+.trust-badge small,.trust-badge b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trust-badge small { color: #666e67; font-size: 7px; font-weight: 800; letter-spacing: .12em; }
+.trust-badge b { margin-top: 3px; color: #cdd2cd; font-size: 10px; }
+.footer-main {
+  display: grid;
+  grid-template-columns: 1.25fr .62fr .72fr 1fr;
+  align-items: start;
+  gap: clamp(32px,5vw,76px);
+  padding-top: 48px;
+  padding-bottom: 42px;
+}
+.footer-brand img { width: 158px; }
+.footer-brand p { max-width: 285px; margin: 13px 0 17px; color: #778078; font-size: 11px; line-height: 1.65; }
+.footer-brand > span { display: inline-flex; align-items: center; gap: 8px; color: #788078; font-size: 9px; font-weight: 700; }
+.footer-brand > span i { width: 7px; height: 7px; border-radius: 50%; background: #56b477; box-shadow: 0 0 0 4px rgba(86,180,119,.1); }
+.footer-main nav { display: grid; align-content: start; gap: 11px; }
+.footer-main nav strong { margin-bottom: 5px; color: #d0d5d0; font-size: 9px; letter-spacing: .14em; }
+.footer-main nav a { color: #747d75; font-size: 10px; text-decoration: none; transition: color .2s ease; }
+.footer-main nav a:hover { color: #e5e7e3; }
+.footer-access { padding: 20px; border: 1px solid rgba(255,255,255,.09); background: #0e1310; }
+.footer-access > span { color: #788178; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.footer-access > b { display: block; margin-top: 8px; color: #e0e3df; font-size: 13px; }
+.footer-access button {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 0 13px;
+  border: 1px solid #dcd7ca;
+  background: #dcd7ca;
+  color: #171b18;
+  font-size: 10px;
+  font-weight: 800;
+}
+.footer-access button:hover { background: #fff; }
+.footer-bottom {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  margin-top: 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+@media (max-width: 1050px) {
+  .footer-trust { grid-template-columns: 1fr; gap: 20px; }
+  .footer-trust-grid { grid-template-columns: repeat(2,1fr); }
+  .footer-main { grid-template-columns: 1.2fr .7fr .8fr; }
+  .footer-access { grid-column: 1/-1; }
+}
+
+@media (max-width: 820px) {
+  .final-cta-grid { grid-template-columns: 1fr; }
+  .barber-tools { min-height: 430px; }
+  .barber-tool { min-height: 305px; }
+  .barber-tool svg { height: 200px; }
+  .footer-main { grid-template-columns: 1.1fr 1fr 1fr; gap: 32px; }
+}
+
+@media (max-width: 580px) {
+  .final-cta { padding: 76px 0 64px; }
+  .final-cta-copy h2 { max-width: 360px; font-size: clamp(42px,13vw,56px); }
+  .final-cta-copy p { font-size: 15px; }
+  .barber-tools {
+    min-height: 0;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 6px;
+    padding: 69px 8px 8px;
+  }
+  .barber-tools-head { right: 12px; left: 12px; }
+  .barber-tool,
+  .barber-tool:nth-child(3),
+  .barber-tool:nth-child(4) {
+    min-height: 225px;
+    padding: 10px 7px 12px;
+    transform: none;
+  }
+  .barber-tool svg { height: 155px; stroke-width: 2.4; }
+  .barber-tool span { display: grid; gap: 2px; font-size: 8px; }
+  .footer-trust { padding-top: 28px; padding-bottom: 28px; }
+  .footer-trust-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+  .trust-badge { min-height: 64px; gap: 9px; padding: 9px; }
+  .trust-badge > i { width: 29px; height: 29px; flex-basis: 29px; }
+  .trust-badge b { font-size: 9px; }
+  .footer-main { grid-template-columns: 1fr 1fr; gap: 34px 22px; padding-top: 38px; padding-bottom: 34px; }
+  .footer-brand { grid-column: 1/-1; }
+  .footer-brand img { width: 150px; }
+  .footer-brand p { max-width: 310px; font-size: 12px; }
+  .footer-main nav strong { font-size: 10px; }
+  .footer-main nav a { min-height: 30px; font-size: 11px; }
+  .footer-access { grid-column: 1/-1; padding: 18px; }
+  .footer-access button { min-height: 48px; font-size: 11px; }
+  .footer-bottom { grid-template-columns: 1fr; gap: 8px; padding-top: 18px; }
+  .footer-bottom span:last-child { text-align: left; }
+}
+
+@media (max-width: 380px) {
+  .footer-trust-grid { grid-template-columns: 1fr; }
+  .footer-main { grid-template-columns: 1fr; }
+  .footer-brand,.footer-access { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barber-tool { transition: none; }
+}
