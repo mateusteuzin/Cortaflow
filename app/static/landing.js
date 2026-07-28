@@ -875,23 +875,38 @@ function initializeMotion() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const targets = $$('[data-reveal], .transform-grid article, .feature-card, .price-card, .proof-grid article, .security-list article');
   if (!targets.length) return;
-  document.documentElement.classList.add('motion-ready');
-  if (!('IntersectionObserver' in window)) {
-    targets.forEach((target) => target.classList.add('is-visible'));
-    return;
-  }
+  if (!('IntersectionObserver' in window)) return;
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
       entry.target.classList.add('is-visible');
       observer.unobserve(entry.target);
     });
-  }, { threshold: .14, rootMargin: '0px 0px -7% 0px' });
+  }, { threshold: .08, rootMargin: '0px 0px 4% 0px' });
+  targets.forEach((target) => target.classList.add('reveal-pending'));
   requestAnimationFrame(() => targets.forEach((target) => observer.observe(target)));
+  window.setTimeout(() => targets.forEach((target) => target.classList.add('is-visible')), 1200);
+}
+
+function initializeProductTilt() {
+  const frame = $('[data-tilt]');
+  if (!frame || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !window.matchMedia('(pointer: fine)').matches) return;
+  const visual = frame.closest('.product-visual');
+  const reset = () => {
+    frame.style.transform = 'rotateY(-7deg) rotateX(3deg)';
+  };
+  visual.addEventListener('pointermove', (event) => {
+    const bounds = visual.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - .5;
+    const y = (event.clientY - bounds.top) / bounds.height - .5;
+    frame.style.transform = `rotateY(${(-7 + x * 7).toFixed(2)}deg) rotateX(${(3 - y * 5).toFixed(2)}deg) translateY(${(y * 3).toFixed(2)}px)`;
+  });
+  visual.addEventListener('pointerleave', reset);
 }
 
 async function initialize() {
   initializeMotion();
+  initializeProductTilt();
   bindSiteNavigation();
   bindPasswordFields();
   bindPhoneFormatting();
