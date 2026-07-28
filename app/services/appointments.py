@@ -35,6 +35,14 @@ def complete_appointment(appointment_id: int, shop_id: int) -> dict:
         # Em tentativas idempotentes ela não é executada novamente.
         if not already_completed and phone:
             cur.execute(
+                """UPDATE clientes SET total_visitas=total_visitas+1,
+                    total_gasto=total_gasto+%s,ultima_visita=NOW(),
+                    ultimo_servico=%s,nome=%s,atualizado_em=NOW()
+                WHERE barbearia_id=%s AND telefone=%s""",
+                (appointment.get("preco") or 0, appointment.get("servico"),
+                 appointment["cliente_nome"], shop_id, phone),
+            )
+            cur.execute(
                 """INSERT INTO fidelidade_cliente(
                     barbearia_id,cliente_telefone,cliente_nome,total_cortes
                 ) VALUES(%s,%s,%s,1)

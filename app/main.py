@@ -177,6 +177,29 @@ def ensure_current_schema():
         cur.execute("ALTER TABLE fidelidade_cliente ALTER COLUMN cliente_telefone DROP NOT NULL")
         cur.execute("ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS concluido_em TIMESTAMPTZ")
         cur.execute("ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ DEFAULT NOW()")
+        cur.execute("""CREATE TABLE IF NOT EXISTS clientes (
+          id SERIAL PRIMARY KEY,
+          barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+          nome VARCHAR(120) NOT NULL,
+          telefone VARCHAR(30) NOT NULL,
+          email VARCHAR(254),
+          total_visitas INTEGER NOT NULL DEFAULT 0,
+          total_gasto NUMERIC(12,2) NOT NULL DEFAULT 0,
+          ultima_visita TIMESTAMPTZ,
+          ultimo_servico VARCHAR(120),
+          faltas INTEGER NOT NULL DEFAULT 0,
+          cancelamentos INTEGER NOT NULL DEFAULT 0,
+          whatsapp_autorizado BOOLEAN NOT NULL DEFAULT FALSE,
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE(barbearia_id,telefone))""")
+        cur.execute("""INSERT INTO clientes(barbearia_id,nome,telefone,email,whatsapp_autorizado)
+          SELECT DISTINCT ON (barbearia_id,cliente_telefone)
+            barbearia_id,cliente_nome,cliente_telefone,cliente_email,whatsapp_autorizado
+          FROM agendamentos
+          WHERE cliente_telefone IS NOT NULL AND cliente_telefone<>''
+          ORDER BY barbearia_id,cliente_telefone,data_hora DESC
+          ON CONFLICT(barbearia_id,telefone) DO NOTHING""")
         cur.execute("ALTER TABLE agendamentos DROP CONSTRAINT IF EXISTS agendamentos_status_check")
         cur.execute("""ALTER TABLE agendamentos ADD CONSTRAINT agendamentos_status_check
           CHECK(status IN ('agendado','confirmado','em_andamento','concluido','realizado','cancelado','nao_compareceu'))""")
@@ -1384,11 +1407,23 @@ def insert_appointment(data, shop_id):
       ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",(shop_id,data.servico_id,data.servico_id,data.servico,data.servico_id))
     if not service: raise HTTPException(404,"Serviço não encontrado")
     try:
-        return one("""INSERT INTO agendamentos(
+        row = one("""INSERT INTO agendamentos(
           barbearia_id,barbeiro_id,servico_id,cliente_nome,cliente_telefone,cliente_email,data_hora,duracao_minutos,servico,preco,whatsapp_autorizado)
           SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
           WHERE EXISTS(SELECT 1 FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo)
           RETURNING *""",(shop_id,data.barbeiro_id,service["id"],data.cliente_nome,data.cliente_telefone,data.cliente_email,data.data_hora,service["duracao_minutos"],service["nome"],service["preco"],data.whatsapp_autorizado,data.barbeiro_id,shop_id))
+        if row and data.cliente_telefone:
+            one("""INSERT INTO clientes(
+              barbearia_id,nome,telefone,email,whatsapp_autorizado,atualizado_em)
+              VALUES(%s,%s,%s,%s,%s,NOW())
+              ON CONFLICT(barbearia_id,telefone) DO UPDATE SET
+                nome=EXCLUDED.nome,
+                email=COALESCE(EXCLUDED.email,clientes.email),
+                whatsapp_autorizado=clientes.whatsapp_autorizado OR EXCLUDED.whatsapp_autorizado,
+                atualizado_em=NOW()
+              RETURNING id""",(shop_id,data.cliente_nome,data.cliente_telefone,data.cliente_email,
+                data.whatsapp_autorizado))
+        return row
     except IntegrityError: raise HTTPException(409,"Este horário acabou de ser ocupado")
 
 @app.get("/api/agendamentos")
@@ -1549,6 +1584,25 @@ def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int
 def barber_report(barber_id:int,user=Depends(current_user)): return one("SELECT b.nome,b.comissao_percentual,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento,COALESCE(SUM(a.preco)*b.comissao_percentual/100,0) comissao FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.status IN ('concluido','realizado') WHERE b.id=%s AND b.barbearia_id=%s GROUP BY b.id",(barber_id,user["barbearia_id"]))
 @app.get("/api/relatorios/fidelidade")
 def loyalty_report(user=Depends(current_user)): return all_rows("SELECT *,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s ORDER BY total_cortes DESC",(user["barbearia_id"],))
+
+@app.get("/api/clientes")
+def customer_relationships(user=Depends(current_user)):
+    return all_rows("""SELECT c.id,c.nome,c.telefone,c.email,c.total_visitas,c.total_gasto,
+        c.ultima_visita,c.ultimo_servico,c.faltas,c.cancelamentos,c.whatsapp_autorizado,
+        next_booking.id proximo_agendamento_id,next_booking.data_hora proximo_agendamento,
+        next_booking.servico proximo_servico,next_booking.barbeiro_nome,
+        next_booking.whatsapp_status
+      FROM clientes c
+      LEFT JOIN LATERAL (
+        SELECT a.id,a.data_hora,a.servico,b.nome barbeiro_nome,a.whatsapp_status
+        FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
+        WHERE a.barbearia_id=c.barbearia_id AND a.cliente_telefone=c.telefone
+          AND a.data_hora>=NOW() AND a.status IN ('agendado','confirmado','em_andamento')
+        ORDER BY a.data_hora LIMIT 1
+      ) next_booking ON TRUE
+      WHERE c.barbearia_id=%s
+      ORDER BY next_booking.data_hora NULLS LAST,c.ultima_visita DESC NULLS LAST,c.nome""",
+      (user["barbearia_id"],))
 @app.get("/api/fidelidade/{telefone}")
 def loyalty(telefone:str,barbearia_id:int=1): return one("SELECT *,total_cortes%%10 saldo,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s AND cliente_telefone=%s",(barbearia_id,telefone)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
 @app.post("/api/fidelidade/registrar-corte")

@@ -47,6 +47,16 @@ class FakeCursor:
             appointment_id, shop_id = params
             row = self.state["appointments"].get(appointment_id)
             self.result = copy.deepcopy(row) if row and row["barbearia_id"] == shop_id else None
+        elif normalized.startswith("UPDATE clientes SET"):
+            price, service, name, shop_id, phone = params
+            row = next((item for item in self.state["clients"]
+                        if item["barbearia_id"] == shop_id and item["telefone"] == phone), None)
+            if row:
+                row["total_visitas"] += 1
+                row["total_gasto"] += price
+                row["ultimo_servico"] = service
+                row["nome"] = name
+            self.result = None
         elif normalized.startswith("INSERT INTO fidelidade_cliente"):
             shop_id, phone, name = params
             row = next((item for item in self.state["loyalty"] if item["barbearia_id"] == shop_id and item["cliente_telefone"] == phone), None)
@@ -103,9 +113,22 @@ class FakeCursor:
 
 class FakeDatabase:
     def __init__(self, appointments, loyalty=None, fail_update=False):
+        client_rows = {}
+        for row in appointments:
+            if row.get("cliente_telefone"):
+                key = (row["barbearia_id"], row["cliente_telefone"])
+                client_rows[key] = {
+                    "barbearia_id": row["barbearia_id"],
+                    "telefone": row["cliente_telefone"],
+                    "nome": row["cliente_nome"],
+                    "total_visitas": 0,
+                    "total_gasto": 0,
+                    "ultimo_servico": None,
+                }
         self.state = {
             "appointments": {row["id"]: copy.deepcopy(row) for row in appointments},
             "loyalty": copy.deepcopy(loyalty or []),
+            "clients": list(client_rows.values()),
             "fail_update": fail_update,
         }
 

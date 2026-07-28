@@ -16,7 +16,7 @@ let services = [];
 let shopProfile = null;
 let businessHours = [];
 let subscription = null;
-let loyaltyClients = [];
+let customerClients = [];
 let toastTimer;
 let agendaWeekAnchor = null;
 
@@ -264,6 +264,7 @@ function bindNavigation() {
     if (action === 'add-barber') openBarber();
     if (action === 'add-service') openService();
     if (action === 'add-product') openProduct();
+    if (action === 'add-appointment') openAppointment();
     if (action === 'complete') concludeAppointment(id);
     if (action === 'cancel') cancelAppointment(id);
     if (action === 'remove-appointment') removeAppointment(id);
@@ -625,39 +626,57 @@ async function loadAppointments() {
 
 function renderClients(query = '') {
   const normalized = query.trim().toLocaleLowerCase('pt-BR');
-  const filtered = loyaltyClients.filter((client) => {
-    const searchable = `${client.cliente_nome || ''} ${client.cliente_telefone || ''}`.toLocaleLowerCase('pt-BR');
+  const filtered = customerClients.filter((client) => {
+    const searchable = `${client.nome || ''} ${client.telefone || ''} ${client.email || ''}`.toLocaleLowerCase('pt-BR');
     return searchable.includes(normalized);
   });
   $('#client-grid').innerHTML = filtered.map((client) => {
-    const name = client.cliente_nome || client.cliente_telefone || 'Cliente';
+    const name = client.nome || client.telefone || 'Cliente';
     const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-    const total = Number(client.total_cortes || 0);
-    const progress = total % 10;
-    const remaining = Number(client.cortes_para_premio || 10);
+    const visits = Number(client.total_visitas || 0);
+    const spent = Number(client.total_gasto || 0);
+    const next = client.proximo_agendamento ? new Date(client.proximo_agendamento) : null;
+    const last = client.ultima_visita ? new Date(client.ultima_visita) : null;
+    const daysSince = last ? Math.floor((Date.now() - last.getTime()) / 86400000) : null;
+    const needsReturn = !next && daysSince !== null && daysSince >= 30;
+    const digits = String(client.telefone || '').replace(/\D/g, '');
+    const destination = digits.startsWith('55') ? digits : `55${digits}`;
+    const message = encodeURIComponent(`Olá, ${name.split(' ')[0]}! Tudo bem? Aqui é da barbearia. Gostaria de agendar seu próximo horário?`);
+    const whatsappStatus = {
+      ENVIADO: 'Mensagem enviada', ENTREGUE: 'Mensagem entregue', LIDO: 'Mensagem lida',
+      PENDENTE: 'Envio pendente', ENVIANDO: 'Enviando confirmação', FALHOU: 'Falha no WhatsApp'
+    }[client.whatsapp_status] || '';
+    const tag = next ? '<span class="client-tag scheduled">Agendado</span>'
+      : needsReturn ? '<span class="client-tag return">Hora de retornar</span>'
+      : visits === 0 ? '<span class="client-tag new">Novo cliente</span>' : '<span class="client-tag">Ativo</span>';
     return `<article class="client-card">
       <div class="client-card-head">
         <span class="client-avatar">${escapeHTML(initials)}</span>
-        <div><h3>${escapeHTML(name)}</h3><p>${escapeHTML(client.cliente_telefone || 'Telefone não informado')}</p></div>
-        <span class="client-visits">${total}<small>visitas</small></span>
+        <div><h3>${escapeHTML(name)}</h3><p>${escapeHTML(client.telefone || 'Telefone não informado')}</p></div>
+        ${tag}
       </div>
-      <div class="client-progress-copy"><span>Fidelidade</span><b>${progress}/10</b></div>
-      <div class="client-progress" role="progressbar" aria-label="Progresso de fidelidade de ${escapeHTML(name)}" aria-valuemin="0" aria-valuemax="10" aria-valuenow="${progress}"><i style="width:${progress * 10}%"></i></div>
-      <footer><span>${remaining === 10 && total > 0 ? 'Prêmio conquistado neste ciclo' : `Faltam ${remaining} corte${remaining === 1 ? '' : 's'} para o prêmio`}</span></footer>
+      <div class="client-facts">
+        <span><small>Visitas</small><b>${visits}</b></span>
+        <span><small>Total gasto</small><b>${money(spent)}</b></span>
+        <span><small>Última visita</small><b>${last ? last.toLocaleDateString('pt-BR') : 'Ainda não veio'}</b></span>
+        <span><small>Serviço habitual</small><b>${escapeHTML(client.ultimo_servico || client.proximo_servico || 'A descobrir')}</b></span>
+      </div>
+      ${next ? `<div class="client-next"><small>PRÓXIMO HORÁRIO</small><b>${next.toLocaleDateString('pt-BR')} às ${next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b><span>${escapeHTML(client.proximo_servico || '')} · ${escapeHTML(client.barbeiro_nome || 'Equipe')}</span>${whatsappStatus ? `<em class="whatsapp-status status-${escapeHTML(String(client.whatsapp_status || '').toLowerCase())}">${escapeHTML(whatsappStatus)}</em>` : ''}</div>` : ''}
+      <footer><a class="client-whatsapp" href="https://wa.me/${destination}?text=${message}" target="_blank" rel="noopener">Chamar no WhatsApp <span>↗</span></a><button type="button" data-action="add-appointment">Novo horário</button></footer>
     </article>`;
-  }).join('') || `<div class="client-empty"><b>${normalized ? 'Nenhum cliente encontrado' : 'Sua base de clientes aparecerá aqui'}</b><span>${normalized ? 'Tente buscar por outro nome ou telefone.' : 'Conclua atendimentos para alimentar o programa de fidelidade.'}</span></div>`;
+  }).join('') || `<div class="client-empty"><b>${normalized ? 'Nenhum cliente encontrado' : 'Sua base de clientes aparecerá aqui'}</b><span>${normalized ? 'Tente buscar por outro nome ou telefone.' : 'Os clientes entram automaticamente depois do primeiro agendamento.'}</span></div>`;
 }
 
 async function loadClients() {
-  loyaltyClients = await api('/relatorios/fidelidade');
-  const totalVisits = loyaltyClients.reduce((sum, client) => sum + Number(client.total_cortes || 0), 0);
-  const nearReward = loyaltyClients.filter((client) => Number(client.cortes_para_premio) <= 2).length;
-  const topClient = loyaltyClients[0];
-  $('#client-total').textContent = loyaltyClients.length;
-  $('#client-visits').textContent = totalVisits;
-  $('#client-near-reward').textContent = nearReward;
-  $('#client-top').textContent = topClient ? (topClient.cliente_nome || 'Cliente').split(' ')[0] : '—';
-  $('#client-top-detail').textContent = topClient ? `${Number(topClient.total_cortes || 0)} visitas registradas` : 'sem histórico';
+  customerClients = await api('/clientes');
+  const now = Date.now();
+  const scheduled = customerClients.filter((client) => client.proximo_agendamento).length;
+  const returnDue = customerClients.filter((client) => !client.proximo_agendamento && client.ultima_visita && (now - new Date(client.ultima_visita).getTime()) >= 30 * 86400000).length;
+  const sent = customerClients.filter((client) => ['ENVIADO', 'ENTREGUE', 'LIDO'].includes(client.whatsapp_status)).length;
+  $('#client-total').textContent = customerClients.length;
+  $('#client-scheduled').textContent = scheduled;
+  $('#client-return').textContent = returnDue;
+  $('#client-whatsapp').textContent = sent;
   const search = $('#client-search');
   search.oninput = () => renderClients(search.value);
   renderClients(search.value);
