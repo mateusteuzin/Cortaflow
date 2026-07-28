@@ -519,6 +519,54 @@ html.motion-ready .feature-card:nth-child(4) { transition-delay: .16s; }
   .final-schedule article { grid-template-columns: 46px 1fr; }
   .final-schedule em { grid-column: 2; justify-self: start; }
 }
+
+@media (max-width: 580px) {
+  .final-cta > .container,
+  .final-cta > .container > .final-cta-grid,
+  .final-cta-copy {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .final-cta-copy > * {
+    max-width: 100% !important;
+  }
+  .final-cta-copy h2,
+  .final-cta-copy p {
+    text-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+  .final-actions,
+  .final-actions .btn,
+  .final-plans-link {
+    width: 100% !important;
+  }
+  .footer-trust,
+  .footer-trust-grid,
+  .footer-main,
+  .footer-bottom {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .footer-trust-grid,
+  .footer-main,
+  .footer-bottom {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .trust-badge,
+  .footer-access,
+  .footer-brand,
+  .footer-main nav {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .trust-badge {
+    width: 100% !important;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-bg,.real-panel-frame,.final-orbit,.final-preview-head > span i { animation: none !important; }
   html.motion-ready [data-reveal],
