@@ -158,6 +158,14 @@ class PublicBookingIsolationTests(unittest.TestCase):
                 self.assertIn('aria-label="Falar com o suporte do CortaFlow pelo WhatsApp"', content)
                 self.assertIn("/support.css?v=", content)
 
+    def test_account_and_subscription_actions_are_clearly_separated(self):
+        content = (Path(main.__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
+        self.assertIn("As alterações abaixo afetam somente os dados da barbearia.", content)
+        self.assertIn("Plano, renovação e pagamento ficam em Minha assinatura.", content)
+        self.assertIn('data-go="assinatura"', content)
+        self.assertIn("Renovar ou alterar plano", content)
+        self.assertIn("RENOVAÇÃO E COBRANÇA", content)
+
     def test_public_shop_listing_is_disabled(self):
         with self.assertRaises(HTTPException) as caught:
             main.public_shops()

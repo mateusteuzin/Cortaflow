@@ -416,10 +416,10 @@ function renderAccountSubscription(data) {
   $('#account-subscription-date-label').textContent = data?.cancel_at_period_end ? 'ACESSO DISPONÍVEL ATÉ' : 'PRÓXIMA RENOVAÇÃO';
   $('#account-subscription-date').textContent = renewal || 'Não cadastrada';
   $('#account-subscription-note').textContent = renewal
-    ? (data.cancel_at_period_end ? 'A assinatura não será renovada depois desta data.' : 'Renovação automática processada pela Stripe.')
+    ? (data.cancel_at_period_end ? 'A assinatura não será renovada depois desta data.' : 'Consulte cobranças e renovação em Minha assinatura.')
     : (data?.managed_by_stripe
       ? 'Aguardando a Stripe informar o próximo ciclo.'
-      : 'Vincule uma assinatura para registrar o vencimento.');
+      : 'Renove ou vincule um plano em Minha assinatura.');
 }
 
 async function chooseSubscription(plan, button) {
