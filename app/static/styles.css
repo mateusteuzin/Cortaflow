@@ -849,11 +849,12 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
 /* Fechamento visual do painel: entrada mais legível e operacional. */
 .hero-card {
   min-height: 300px;
-  grid-template-columns: minmax(360px,480px) minmax(240px,1fr);
-  align-items: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   padding: 38px clamp(26px,2.8vw,42px);
   background:
-    linear-gradient(90deg,#090c0a 0%,rgba(9,12,10,.99) 43%,rgba(9,12,10,.62) 61%,rgba(9,12,10,.14) 100%),
+    linear-gradient(90deg,#090c0a 0%,rgba(9,12,10,.99) 42%,rgba(9,12,10,.72) 57%,rgba(9,12,10,.14) 100%),
     url('/assets/barber-hero.webp') 91% 32% / cover no-repeat;
   box-shadow: 0 22px 58px rgba(0,0,0,.3);
 }
@@ -878,9 +879,8 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
 }
 .hero-card-main {
   width: 100%;
-  max-width: 460px;
-  align-self: center;
-  justify-self: start;
+  max-width: 480px;
+  margin: 0;
   text-align: left;
 }
 .hero-card h2 {
@@ -900,10 +900,11 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
 }
 .hero-mini-stats small { color: #c6b682; }
 .hero-command {
-  align-self: end;
-  justify-self: end;
-  min-width: 270px;
-  padding: 16px;
+  width: 100%;
+  min-width: 0;
+  max-width: 450px;
+  margin-top: 22px;
+  padding: 14px;
   border: 1px solid rgba(255,255,255,.11);
   border-radius: 14px;
   background: rgba(12,16,13,.72);
@@ -982,14 +983,12 @@ html[data-theme="dark"] .agenda-mobile-day { border-bottom-color: var(--line); }
 @media (max-width: 820px) {
   .hero-card {
     min-height: 420px;
-    grid-template-columns: 1fr;
     align-items: end;
     padding: 28px 24px;
     background-position: 68% center;
   }
   .hero-card::before { top: 22px; bottom: 22px; left: 12px; }
-  .hero-card-main { align-self: end; }
-  .hero-command { width: 100%; min-width: 0; justify-self: stretch; }
+  .hero-card-main { max-width: 520px; }
 }
 
 @media (max-width: 520px) {
