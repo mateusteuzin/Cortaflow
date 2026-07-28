@@ -237,3 +237,96 @@ body { background: var(--agency-bg); }
 @media (prefers-reduced-motion: reduce) {
   .reveal-pending { opacity: 1; transform: none; transition: none; }
 }
+
+/* “Tudo conectado”: linguagem monocromática, editorial e orientada ao produto. */
+.features-section {
+  padding-block: clamp(92px,10vw,148px);
+  background: #dfe2df;
+  color: #121412;
+}
+.features-section .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0,1.15fr) minmax(280px,.55fr);
+  align-items: end;
+  gap: clamp(44px,8vw,120px);
+  margin-bottom: 62px;
+  text-align: left;
+}
+.features-section .section-intro { max-width: 820px; }
+.features-section .section-intro .kicker { color: #555b56; }
+.features-section .section-heading h2 { color: #101210; font-size: clamp(47px,5.2vw,74px); line-height: .98; }
+.features-section .section-heading > p { max-width: 420px; color: #5e655f; font-size: 15px; line-height: 1.7; }
+.features-section .feature-grid { gap: 14px; }
+.features-section .feature-card.product-card {
+  border: 1px solid #c7cbc7;
+  border-radius: 4px;
+  background: #f6f7f5;
+  color: #141614;
+  box-shadow: 0 22px 60px rgba(33,38,34,.09);
+}
+.features-section .feature-card.product-card:nth-child(even) { background: #eceeeb; }
+.features-section .feature-card.product-card::before { display: block; width: 56px; height: 2px; background: #202420; }
+.features-section .feature-card.product-card:hover {
+  border-color: #979d98;
+  box-shadow: 0 30px 75px rgba(33,38,34,.15);
+  transform: translateY(-4px);
+}
+.features-section .feature-copy > span { color: #626863; }
+.features-section .feature-copy h3 { color: #111311; }
+.features-section .feature-copy p { color: #626863; }
+.features-section .feature-icon { border-color: #aeb3af; color: #1e221f; }
+.features-section .product-shot {
+  border-color: #303531;
+  border-radius: 3px;
+  background: #171a18;
+  box-shadow: 0 22px 52px rgba(24,28,25,.24);
+}
+.features-section .shot-bar { border-color: #333834; }
+.features-section .shot-bar span { color: #f2f3f1; }
+.features-section .shot-bar b { color: #8f9590; }
+.features-section .shot-bar i { background: #f0f1ef; color: #171a18; }
+.features-section .schedule-row { border-color: #303430; }
+.features-section .schedule-row time { color: #f1f2f0; }
+.features-section .schedule-row img,
+.features-section .team-member img { filter: grayscale(1) contrast(1.05); }
+.features-section .schedule-row div b,
+.features-section .team-member div b,
+.features-section .analytics-head b { color: #f0f1ef; }
+.features-section .schedule-row div small,
+.features-section .team-member div small,
+.features-section .team-member > span small { color: #878d88; }
+.features-section .schedule-row em,
+.features-section .analytics-head > span {
+  background: #303531;
+  color: #dfe2df;
+}
+.features-section .messages-shot { background: #171a18; }
+.features-section .channel-logo { background: #e8eae7; box-shadow: none; }
+.features-section .channel-logo svg { fill: #171a18; }
+.features-section .message-bubble { background: #303431; }
+.features-section .message-bubble b { color: #f3f4f2; }
+.features-section .message-bubble span,
+.features-section .message-bubble small { color: #adb2ad; }
+.features-section .email-status { border-color: #393e3a; background: #202420; }
+.features-section .email-status > svg { stroke: #e1e3e0; }
+.features-section .email-status > span { color: #daddda; }
+.features-section .team-member { border-color: #343935; }
+.features-section .team-member > span strong { color: #f1f2f0; }
+.features-section .commission-summary { background: #292d2a; }
+.features-section .commission-summary > span { background: #3b403c; }
+.features-section .commission-summary svg { stroke: #e4e6e3; }
+.features-section .commission-summary small,
+.features-section .commission-summary em { color: #aeb3ae; }
+.features-section .analytics-head small,
+.features-section .analytics-stats small { color: #8d938e; }
+.features-section .grid-line { stroke: rgba(255,255,255,.08); }
+.features-section .chart-area { fill: rgba(255,255,255,.06); }
+.features-section .chart-line { stroke: #f0f1ef; }
+.features-section .analytics-stats { border-color: #353a36; }
+.features-section .analytics-stats span { background: #242825; }
+.features-section .analytics-stats b { color: #e8eae7; }
+
+@media (max-width: 820px) {
+  .features-section .section-heading { display: block; margin-bottom: 45px; }
+  .features-section .section-heading > p { margin-top: 20px; }
+}
