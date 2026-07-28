@@ -108,6 +108,47 @@ class BackendSecurityTests(unittest.TestCase):
         "GOOGLE_CLIENT_SECRET": "google-secret-value",
         "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
     }, clear=False)
+    def test_google_oidc_parallel_attempts_use_distinct_cookies(self):
+        first = main.start_google_oidc()
+        second = main.start_google_oidc()
+        first_cookie = first.headers["set-cookie"].split("=", 1)[0]
+        second_cookie = second.headers["set-cookie"].split("=", 1)[0]
+        self.assertNotEqual(first_cookie, second_cookie)
+        self.assertTrue(first_cookie.startswith(main.GOOGLE_STATE_COOKIE))
+        self.assertTrue(second_cookie.startswith(main.GOOGLE_STATE_COOKIE))
+
+    @patch.dict("os.environ", {
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+        "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "google-secret-value",
+        "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+    }, clear=False)
+    def test_google_oidc_expired_state_redirects_to_friendly_error(self):
+        request = Request({
+            "type": "http",
+            "method": "GET",
+            "path": "/api/auth/google/callback",
+            "raw_path": b"/api/auth/google/callback",
+            "query_string": b"",
+            "headers": [],
+            "client": ("203.0.113.10", 1234),
+            "server": ("testserver", 80),
+            "scheme": "https",
+        })
+        response = main.google_oidc_callback(
+            request=request,
+            code="authorization-code",
+            state="expired-state",
+        )
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["location"], "/?google=sessao_expirada")
+
+    @patch.dict("os.environ", {
+        "PUBLIC_BASE_URL": "https://cortaflow.com.br",
+        "GOOGLE_CLIENT_ID": "client.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "google-secret-value",
+        "GOOGLE_REDIRECT_URI": "https://cortaflow.com.br/api/auth/google/callback",
+    }, clear=False)
     def test_google_register_state_carries_signed_plan(self):
         response = main.start_google_oidc(mode="register", plan="premium")
         params = parse_qs(urlparse(response.headers["location"]).query)

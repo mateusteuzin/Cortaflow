@@ -392,6 +392,15 @@ GOOGLE_TOKENINFO_ENDPOINT = "https://oauth2.googleapis.com/tokeninfo"
 GOOGLE_OIDC_SCOPES = "openid email profile"
 GOOGLE_STATE_COOKIE = "cortaflow_oidc_state"
 
+def _google_state_cookie_name(state: str) -> str:
+    suffix = hashlib.sha256(state.encode()).hexdigest()[:12]
+    return f"{GOOGLE_STATE_COOKIE}_{suffix}"
+
+
+def _clear_google_state_cookies(response: Response, state: str) -> None:
+    response.delete_cookie(_google_state_cookie_name(state), path="/api/auth/google")
+    response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+
 
 def _google_json_request(request: UrlRequest) -> dict:
     try:
@@ -427,7 +436,7 @@ def start_google_oidc(
     })
     response = RedirectResponse(f"{GOOGLE_AUTHORIZATION_ENDPOINT}?{query}", status_code=302)
     response.set_cookie(
-        GOOGLE_STATE_COOKIE,
+        _google_state_cookie_name(state),
         state,
         max_age=600,
         httponly=True,
@@ -449,18 +458,26 @@ def google_oidc_callback(
     if not settings:
         raise HTTPException(503, "Login com Google ainda não está configurado.")
     if len(code) > 2048 or len(state) > 4096 or len(error) > 120:
-        raise HTTPException(400, "Resposta OAuth invalida.")
-    cookie_state = request.cookies.get(GOOGLE_STATE_COOKIE, "")
+        return RedirectResponse("/?google=sessao_expirada", status_code=303)
+    cookie_state = (
+        request.cookies.get(_google_state_cookie_name(state), "")
+        or request.cookies.get(GOOGLE_STATE_COOKIE, "")
+    )
     if not cookie_state or not secrets.compare_digest(cookie_state, state):
-        raise HTTPException(400, "State OAuth inválido ou expirado.")
+        response = RedirectResponse("/?google=sessao_expirada", status_code=303)
+        _clear_google_state_cookies(response, state)
+        return response
     try:
         state_claims = decode_oidc_state(state)
     except JWTError as error:
-        raise HTTPException(400, "State OAuth inválido ou expirado.") from error
+        logging.info("Expired or invalid Google OAuth state: %s", type(error).__name__)
+        response = RedirectResponse("/?google=sessao_expirada", status_code=303)
+        _clear_google_state_cookies(response, state)
+        return response
     if error:
         result = "cadastro_cancelado" if state_claims.get("mode") == "register" else "login_cancelado"
         response = RedirectResponse(f"/?google={result}", status_code=303)
-        response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+        _clear_google_state_cookies(response, state)
         return response
     if len(code) < 8:
         raise HTTPException(400, "Codigo OAuth ausente ou invalido.")
@@ -510,7 +527,7 @@ def google_oidc_callback(
         )
         if existing_user:
             response = RedirectResponse("/?google=conta_existente", status_code=303)
-            response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+            _clear_google_state_cookies(response, state)
             return response
         pending_by_subject = one(
             """SELECT id,email FROM cadastros_pendentes
@@ -546,7 +563,7 @@ def google_oidc_callback(
             raise HTTPException(409, "Este e-mail ja esta vinculado a outro cadastro.")
         session = _create_pending_checkout(pending, request)
         response = RedirectResponse(session.url, status_code=303)
-        response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+        _clear_google_state_cookies(response, state)
         return response
     user = one("""SELECT u.id,u.email,u.nome,b.subscription_plan
         FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id
@@ -554,7 +571,7 @@ def google_oidc_callback(
           AND u.email_verificado""", (google_subject, email))
     if not user:
         response = RedirectResponse("/?google=conta_nao_encontrada", status_code=303)
-        response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+        _clear_google_state_cookies(response, state)
         return response
     one("""UPDATE usuarios SET google_subject=COALESCE(google_subject,%s)
         WHERE id=%s RETURNING id""", (google_subject, user["id"]))
@@ -570,7 +587,7 @@ def google_oidc_callback(
         "code": login_code,
     })
     response = RedirectResponse(f"/?{query}", status_code=303)
-    response.delete_cookie(GOOGLE_STATE_COOKIE, path="/api/auth/google")
+    _clear_google_state_cookies(response, state)
     return response
 
 

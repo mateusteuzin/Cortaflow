@@ -582,6 +582,7 @@ async function handleReturnRoute() {
 
   if (google) {
     const googleRegisterErrors = {
+      sessao_expirada: 'Sua sessão com Google expirou. Inicie novamente para continuar com segurança.',
       plano_invalido: 'Nao foi possivel identificar o plano escolhido. Selecione um plano e tente novamente.',
       email_indisponivel: 'Este e-mail Google nao esta disponivel para um novo cadastro.',
       cadastro_cancelado: 'O cadastro com Google foi cancelado. Voce pode tentar novamente quando quiser.',
