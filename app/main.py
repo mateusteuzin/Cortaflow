@@ -613,17 +613,27 @@ def create_checkout(data: CheckoutRequest, request: Request, user=Depends(authen
             customer_id = customer.id
             one("UPDATE barbearias SET stripe_customer_id=%s WHERE id=%s RETURNING id",
                 (customer_id, shop["id"]))
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            customer=customer_id,
-            client_reference_id=str(user["id"]),
-            line_items=[_stripe_line_item(plan)],
-            success_url=f"{site_url}/painel?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{site_url}/painel?checkout=cancelado",
-            allow_promotion_codes=True,
-            metadata={"plan": plan, "barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
-            subscription_data={"metadata": {"plan": plan, "barbearia_id": str(shop["id"])}},
-        )
+        checkout_data = {
+            "mode": "subscription",
+            "customer": customer_id,
+            "client_reference_id": str(user["id"]),
+            "line_items": [_stripe_line_item(plan)],
+            "success_url": f"{site_url}/painel?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
+            "cancel_url": f"{site_url}/painel?checkout=cancelado",
+            "allow_promotion_codes": True,
+            "metadata": {"plan": plan, "barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
+            "subscription_data": {"metadata": {"plan": plan, "barbearia_id": str(shop["id"])}},
+        }
+        try:
+            session = stripe.checkout.Session.create(**checkout_data)
+        except stripe.error.StripeError:
+            # A stale Price ID in the deployment must not block a new subscription.
+            if checkout_data["line_items"][0].get("price"):
+                logging.exception("Configured Stripe price rejected for plan %s; retrying with server price", plan)
+                checkout_data["line_items"] = [_stripe_line_item(plan, use_configured=False)]
+                session = stripe.checkout.Session.create(**checkout_data)
+            else:
+                raise
     except stripe.error.StripeError as error:
         logging.exception("Stripe checkout error")
         raise HTTPException(502, "Não foi possível abrir o checkout agora.") from error
@@ -640,10 +650,19 @@ def _stripe_client():
     stripe.api_key = secret
     return stripe
 
-def _stripe_line_item(plan: str):
+def _stripe_line_item(plan: str, use_configured: bool = True):
     plan_data = STRIPE_PLANS.get(plan)
     if not plan_data:
         raise HTTPException(422, "Plano inválido.")
+    configured_price = os.getenv(plan_data["price_env"], "").strip()
+    if configured_price and use_configured:
+        if (
+            not configured_price.startswith("price_")
+            or "..." in configured_price
+            or any(char.isspace() for char in configured_price)
+        ):
+            raise HTTPException(503, f"{plan_data['price_env']} possui formato inválido.")
+        return {"price": configured_price, "quantity": 1}
     return {
         "price_data": {
             "currency": "brl",

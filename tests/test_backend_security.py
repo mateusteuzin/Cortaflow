@@ -231,7 +231,13 @@ class BackendSecurityTests(unittest.TestCase):
         self.assertTrue(result["duplicate"])
         process.assert_not_called()
 
-    def test_stripe_line_item_uses_server_side_plan_price(self):
+    @patch.dict("os.environ", {"STRIPE_PRICE_ESSENCIAL": "price_1234567890"}, clear=False)
+    def test_stripe_line_item_uses_configured_stripe_price(self):
+        item = main._stripe_line_item("essencial")
+        self.assertEqual(item, {"price": "price_1234567890", "quantity": 1})
+
+    @patch.dict("os.environ", {"STRIPE_PRICE_ESSENCIAL": ""}, clear=False)
+    def test_stripe_line_item_can_fallback_to_server_side_price_data(self):
         item = main._stripe_line_item("essencial")
         self.assertEqual(item["price_data"]["currency"], "brl")
         self.assertEqual(item["price_data"]["unit_amount"], 2990)
