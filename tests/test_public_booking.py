@@ -148,6 +148,16 @@ class PublicBookingIsolationTests(unittest.TestCase):
         response = main.booking_page("barbearia-gold")
         self.assertTrue(Path(response.path).name == "cliente.html")
 
+    def test_whatsapp_support_button_is_available_on_every_public_surface(self):
+        static = Path(main.__file__).parent / "static"
+        expected = "https://wa.me/5585998265953"
+        for page in ("index.html", "landing.html", "cliente.html"):
+            with self.subTest(page=page):
+                content = (static / page).read_text(encoding="utf-8")
+                self.assertIn(expected, content)
+                self.assertIn('aria-label="Falar com o suporte do CortaFlow pelo WhatsApp"', content)
+                self.assertIn("/support.css?v=", content)
+
     def test_public_shop_listing_is_disabled(self):
         with self.assertRaises(HTTPException) as caught:
             main.public_shops()
