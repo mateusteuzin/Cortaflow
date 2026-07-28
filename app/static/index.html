@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260728-hero-left-v2">
+  <link rel="stylesheet" href="/styles.css?v=20260728-account-plan">
 </head>
 <body>
   <section id="login" class="auth-screen">
@@ -262,6 +262,20 @@
 
       <section id="conta" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">IDENTIDADE DA MARCA</span><h2>Minha conta</h2><p>Personalize como sua barbearia aparece para os clientes.</p></div></div>
+        <section class="account-subscription-summary" aria-labelledby="account-subscription-title">
+          <div class="account-subscription-plan">
+            <span id="account-subscription-badge" class="subscription-badge">ASSINATURA</span>
+            <small>PLANO ATUAL</small>
+            <h3 id="account-subscription-title">Carregando...</h3>
+            <p id="account-subscription-description">Consultando os dados da sua assinatura.</p>
+          </div>
+          <div class="account-subscription-renewal">
+            <small id="account-subscription-date-label">PRÓXIMA RENOVAÇÃO</small>
+            <strong id="account-subscription-date">—</strong>
+            <span id="account-subscription-note">A data será exibida quando a cobrança estiver vinculada.</span>
+          </div>
+          <button class="button button-outline" data-go="assinatura" type="button">Ver assinatura</button>
+        </section>
         <form id="account-form" class="panel account-panel">
           <section class="booking-link-card" aria-labelledby="booking-link-title">
             <div><span class="eyebrow">AGENDA PÚBLICA</span><h3 id="booking-link-title">Link de agendamento</h3><p>Compartilhe este link para que seus clientes agendem diretamente na sua barbearia.</p></div>
@@ -299,6 +313,6 @@
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button id="modal-close" type="button" class="icon-button modal-close" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260727-admin-premium"></script>
+  <script src="/app.js?v=20260728-account-plan"></script>
 </body>
 </html>

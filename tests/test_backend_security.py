@@ -285,6 +285,42 @@ class BackendSecurityTests(unittest.TestCase):
         self.assertEqual(item["price_data"]["recurring"], {"interval": "month"})
         self.assertEqual(item["price_data"]["product_data"]["metadata"], {"plan": "essencial"})
 
+    @patch("app.main.one")
+    def test_subscription_details_exposes_plan_and_renewal(self, database_one):
+        database_one.return_value = {
+            "subscription_plan": "profissional",
+            "subscription_status": "active",
+            "plano_ativo": True,
+            "subscription_current_period_end": "2026-08-21T12:00:00+00:00",
+            "subscription_cancel_at_period_end": False,
+            "stripe_customer_id": "cus_test",
+            "stripe_subscription_id": "sub_test",
+            "data_assinatura": "2026-07-21",
+        }
+        result = main.subscription_details({"barbearia_id": 11})
+        self.assertEqual(result["plan"], "profissional")
+        self.assertEqual(result["plan_name"], "CortaFlow Profissional")
+        self.assertEqual(result["current_period_end"], "2026-08-21T12:00:00+00:00")
+        self.assertEqual(result["started_at"], "2026-07-21")
+        self.assertTrue(result["billing_data_complete"])
+
+    @patch("app.main.one")
+    def test_legacy_subscription_is_reported_as_incomplete(self, database_one):
+        database_one.return_value = {
+            "subscription_plan": None,
+            "subscription_status": "active",
+            "plano_ativo": True,
+            "subscription_current_period_end": None,
+            "subscription_cancel_at_period_end": False,
+            "stripe_customer_id": "cus_legacy",
+            "stripe_subscription_id": None,
+            "data_assinatura": "2026-07-21",
+        }
+        result = main.subscription_details({"barbearia_id": 11})
+        self.assertTrue(result["active"])
+        self.assertIsNone(result["plan"])
+        self.assertFalse(result["billing_data_complete"])
+
 
 if __name__ == "__main__":
     unittest.main()

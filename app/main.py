@@ -874,15 +874,22 @@ def _send_subscription_email_once(shop_id: int, plan: str | None, period_end=Non
 def subscription_details(user=Depends(authenticated_user)):
     shop = one("""SELECT subscription_plan,subscription_status,plano_ativo,
         subscription_current_period_end,subscription_cancel_at_period_end,
-        stripe_customer_id,stripe_subscription_id FROM barbearias WHERE id=%s""",
+        stripe_customer_id,stripe_subscription_id,data_assinatura
+        FROM barbearias WHERE id=%s""",
         (user["barbearia_id"],))
+    plan = shop["subscription_plan"]
+    period_end = shop["subscription_current_period_end"]
+    managed_by_stripe = bool(shop["stripe_customer_id"] and shop["stripe_subscription_id"])
     return {
         "active": bool(shop["plano_ativo"]),
-        "plan": shop["subscription_plan"],
+        "plan": plan,
+        "plan_name": STRIPE_PLANS.get(plan or "", {}).get("name"),
         "status": shop["subscription_status"] or ("active" if shop["plano_ativo"] else "inactive"),
-        "current_period_end": shop["subscription_current_period_end"],
+        "current_period_end": period_end,
+        "started_at": shop["data_assinatura"],
         "cancel_at_period_end": bool(shop["subscription_cancel_at_period_end"]),
-        "managed_by_stripe": bool(shop["stripe_customer_id"] and shop["stripe_subscription_id"]),
+        "managed_by_stripe": managed_by_stripe,
+        "billing_data_complete": bool(plan and period_end and managed_by_stripe),
     }
 
 @app.post("/api/billing/confirm")

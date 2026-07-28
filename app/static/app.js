@@ -358,6 +358,7 @@ async function loadSubscription() {
   $('#subscription-loading').classList.remove('hidden');
   $('#subscription-content').classList.add('hidden');
   subscription = await api('/billing/subscription');
+  renderAccountSubscription(subscription);
   const names = { essencial: 'Essencial', profissional: 'Profissional', premium: 'Premium' };
   const descriptions = {
     essencial: 'Agenda e gestão essenciais para um profissional.',
@@ -387,6 +388,38 @@ async function loadSubscription() {
   });
   $('#subscription-loading').classList.add('hidden');
   $('#subscription-content').classList.remove('hidden');
+}
+
+function subscriptionDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function renderAccountSubscription(data) {
+  const names = { essencial: 'Plano Essencial', profissional: 'Plano Profissional', premium: 'Plano Premium' };
+  const planName = names[data?.plan] || data?.plan_name || (data?.active ? 'Acesso ativo sem plano vinculado' : 'Sem assinatura ativa');
+  const renewal = subscriptionDate(data?.current_period_end);
+  const started = subscriptionDate(data?.started_at);
+  const badge = $('#account-subscription-badge');
+  $('#account-subscription-title').textContent = planName;
+  $('#account-subscription-description').textContent = data?.plan
+    ? `Sua assinatura ${names[data.plan] || data.plan_name || data.plan} está vinculada a esta conta.`
+    : (data?.active
+      ? `Seu acesso está liberado${started ? ` desde ${started}` : ''}, mas o plano de cobrança ainda não foi vinculado.`
+      : 'Escolha um plano para ativar todos os recursos do CortaFlow.');
+  badge.textContent = data?.active
+    ? (data.cancel_at_period_end ? 'CANCELAMENTO AGENDADO' : 'ASSINATURA ATIVA')
+    : 'ASSINATURA INATIVA';
+  badge.classList.toggle('inactive', !data?.active || Boolean(data?.cancel_at_period_end));
+  $('#account-subscription-date-label').textContent = data?.cancel_at_period_end ? 'ACESSO DISPONÍVEL ATÉ' : 'PRÓXIMA RENOVAÇÃO';
+  $('#account-subscription-date').textContent = renewal || 'Não cadastrada';
+  $('#account-subscription-note').textContent = renewal
+    ? (data.cancel_at_period_end ? 'A assinatura não será renovada depois desta data.' : 'Renovação automática processada pela Stripe.')
+    : (data?.managed_by_stripe
+      ? 'Aguardando a Stripe informar o próximo ciclo.'
+      : 'Vincule uma assinatura para registrar o vencimento.');
 }
 
 async function chooseSubscription(plan, button) {
@@ -447,10 +480,12 @@ async function copyBookingLink() {
 }
 
 async function loadProfile() {
-  [shopProfile, businessHours] = await Promise.all([
+  [shopProfile, businessHours, subscription] = await Promise.all([
     api('/barbearia/perfil'),
-    api('/barbearia/horarios-funcionamento')
+    api('/barbearia/horarios-funcionamento'),
+    api('/billing/subscription')
   ]);
+  renderAccountSubscription(subscription);
   applyShopBrand(shopProfile);
   const form = $('#account-form');
   ['nome', 'telefone', 'endereco', 'cnpj', 'logo_url'].forEach((name) => {
