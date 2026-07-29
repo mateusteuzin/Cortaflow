@@ -1,0 +1,21 @@
+ALTER TABLE produtos
+  ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE vendas_produto
+  ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS despesas (
+  id SERIAL PRIMARY KEY,
+  barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+  descricao VARCHAR(160) NOT NULL,
+  categoria VARCHAR(30) NOT NULL,
+  valor NUMERIC(12,2) NOT NULL CHECK(valor > 0),
+  data DATE NOT NULL,
+  recorrente BOOLEAN NOT NULL DEFAULT FALSE,
+  observacao VARCHAR(500) NOT NULL DEFAULT '',
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_despesas_barbearia_data
+  ON despesas(barbearia_id, data DESC);

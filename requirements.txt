@@ -6,3 +6,5 @@ bcrypt==4.2.1
 pydantic[email]==2.10.4
 python-multipart==0.0.20
 stripe==12.5.0
+xlsxwriter==3.2.5
+reportlab==4.4.3

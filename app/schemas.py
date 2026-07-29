@@ -148,7 +148,19 @@ class PublicAppointment(Appointment):
 class Product(BaseModel):
     nome: str
     preco: Decimal = Field(ge=0)
+    custo_unitario: Decimal = Field(default=0, ge=0)
     quantidade_estoque: int = Field(default=0, ge=0)
+
+
+class Expense(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    descricao: str = Field(min_length=2, max_length=160)
+    categoria: Literal["aluguel", "agua", "energia", "internet", "materiais", "marketing", "manutencao", "impostos", "outros"]
+    valor: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    data: date
+    recorrente: bool = False
+    observacao: str = Field(default="", max_length=500)
 
 
 class Service(BaseModel):

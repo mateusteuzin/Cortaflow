@@ -1,6 +1,7 @@
 import hashlib, json, logging, os, secrets, time as time_module
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from urllib.parse import quote, urlencode, urlparse
@@ -35,6 +36,7 @@ from .services.email import (
 )
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
 from .services.slugs import unique_shop_slug
+from .services.financial_exports import build_financial_pdf, build_financial_xlsx
 from .runtime import is_vercel, should_run_migrations, should_start_worker
 from .services.appointments import (
     AppointmentNotFoundError,
@@ -160,6 +162,21 @@ def ensure_current_schema():
         cur.execute("""UPDATE barbearias b SET email_notificacoes=u.email FROM usuarios u
             WHERE b.usuario_id=u.id AND (b.email_notificacoes IS NULL OR b.email_notificacoes='')""")
         cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS foto_url TEXT")
+        cur.execute("ALTER TABLE produtos ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
+        cur.execute("ALTER TABLE vendas_produto ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
+        cur.execute("""CREATE TABLE IF NOT EXISTS despesas (
+          id SERIAL PRIMARY KEY,
+          barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+          descricao VARCHAR(160) NOT NULL,
+          categoria VARCHAR(30) NOT NULL,
+          valor NUMERIC(12,2) NOT NULL CHECK(valor > 0),
+          data DATE NOT NULL,
+          recorrente BOOLEAN NOT NULL DEFAULT FALSE,
+          observacao VARCHAR(500) NOT NULL DEFAULT '',
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
+        cur.execute("""CREATE INDEX IF NOT EXISTS idx_despesas_barbearia_data
+          ON despesas(barbearia_id,data DESC)""")
         cur.execute("""CREATE TABLE IF NOT EXISTS servicos (
           id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
           nome VARCHAR(120) NOT NULL, descricao VARCHAR(240),
@@ -1628,9 +1645,9 @@ def confirm(data:ConfirmRequest):
 @app.get("/api/produtos")
 def products(user=Depends(current_user)): return all_rows("SELECT * FROM produtos WHERE barbearia_id=%s ORDER BY nome",(user["barbearia_id"],))
 @app.post("/api/produtos",status_code=201)
-def create_product(data:Product,user=Depends(current_user)): return one("INSERT INTO produtos(barbearia_id,nome,preco,quantidade_estoque) VALUES(%s,%s,%s,%s) RETURNING *",(user["barbearia_id"],data.nome,data.preco,data.quantidade_estoque))
+def create_product(data:Product,user=Depends(current_user)): return one("INSERT INTO produtos(barbearia_id,nome,preco,custo_unitario,quantidade_estoque) VALUES(%s,%s,%s,%s,%s) RETURNING *",(user["barbearia_id"],data.nome,data.preco,data.custo_unitario,data.quantidade_estoque))
 @app.put("/api/produtos/{product_id}")
-def update_product(product_id:int,data:Product,user=Depends(current_user)): return one("UPDATE produtos SET nome=%s,preco=%s,quantidade_estoque=%s WHERE id=%s AND barbearia_id=%s RETURNING *",(data.nome,data.preco,data.quantidade_estoque,product_id,user["barbearia_id"]))
+def update_product(product_id:int,data:Product,user=Depends(current_user)): return one("UPDATE produtos SET nome=%s,preco=%s,custo_unitario=%s,quantidade_estoque=%s WHERE id=%s AND barbearia_id=%s RETURNING *",(data.nome,data.preco,data.custo_unitario,data.quantidade_estoque,product_id,user["barbearia_id"]))
 @app.delete("/api/produtos/{product_id}")
 def delete_product(product_id:int,user=Depends(current_user)):
     if not one("DELETE FROM produtos WHERE id=%s AND barbearia_id=%s RETURNING id",(product_id,user["barbearia_id"])): raise HTTPException(404,"Produto não encontrado")
@@ -1638,11 +1655,100 @@ def delete_product(product_id:int,user=Depends(current_user)):
 @app.post("/api/agendamentos/{appointment_id}/adicionar-produto")
 def sell_product(appointment_id:int,data:ProductSale,user=Depends(current_user)):
     with db() as cur:
-        cur.execute("UPDATE produtos SET quantidade_estoque=quantidade_estoque-%s WHERE id=%s AND barbearia_id=%s AND quantidade_estoque>=%s RETURNING preco",(data.quantidade,data.produto_id,user["barbearia_id"],data.quantidade)); p=cur.fetchone()
+        cur.execute("SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s",
+            (appointment_id,user["barbearia_id"]))
+        if not cur.fetchone():raise HTTPException(404,"Atendimento não encontrado")
+        cur.execute("UPDATE produtos SET quantidade_estoque=quantidade_estoque-%s WHERE id=%s AND barbearia_id=%s AND quantidade_estoque>=%s RETURNING preco,custo_unitario",(data.quantidade,data.produto_id,user["barbearia_id"],data.quantidade)); p=cur.fetchone()
         if not p: raise HTTPException(409,"Estoque insuficiente")
-        cur.execute("INSERT INTO vendas_produto(agendamento_id,produto_id,quantidade,preco_unitario) VALUES(%s,%s,%s,%s) RETURNING *",(appointment_id,data.produto_id,data.quantidade,p["preco"])); return cur.fetchone()
+        cur.execute("INSERT INTO vendas_produto(agendamento_id,produto_id,quantidade,preco_unitario,custo_unitario) VALUES(%s,%s,%s,%s,%s) RETURNING *",(appointment_id,data.produto_id,data.quantidade,p["preco"],p["custo_unitario"])); return cur.fetchone()
 @app.get("/api/agendamentos/{appointment_id}/produtos")
 def appointment_products(appointment_id:int,user=Depends(current_user)): return all_rows("SELECT v.*,p.nome FROM vendas_produto v JOIN produtos p ON p.id=v.produto_id JOIN agendamentos a ON a.id=v.agendamento_id WHERE v.agendamento_id=%s AND a.barbearia_id=%s",(appointment_id,user["barbearia_id"]))
+
+EXPENSE_CATEGORIES = {
+    "aluguel": "Aluguel", "agua": "Água", "energia": "Energia",
+    "internet": "Internet", "materiais": "Materiais", "marketing": "Marketing",
+    "manutencao": "Manutenção", "impostos": "Impostos", "outros": "Outros",
+}
+
+@app.get("/api/despesas")
+def expenses(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+    rows=all_rows("""SELECT * FROM despesas WHERE barbearia_id=%s
+        AND data>=%s AND data<%s ORDER BY data DESC,id DESC""",
+        (user["barbearia_id"],date(ano,mes,1),date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)))
+    for item in rows:item["categoria_label"]=EXPENSE_CATEGORIES.get(item["categoria"],item["categoria"].title())
+    return rows
+
+@app.post("/api/despesas",status_code=201)
+def create_expense(data:Expense,user=Depends(current_user)):
+    return one("""INSERT INTO despesas(barbearia_id,descricao,categoria,valor,data,recorrente,observacao)
+        VALUES(%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+        (user["barbearia_id"],data.descricao,data.categoria,data.valor,data.data,data.recorrente,data.observacao))
+
+@app.put("/api/despesas/{expense_id}")
+def update_expense(expense_id:int,data:Expense,user=Depends(current_user)):
+    row=one("""UPDATE despesas SET descricao=%s,categoria=%s,valor=%s,data=%s,
+        recorrente=%s,observacao=%s,atualizado_em=NOW()
+        WHERE id=%s AND barbearia_id=%s RETURNING *""",
+        (data.descricao,data.categoria,data.valor,data.data,data.recorrente,data.observacao,expense_id,user["barbearia_id"]))
+    if not row:raise HTTPException(404,"Despesa não encontrada")
+    return row
+
+@app.delete("/api/despesas/{expense_id}")
+def delete_expense(expense_id:int,user=Depends(current_user)):
+    if not one("DELETE FROM despesas WHERE id=%s AND barbearia_id=%s RETURNING id",(expense_id,user["barbearia_id"])):
+        raise HTTPException(404,"Despesa não encontrada")
+    return {"ok":True}
+
+def financial_data(shop_id:int,mes:int,ano:int):
+    inicio=date(ano,mes,1);fim=date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)
+    shop=one("SELECT nome FROM barbearias WHERE id=%s",(shop_id,))
+    appointments=all_rows("""SELECT a.data_hora,a.cliente_nome,a.servico,a.preco,b.nome barbeiro_nome,
+        ROUND(a.preco*b.comissao_percentual/100,2) comissao
+        FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
+        WHERE a.barbearia_id=%s AND a.data_hora>=%s AND a.data_hora<%s
+        AND a.status IN ('concluido','realizado') ORDER BY a.data_hora""",(shop_id,inicio,fim))
+    sales=all_rows("""SELECT v.criado_em,p.nome produto_nome,v.quantidade,v.preco_unitario,v.custo_unitario,
+        v.quantidade*v.preco_unitario total_venda,v.quantidade*v.custo_unitario total_custo
+        FROM vendas_produto v JOIN produtos p ON p.id=v.produto_id
+        JOIN agendamentos a ON a.id=v.agendamento_id
+        WHERE a.barbearia_id=%s AND a.data_hora>=%s AND a.data_hora<%s
+        AND a.status IN ('concluido','realizado') ORDER BY v.criado_em""",(shop_id,inicio,fim))
+    expense_rows=all_rows("""SELECT * FROM despesas WHERE barbearia_id=%s
+        AND data>=%s AND data<%s ORDER BY data DESC,id DESC""",(shop_id,inicio,fim))
+    for item in expense_rows:item["categoria_label"]=EXPENSE_CATEGORIES.get(item["categoria"],item["categoria"].title())
+    zero=Decimal("0")
+    service_revenue=sum((Decimal(item["preco"]) for item in appointments),zero)
+    product_revenue=sum((Decimal(item["total_venda"]) for item in sales),zero)
+    commissions=sum((Decimal(item["comissao"]) for item in appointments),zero)
+    product_costs=sum((Decimal(item["total_custo"]) for item in sales),zero)
+    expenses_total=sum((Decimal(item["valor"]) for item in expense_rows),zero)
+    gross_revenue=service_revenue+product_revenue
+    net_profit=gross_revenue-commissions-product_costs-expenses_total
+    return {"barbearia_nome":shop["nome"],"mes":mes,"ano":ano,
+        "periodo_label":f"{mes:02d}/{ano}","inicio":inicio,"fim":fim,
+        "faturamento_servicos":service_revenue,"faturamento_produtos":product_revenue,
+        "faturamento_total":gross_revenue,"comissoes":commissions,
+        "custos_produtos":product_costs,"despesas_total":expenses_total,
+        "lucro_liquido":net_profit,
+        "margem_liquida":(net_profit/gross_revenue*100 if gross_revenue else 0),
+        "atendimentos":len(appointments),"atendimentos_detalhes":appointments,
+        "vendas_detalhes":sales,"despesas":expense_rows}
+
+@app.get("/api/financeiro/resumo")
+def financial_summary(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+    return financial_data(user["barbearia_id"],mes,ano)
+
+@app.get("/api/financeiro/exportar.xlsx")
+def export_financial_xlsx(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+    content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano))
+    return Response(content,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.xlsx"'})
+
+@app.get("/api/financeiro/exportar.pdf")
+def export_financial_pdf(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+    content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano))
+    return Response(content,media_type="application/pdf",
+        headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.pdf"'})
 
 @app.get("/api/relatorios/dia")
 def daily(data:date,user=Depends(current_user)): return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status IN ('concluido','realizado')",(user["barbearia_id"],data)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora::date=%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(data,user["barbearia_id"]))}

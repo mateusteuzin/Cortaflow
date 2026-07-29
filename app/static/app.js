@@ -17,6 +17,7 @@ let shopProfile = null;
 let businessHours = [];
 let subscription = null;
 let customerClients = [];
+let financeExpenses = [];
 let toastTimer;
 let agendaWeekAnchor = null;
 let agendaWeekDays = [];
@@ -128,12 +129,12 @@ function logout() {
 function show(view) {
   $$('.view').forEach((element) => element.classList.toggle('hidden', element.id !== view));
   $$('nav button[data-view]').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
-  const label = { dashboard: 'Resumo do dia', agenda: 'Agenda', clientes: 'Clientes', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
+  const label = { dashboard: 'Resumo do dia', agenda: 'Agenda', clientes: 'Clientes', barbeiros: 'Barbeiros', servicos: 'Serviços', produtos: 'Produtos', financeiro: 'Financeiro', relatorios: 'Relatórios', assinatura: 'Minha assinatura', conta: 'Minha conta' }[view] || 'Painel';
   $('#title').textContent = label;
   const breadcrumb = $('#breadcrumb-current');
   if (breadcrumb) breadcrumb.textContent = label;
   closeSidebar();
-  const loaders = { agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
+  const loaders = { agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, financeiro: loadFinance, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
   if (loaders[view]) loaders[view]().catch((error) => toast(error.message));
 }
 
@@ -261,6 +262,8 @@ function bindNavigation() {
   $('#account-form').onsubmit = saveProfile;
   $('#copy-booking-link').onclick = copyBookingLink;
   $('#manage-subscription').onclick = openBillingPortal;
+  $('#finance-export-xlsx').onclick = () => downloadFinancial('xlsx').catch((error) => toast(error.message));
+  $('#finance-export-pdf').onclick = () => downloadFinancial('pdf').catch((error) => toast(error.message));
   $$('[data-subscription-plan]').forEach((button) => {
     button.onclick = () => chooseSubscription(button.dataset.subscriptionPlan, button);
   });
@@ -272,6 +275,7 @@ function bindNavigation() {
     if (action === 'add-barber') openBarber();
     if (action === 'add-service') openService();
     if (action === 'add-product') openProduct();
+    if (action === 'add-expense') openExpense();
     if (action === 'add-appointment') openAppointment();
     if (action === 'complete') concludeAppointment(id);
     if (action === 'cancel') cancelAppointment(id);
@@ -282,6 +286,8 @@ function bindNavigation() {
     if (action === 'remove-service') removeService(id);
     if (action === 'edit-product') openProduct(id);
     if (action === 'remove-product') removeProduct(id);
+    if (action === 'edit-expense') openExpense(id);
+    if (action === 'remove-expense') removeExpense(id);
   });
 }
 
@@ -906,7 +912,7 @@ async function removeAppointment(id) {
 
 async function loadProducts() {
   products = await api('/produtos');
-  $('#product-grid').innerHTML = products.map((product) => `<article><span class="badge">${product.quantidade_estoque} em estoque</span><h3>${escapeHTML(product.nome)}</h3><strong>${money(product.preco)}</strong><footer><span>Estoque atual</span><button class="danger" type="button" data-action="remove-product" data-id="${product.id}">Excluir</button></footer></article>`).join('') || '<p class="empty">Nenhum produto cadastrado.</p>';
+  $('#product-grid').innerHTML = products.map((product) => `<article><span class="badge">${product.quantidade_estoque} em estoque</span><h3>${escapeHTML(product.nome)}</h3><strong>${money(product.preco)}</strong><p>Custo: ${money(product.custo_unitario)}</p><footer><button class="link" type="button" data-action="edit-product" data-id="${product.id}">Editar</button><button class="danger" type="button" data-action="remove-product" data-id="${product.id}">Excluir</button></footer></article>`).join('') || '<p class="empty">Nenhum produto cadastrado.</p>';
 }
 
 async function loadServices() {
@@ -936,11 +942,15 @@ async function removeService(id) {
   toast('Serviço desativado');
 }
 
-function openProduct() {
-  fields('<label>Produto<input name="nome" required></label><div class="grid2"><label>Preço<input name="preco" type="number" min="0" step=".01" required></label><label>Estoque<input name="quantidade_estoque" type="number" min="0" value="0" required></label></div>', 'Novo produto', async (data) => {
+function openProduct(id = null) {
+  const product = id ? products.find((item) => item.id === id) : null;
+  if (id && !product) return toast('Produto não encontrado.');
+  const value = (key, fallback = '') => escapeHTML(product?.[key] ?? fallback);
+  fields(`<label>Produto<input name="nome" value="${value('nome')}" required></label><div class="grid2"><label>Preço de venda<input name="preco" type="number" min="0" step=".01" value="${value('preco')}" required><small>Valor cobrado do cliente.</small></label><label>Custo unitário<input name="custo_unitario" type="number" min="0" step=".01" value="${value('custo_unitario', 0)}" required><small>Quanto a barbearia paga pelo item.</small></label><label>Estoque<input name="quantidade_estoque" type="number" min="0" value="${value('quantidade_estoque', 0)}" required></label></div>`, product ? 'Editar produto' : 'Novo produto', async (data) => {
     data.preco = Number(data.preco);
+    data.custo_unitario = Number(data.custo_unitario);
     data.quantidade_estoque = Number(data.quantidade_estoque);
-    await api('/produtos', { method: 'POST', body: JSON.stringify(data) });
+    await api(product ? '/produtos/' + product.id : '/produtos', { method: product ? 'PUT' : 'POST', body: JSON.stringify(data) });
     await loadProducts();
   });
 }
@@ -955,6 +965,85 @@ async function removeProduct(id) {
 }
 
 const reportMonths = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const expenseCategories = {
+  aluguel: 'Aluguel', agua: 'Água', energia: 'Energia', internet: 'Internet',
+  materiais: 'Materiais', marketing: 'Marketing', manutencao: 'Manutenção',
+  impostos: 'Impostos', outros: 'Outros'
+};
+
+function setupFinanceFilters() {
+  const now = new Date();
+  if (!$('#finance-month').options.length) {
+    $('#finance-month').innerHTML = reportMonths.map((name, index) => `<option value="${index + 1}">${name}</option>`).join('');
+    $('#finance-year').innerHTML = Array.from({ length: 7 }, (_, index) => now.getFullYear() - index).map((year) => `<option value="${year}">${year}</option>`).join('');
+    $('#finance-month').value = String(now.getMonth() + 1);
+    $('#finance-year').value = String(now.getFullYear());
+    ['finance-month', 'finance-year'].forEach((id) => { $('#' + id).onchange = () => loadFinance().catch((error) => toast(error.message)); });
+  }
+}
+
+async function loadFinance() {
+  setupFinanceFilters();
+  const month = Number($('#finance-month').value);
+  const year = Number($('#finance-year').value);
+  const result = await api(`/financeiro/resumo?mes=${month}&ano=${year}`);
+  financeExpenses = result.despesas || [];
+  const outflows = Number(result.comissoes) + Number(result.custos_produtos) + Number(result.despesas_total);
+  $('#finance-revenue').textContent = money(result.faturamento_total);
+  $('#finance-outflows').textContent = money(outflows);
+  $('#finance-profit').textContent = money(result.lucro_liquido);
+  $('#finance-margin').textContent = `${Number(result.margem_liquida).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+  $('#expense-total').textContent = money(result.despesas_total);
+  $('.finance-profit-card').classList.toggle('is-negative', Number(result.lucro_liquido) < 0);
+  const rows = [
+    ['Faturamento de serviços', result.faturamento_servicos, 'positive'],
+    ['Vendas de produtos', result.faturamento_produtos, 'positive'],
+    ['Comissões da equipe', -Number(result.comissoes), 'negative'],
+    ['Custos dos produtos', -Number(result.custos_produtos), 'negative'],
+    ['Despesas cadastradas', -Number(result.despesas_total), 'negative'],
+  ];
+  $('#finance-breakdown').innerHTML = rows.map(([label, value, tone]) => `<div class="finance-breakdown-row"><span>${escapeHTML(label)}</span><b class="${tone}">${value >= 0 ? '+' : '−'} ${money(Math.abs(value))}</b></div>`).join('') + `<div class="finance-breakdown-row total"><span>Lucro líquido</span><b>${money(result.lucro_liquido)}</b></div>`;
+  $('#expense-list').innerHTML = financeExpenses.map((expense) => `<article class="expense-row"><span class="expense-date">${new Date(expense.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span><div><b>${escapeHTML(expense.descricao)}</b><small>${escapeHTML(expense.categoria_label || expenseCategories[expense.categoria] || expense.categoria)}${expense.recorrente ? ' · recorrente' : ''}</small></div><strong>${money(expense.valor)}</strong><div class="expense-actions"><button class="link" type="button" data-action="edit-expense" data-id="${expense.id}">Editar</button><button class="danger" type="button" data-action="remove-expense" data-id="${expense.id}">Excluir</button></div></article>`).join('') || '<div class="finance-empty"><b>Nenhuma despesa neste mês</b><span>Cadastre aluguel, materiais, contas e outros custos para ver o lucro real.</span><button class="button button-outline" type="button" data-action="add-expense">Cadastrar primeira despesa</button></div>';
+}
+
+function openExpense(id = null) {
+  const expense = id ? financeExpenses.find((item) => item.id === id) : null;
+  if (id && !expense) return toast('Despesa não encontrada.');
+  const value = (key, fallback = '') => escapeHTML(expense?.[key] ?? fallback);
+  const options = Object.entries(expenseCategories).map(([key, label]) => `<option value="${key}"${expense?.categoria === key ? ' selected' : ''}>${label}</option>`).join('');
+    fields(`<label>Descrição<input name="descricao" value="${value('descricao')}" placeholder="Ex.: Conta de energia" required></label><div class="grid2"><label>Categoria<select name="categoria" required>${options}</select></label><label>Valor<input name="valor" type="number" min=".01" step=".01" value="${value('valor')}" required></label><label>Data<input name="data" type="date" value="${value('data', localDate())}" required></label></div><label class="notification-toggle compact"><input name="recorrente" type="checkbox"${expense?.recorrente ? ' checked' : ''}><span><b>Despesa recorrente</b><small>Identifica contas mensais; cada mês deve ser lançado separadamente.</small></span></label><label>Observação<textarea name="observacao" rows="3" maxlength="500" placeholder="Informação opcional">${value('observacao')}</textarea></label>`, expense ? 'Editar despesa' : 'Nova despesa', async (data) => {
+    data.valor = Number(data.valor);
+    data.recorrente = data.recorrente === 'on';
+    await api(expense ? '/despesas/' + expense.id : '/despesas', { method: expense ? 'PUT' : 'POST', body: JSON.stringify(data) });
+    await loadFinance();
+  });
+}
+
+async function removeExpense(id) {
+  if (!await confirmAction({ title: 'Excluir despesa?', message: 'A despesa será removida do cálculo de lucro deste mês.', confirmLabel: 'Excluir despesa' })) return;
+  await api('/despesas/' + id, { method: 'DELETE' });
+  await loadFinance();
+  toast('Despesa excluída');
+}
+
+async function downloadFinancial(format) {
+  const month = Number($('#finance-month').value);
+  const year = Number($('#finance-year').value);
+  const response = await fetch(`/api/financeiro/exportar.${format}?mes=${month}&ano=${year}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || 'Não foi possível gerar o arquivo.');
+  }
+  const blob = await response.blob();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `financeiro-${year}-${String(month).padStart(2, '0')}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+  toast(format === 'xlsx' ? 'Excel gerado com sucesso' : 'PDF gerado com sucesso');
+}
 
 function setupReportFilters() {
   const now = new Date();

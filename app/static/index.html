@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260729-report-chart">
+  <link rel="stylesheet" href="/styles.css?v=20260729-financial-panel">
   <link rel="stylesheet" href="/support.css?v=20260728">
 </head>
 <body>
@@ -116,6 +116,7 @@
         <button data-view="barbeiros" type="button" data-tooltip="Equipe"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span>Equipe</span></button>
         <button data-view="servicos" type="button" data-tooltip="Serviços"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="m6 3 12 18M18 3 6 21"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/></svg></span><span>Serviços</span></button>
         <button data-view="produtos" type="button" data-tooltip="Produtos"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v8l-9 5-9-5Z"/></svg></span><span>Produtos</span></button>
+        <button data-view="financeiro" type="button" data-tooltip="Financeiro"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="m3 6 6-3 6 5 6-4"/></svg></span><span>Financeiro</span></button>
         <button data-view="relatorios" type="button" data-tooltip="Insights"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/></svg></span><span>Insights</span></button>
         <span class="nav-label nav-label-spaced">CONFIGURAÇÕES</span>
         <button data-view="assinatura" type="button" data-tooltip="Minha assinatura"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M7 15h3"/></svg></span><span>Minha assinatura</span></button>
@@ -220,6 +221,30 @@
       <section id="barbeiros" class="view hidden"><div class="section-heading"><div><span class="eyebrow">SUA EQUIPE</span><h2>Profissionais</h2><p>Tenha os contatos e a comissão sempre à mão.</p></div><button class="button button-primary" type="button" data-action="add-barber">+ Adicionar barbeiro</button></div><div id="barber-grid" class="card-grid"></div></section>
       <section id="servicos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Serviços</h2><p>Gerencie o que aparece na página de agendamento.</p></div><button class="button button-primary" type="button" data-action="add-service">+ Adicionar serviço</button></div><div id="service-grid" class="card-grid"></div></section>
       <section id="produtos" class="view hidden"><div class="section-heading"><div><span class="eyebrow">ESTOQUE</span><h2>Produtos</h2><p>Acompanhe itens usados ou vendidos no atendimento.</p></div><button class="button button-primary" type="button" data-action="add-product">+ Adicionar produto</button></div><div id="product-grid" class="card-grid"></div></section>
+
+      <section id="financeiro" class="view hidden">
+        <div class="section-heading"><div><span class="eyebrow">RESULTADO REAL</span><h2>Financeiro</h2><p>Veja quanto entrou, quanto saiu e o lucro que ficou no caixa.</p></div><button class="button button-primary" type="button" data-action="add-expense">+ Nova despesa</button></div>
+        <div class="finance-toolbar panel">
+          <div class="finance-filters"><label>Mês<select id="finance-month"></select></label><label>Ano<select id="finance-year"></select></label></div>
+          <div class="finance-export-actions"><button id="finance-export-xlsx" class="button button-outline" type="button">Baixar Excel</button><button id="finance-export-pdf" class="button button-dark" type="button">Gerar PDF</button></div>
+        </div>
+        <div class="metrics finance-metrics">
+          <article class="metric-card"><span>ENTRADAS</span><strong id="finance-revenue">R$ 0,00</strong><small>serviços e produtos</small></article>
+          <article class="metric-card"><span>SAÍDAS</span><strong id="finance-outflows">R$ 0,00</strong><small>comissões, custos e despesas</small></article>
+          <article class="metric-card finance-profit-card"><span>LUCRO LÍQUIDO</span><strong id="finance-profit">R$ 0,00</strong><small>resultado depois de todos os custos</small></article>
+          <article class="metric-card"><span>MARGEM</span><strong id="finance-margin">0%</strong><small>percentual que ficou no negócio</small></article>
+        </div>
+        <div class="finance-grid">
+          <div class="panel finance-composition">
+            <div class="panel-head"><div><span class="eyebrow">COMPOSIÇÃO</span><h2>Como chegamos ao lucro</h2></div></div>
+            <div id="finance-breakdown"></div>
+          </div>
+          <div class="panel expense-panel">
+            <div class="panel-head"><div><span class="eyebrow">CONTROLE DE SAÍDAS</span><h2>Despesas do mês</h2></div><strong id="expense-total">R$ 0,00</strong></div>
+            <div id="expense-list"></div>
+          </div>
+        </div>
+      </section>
 
       <section id="relatorios" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios</h2><p>Compare resultados, identifique os dias mais movimentados e acompanhe sua evolução.</p></div></div>
@@ -331,6 +356,6 @@
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3Zm0 23.6a10.6 10.6 0 0 1-5.4-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6Zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2l-1 1.2c-.2.2-.4.2-.7.1-1.8-.9-3-1.7-4.2-3.7-.3-.5.3-.6.9-1.8.1-.2.1-.4 0-.6l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1.1-1.1 2.6s1.1 3.1 1.3 3.3c.2.2 2.3 3.5 5.5 4.9.8.3 1.4.5 1.9.6.8.3 1.6.2 2.1.1.7-.1 1.9-.8 2.1-1.5.3-.7.3-1.4.2-1.5-.1-.2-.4-.3-.7-.5Z"/></svg>
     <span>Suporte</span>
   </a>
-  <script src="/app.js?v=20260729-report-chart"></script>
+  <script src="/app.js?v=20260729-financial-panel"></script>
 </body>
 </html>

@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS clientes (
  UNIQUE(barbearia_id, telefone));
 CREATE TABLE IF NOT EXISTS produtos (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
- nome VARCHAR(120) NOT NULL, preco NUMERIC(10,2) NOT NULL, quantidade_estoque INTEGER DEFAULT 0, criado_em TIMESTAMPTZ DEFAULT NOW());
+ nome VARCHAR(120) NOT NULL, preco NUMERIC(10,2) NOT NULL, custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0,
+ quantidade_estoque INTEGER DEFAULT 0, criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS servicos (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  nome VARCHAR(120) NOT NULL, descricao VARCHAR(240), duracao_minutos INTEGER NOT NULL DEFAULT 30 CHECK(duracao_minutos BETWEEN 10 AND 480),
@@ -77,7 +78,13 @@ CREATE TABLE IF NOT EXISTS servicos (
  ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS vendas_produto (
  id SERIAL PRIMARY KEY, agendamento_id INTEGER NOT NULL REFERENCES agendamentos(id), produto_id INTEGER NOT NULL REFERENCES produtos(id),
- quantidade INTEGER NOT NULL CHECK(quantidade > 0), preco_unitario NUMERIC(10,2) NOT NULL, criado_em TIMESTAMPTZ DEFAULT NOW());
+ quantidade INTEGER NOT NULL CHECK(quantidade > 0), preco_unitario NUMERIC(10,2) NOT NULL,
+ custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0, criado_em TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS despesas (
+ id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+ descricao VARCHAR(160) NOT NULL, categoria VARCHAR(30) NOT NULL, valor NUMERIC(12,2) NOT NULL CHECK(valor > 0),
+ data DATE NOT NULL, recorrente BOOLEAN NOT NULL DEFAULT FALSE, observacao VARCHAR(500) NOT NULL DEFAULT '',
+ criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(), atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS fidelidade_cliente (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
  cliente_telefone VARCHAR(30), cliente_nome VARCHAR(120), total_cortes INTEGER DEFAULT 0, criado_em TIMESTAMPTZ DEFAULT NOW(),
@@ -92,4 +99,5 @@ CREATE INDEX IF NOT EXISTS idx_clientes_barbearia_atualizado ON clientes(barbear
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativos ON barbeiros(barbearia_id, nome) WHERE ativo;
 CREATE INDEX IF NOT EXISTS idx_servicos_barbearia_ativos ON servicos(barbearia_id, nome) WHERE ativo;
 CREATE INDEX IF NOT EXISTS idx_vendas_produto_agendamento ON vendas_produto(agendamento_id);
+CREATE INDEX IF NOT EXISTS idx_despesas_barbearia_data ON despesas(barbearia_id, data DESC);
 CREATE INDEX IF NOT EXISTS idx_pagamentos_agendamento ON pagamentos(agendamento_id);
