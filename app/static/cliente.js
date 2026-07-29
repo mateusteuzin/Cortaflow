@@ -93,11 +93,15 @@ async function init() {
 async function loadServices() {
   const list = await api(`${publicBase()}/servicos`);
   if (!list.length) throw new Error('Esta barbearia ainda não possui serviços disponíveis.');
-  $('#services').innerHTML = list.map((item, index) => `<button class="service-option" type="button" data-index="${index}"><span class="service-photo"><img src="${escapeHTML(item.imagem_url || '/assets/service-degrade.webp')}" alt="${escapeHTML(item.nome)}" loading="lazy"></span><span class="service-copy"><span><b>${escapeHTML(item.nome)}</b><small>${escapeHTML(item.descricao || 'Serviço profissional')}</small></span><strong>${money(item.preco)}</strong><span class="duration">${item.duracao_minutos} minutos</span></span></button>`).join('');
+  $('#services').innerHTML = list.map((item, index) => `<button class="service-option" type="button" role="radio" aria-checked="false" aria-label="${escapeHTML(`${item.nome}, ${money(item.preco)}, ${item.duracao_minutos} minutos`)}" data-index="${index}"><span class="service-photo"><img src="${escapeHTML(item.imagem_url || '/assets/service-degrade.webp')}" alt="" loading="lazy"></span><span class="service-copy"><span><b>${escapeHTML(item.nome)}</b><small>${escapeHTML(item.descricao || 'Serviço profissional')}</small></span><strong>${money(item.preco)}</strong><span class="duration">${item.duracao_minutos} minutos</span></span></button>`).join('');
   $$('.service-option').forEach((button) => {
     button.onclick = () => {
       service = list[Number(button.dataset.index)];
-      $$('.service-option').forEach((element) => element.classList.toggle('active', element === button));
+      $$('.service-option').forEach((element) => {
+        const selected = element === button;
+        element.classList.toggle('active', selected);
+        element.setAttribute('aria-checked', String(selected));
+      });
       $('#barber-block').classList.add('ready');
       if (barber) loadSlots();
     };

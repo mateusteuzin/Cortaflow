@@ -516,3 +516,78 @@ main { min-height: calc(100dvh - 95px); }
   .text-button span { display: none; }
   .state h2 { font-size: 27px; }
 }
+
+/* Serviços compactos no celular: comparação rápida sem perder o apelo das fotos. */
+@media (max-width: 680px) {
+  .service-list { grid-template-columns: 1fr; gap: 8px; }
+  .service-option {
+    display: grid;
+    min-height: 104px;
+    grid-template-columns: 94px minmax(0,1fr);
+    align-items: stretch;
+    border-radius: 8px;
+  }
+  .service-option:hover { transform: none; box-shadow: none; }
+  .service-option:active { transform: scale(.99); }
+  .service-option::before { width: 4px; border-radius: 8px 0 0 8px; }
+  .service-option::after {
+    position: absolute;
+    right: 10px;
+    bottom: 9px;
+    display: grid;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 50%;
+    background: #b9852f;
+    color: #fff;
+    content: "✓";
+    font-size: 11px;
+    font-weight: 900;
+    opacity: 0;
+    transform: scale(.7);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .service-option.active::after { opacity: 1; transform: scale(1); }
+  .service-photo {
+    position: relative;
+    width: 94px;
+    height: auto;
+    min-height: 102px;
+    grid-column: 1;
+    grid-row: 1;
+    border-right: 1px solid var(--line);
+  }
+  .service-photo img { position: absolute; inset: 0; }
+  .service-copy {
+    grid-column: 2;
+    grid-row: 1;
+    align-content: center;
+    gap: 7px;
+    padding: 11px 12px;
+  }
+  .service-option b { overflow: hidden; font-size: 14px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+  .service-option small {
+    display: -webkit-box;
+    max-width: none;
+    margin-top: 4px;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .service-option strong { align-self: start; font-size: 15px; white-space: nowrap; }
+  .service-option .duration { padding-right: 25px; line-height: 1.2; }
+}
+
+@media (max-width: 360px) {
+  .service-option { min-height: 94px; grid-template-columns: 78px minmax(0,1fr); }
+  .service-photo { width: 78px; min-height: 92px; }
+  .service-copy { gap: 5px 6px; padding: 9px 10px; }
+  .service-option b { font-size: 12px; }
+  .service-option strong { font-size: 14px; }
+  .service-option small { font-size: 10px; -webkit-line-clamp: 1; }
+}

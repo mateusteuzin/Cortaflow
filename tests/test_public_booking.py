@@ -204,6 +204,16 @@ class PublicBookingIsolationTests(unittest.TestCase):
         self.assertNotIn("/cliente/barbearias", script)
         self.assertNotIn("barbearia_id", script)
 
+    def test_mobile_services_use_compact_accessible_cards(self):
+        html = Path("app/static/cliente.html").read_text(encoding="utf-8")
+        script = Path("app/static/cliente.js").read_text(encoding="utf-8")
+        css = Path("app/static/cliente.css").read_text(encoding="utf-8")
+        self.assertIn('role="radiogroup"', html)
+        self.assertIn('role="radio"', script)
+        self.assertIn("aria-checked", script)
+        self.assertIn("grid-template-columns: 94px minmax(0,1fr)", css)
+        self.assertIn("@media (max-width: 360px)", css)
+
 
 if __name__ == "__main__":
     unittest.main()
