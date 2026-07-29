@@ -62,7 +62,34 @@ def send_appointment_push(appointment_id: int, event: str = "novo") -> int:
         (item["barbearia_id"], item["barbeiro_id"]),
     )
     if not subscriptions:
+        logger.info(
+            "Web Push sem destinatários ativos para barbearia=%s barbeiro=%s",
+            item["barbearia_id"], item["barbeiro_id"],
+        )
         return 0
+    return _send_payload(subscriptions, payload)
+
+
+def send_user_test_push(user_id: int, shop_id: int) -> int:
+    if not push_is_configured():
+        return 0
+    subscriptions = all_rows(
+        """SELECT id,endpoint,p256dh,auth FROM push_subscriptions
+        WHERE usuario_id=%s AND barbearia_id=%s AND ativo""",
+        (user_id, shop_id),
+    )
+    if not subscriptions:
+        logger.info("Teste Web Push sem inscrição ativa para usuario=%s", user_id)
+        return 0
+    return _send_payload(subscriptions, {
+        "title": "Notificações ativadas",
+        "body": "Tudo certo! Este celular receberá os avisos da agenda.",
+        "url": "/painel#agenda",
+        "tag": f"push-test-{user_id}",
+    })
+
+
+def _send_payload(subscriptions: list[dict], payload: dict) -> int:
     try:
         from pywebpush import WebPushException, webpush
     except ImportError:
@@ -94,7 +121,8 @@ def send_appointment_push(appointment_id: int, event: str = "novo") -> int:
                 (subscription["id"],),
             )
         except WebPushException as error:
-            status = getattr(getattr(error, "response", None), "status_code", None)
+            response = getattr(error, "response", None)
+            status = getattr(response, "status_code", None) or getattr(response, "status", None)
             if status in (404, 410):
                 one(
                     """UPDATE push_subscriptions SET ativo=FALSE,atualizado_em=NOW()
@@ -104,4 +132,5 @@ def send_appointment_push(appointment_id: int, event: str = "novo") -> int:
             logger.warning("Falha ao enviar Web Push para inscrição %s: %s", subscription["id"], error)
         except Exception:
             logger.exception("Erro inesperado ao enviar Web Push para inscrição %s", subscription["id"])
+    logger.info("Web Push enviado para %s de %s inscrição(ões)", sent, len(subscriptions))
     return sent

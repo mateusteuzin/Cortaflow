@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cortaflow-shell-20260729-3';
+const CACHE_NAME = 'cortaflow-shell-20260729-4';
 const APP_SHELL = [
   '/painel',
   '/styles.css',

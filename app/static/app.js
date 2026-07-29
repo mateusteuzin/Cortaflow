@@ -690,6 +690,8 @@ function setPushButton(label, status, { disabled = false, active = false } = {})
   button.querySelector('span').textContent = label;
   button.disabled = disabled;
   button.classList.toggle('is-active', active);
+  const testButton = $('#push-test');
+  if (testButton) testButton.hidden = !active;
   $('#push-notification-status').textContent = status;
 }
 
@@ -707,6 +709,11 @@ async function refreshPushStatus() {
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
   if (subscription && Notification.permission === 'granted') {
+    await api('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+    if (!config.subscribed) {
+      await api('/push/test', { method: 'POST' });
+      toast('Inscrição recuperada e notificação de teste enviada');
+    }
     setPushButton('Notificações ativadas', 'Este aparelho receberá avisos de novos horários.', { active: true });
   } else if (Notification.permission === 'denied') {
     setPushButton('Permissão bloqueada', 'Libere as notificações nas configurações do navegador ou do aparelho.', { disabled: true });
@@ -737,11 +744,25 @@ async function togglePushNotifications() {
       applicationServerKey: urlBase64ToUint8Array(config.public_key)
     });
     await api('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+    await api('/push/test', { method: 'POST' });
     setPushButton('Notificações ativadas', 'Este aparelho receberá avisos de novos horários.', { active: true });
-    toast('Notificações ativadas neste aparelho');
+    toast('Notificações ativadas. Enviamos um teste para este aparelho.');
   } catch (error) {
     toast(error.message);
     await refreshPushStatus().catch(() => {});
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function sendPushTest() {
+  const button = $('#push-test');
+  button.disabled = true;
+  try {
+    const result = await api('/push/test', { method: 'POST' });
+    toast(`Teste enviado para ${result.sent} aparelho${result.sent === 1 ? '' : 's'}`);
+  } catch (error) {
+    toast(error.message);
   } finally {
     button.disabled = false;
   }
@@ -1469,5 +1490,6 @@ bindTheme();
 bindPricing();
 bindPwaInstall();
 $('#push-notifications').onclick = togglePushNotifications;
+$('#push-test').onclick = sendPushTest;
 if (token) start();
 else location.replace('/');

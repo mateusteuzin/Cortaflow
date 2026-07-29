@@ -52,6 +52,23 @@ class PushNotificationTests(unittest.TestCase):
         self.assertIn("Novo agendamento", payload)
         self.assertIn("João", payload)
 
+    @patch("pywebpush.webpush")
+    @patch("app.services.push.all_rows")
+    @patch("app.services.push.one", return_value={"id": 1})
+    def test_user_can_receive_immediate_test_notification(self, _mocked_one, mocked_rows, mocked_webpush):
+        mocked_rows.return_value = [{
+            "id": 1,
+            "endpoint": "https://push.example/subscription",
+            "p256dh": "p256dh-key",
+            "auth": "auth-key",
+        }]
+        with patch.dict("os.environ", PUSH_ENV, clear=True):
+            sent = push.send_user_test_push(3, 7)
+
+        self.assertEqual(sent, 1)
+        self.assertEqual(mocked_rows.call_args.args[1], (3, 7))
+        self.assertIn("Notificações ativadas", mocked_webpush.call_args.kwargs["data"])
+
 
 if __name__ == "__main__":
     unittest.main()

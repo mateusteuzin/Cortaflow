@@ -33,6 +33,7 @@ class AgendaPwaUiTests(unittest.TestCase):
         worker = (STATIC / "sw.js").read_text(encoding="utf-8")
         self.assertIn('id="push-notifications"', html)
         self.assertIn("pushManager.subscribe", script)
+        self.assertIn("api('/push/test'", script)
         self.assertIn("self.addEventListener('push'", worker)
         self.assertIn("self.addEventListener('notificationclick'", worker)
 

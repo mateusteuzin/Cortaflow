@@ -40,7 +40,7 @@ from .services.email import (
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
 from .services.slugs import unique_shop_slug
 from .services.financial_exports import build_financial_pdf, build_financial_xlsx
-from .services.push import push_public_key, send_appointment_push
+from .services.push import push_public_key, send_appointment_push, send_user_test_push
 from .runtime import is_vercel, should_run_migrations, should_start_worker
 from .services.appointments import (
     AppointmentNotFoundError,
@@ -1306,6 +1306,14 @@ def unsubscribe_push(data: PushSubscription, user=Depends(panel_user)):
         (data.endpoint, user["id"], user["barbearia_id"]),
     )
     return {"ok": True}
+
+
+@app.post("/api/push/test")
+def test_push(user=Depends(panel_user)):
+    sent = send_user_test_push(user["id"], user["barbearia_id"])
+    if not sent:
+        raise HTTPException(409, "Nenhum aparelho ativo recebeu a notificação de teste")
+    return {"ok": True, "sent": sent}
 
 
 @app.post("/api/auth/reenviar-confirmacao")
