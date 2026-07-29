@@ -77,7 +77,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/landing.css?v=20260727-agency">
-  <link rel="stylesheet" href="/landing-agency.css?v=20260727-trust-v10">
+  <link rel="stylesheet" href="/landing-agency.css?v=20260729-pwa-install">
 </head>
 <body>
   <header class="site-header">
@@ -109,6 +109,10 @@
           <div class="hero-actions">
             <button class="btn btn-gold" data-auth="register" type="button">Começar agora <span>→</span></button>
             <a class="btn btn-ghost" href="#produto"><span class="play-mark">▶</span> Ver o sistema em ação</a>
+            <button class="btn btn-install-app" data-install-app type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 15v4h14v-4"/></svg>
+              <span>Baixar aplicativo</span>
+            </button>
           </div>
           <div class="hero-proof"><span class="proof-pulse" aria-hidden="true"></span><p><b>Produto real, pronto para operar</b><small>Agenda, equipe e caixa no mesmo fluxo</small></p></div>
         </div>
@@ -507,7 +511,30 @@
       </div>
     </section>
   </div>
+  <dialog id="pwa-install-dialog" class="pwa-install-dialog" aria-labelledby="pwa-install-title">
+    <form method="dialog">
+      <header>
+        <span class="pwa-install-icon" aria-hidden="true">
+          <img src="/icons/icon-192.png" width="54" height="54" alt="">
+        </span>
+        <div><small>CORTAFLOW NO CELULAR</small><h2 id="pwa-install-title">Instalar aplicativo</h2></div>
+        <button class="pwa-install-close" value="cancel" aria-label="Fechar instruções" type="submit">×</button>
+      </header>
+      <div data-install-ios class="hidden">
+        <p>No Safari do iPhone ou iPad:</p>
+        <ol>
+          <li>Toque em <b>Compartilhar</b> <span class="ios-share-symbol" aria-hidden="true">□↑</span></li>
+          <li>Escolha <b>Adicionar à Tela de Início</b></li>
+          <li>Confirme em <b>Adicionar</b></li>
+        </ol>
+      </div>
+      <div data-install-browser class="hidden">
+        <p>Abra o menu do navegador e escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</p>
+      </div>
+      <button class="pwa-install-done" value="done" type="submit">Entendi</button>
+    </form>
+  </dialog>
   <div id="toast" class="site-toast" role="status" aria-live="polite"></div>
-  <script src="/landing.js?v=20260729-pwa"></script>
+  <script src="/landing.js?v=20260729-pwa-install"></script>
 </body>
 </html>

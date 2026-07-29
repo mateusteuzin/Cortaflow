@@ -75,6 +75,23 @@ let lastFocusedElement = null;
 let activeAuthMode = 'login';
 let checkoutRetry = null;
 let googleOAuthConfigured = false;
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  $$('[data-install-app]').forEach((button) => button.classList.add('install-ready'));
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  $$('[data-install-app]').forEach((button) => {
+    button.classList.remove('install-ready');
+    button.classList.add('is-installed');
+    $('span', button).textContent = 'Aplicativo instalado';
+  });
+  toast('CortaFlow instalado com sucesso.');
+});
 
 function announce(message) {
   $('#auth-live').textContent = '';
@@ -875,6 +892,57 @@ function bindPricing() {
   });
 }
 
+function isPwaInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function isAppleMobile() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function openInstallInstructions() {
+  const dialog = $('#pwa-install-dialog');
+  const iosInstructions = $('[data-install-ios]', dialog);
+  const browserInstructions = $('[data-install-browser]', dialog);
+  const appleMobile = isAppleMobile();
+  iosInstructions.classList.toggle('hidden', !appleMobile);
+  browserInstructions.classList.toggle('hidden', appleMobile);
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function bindPwaInstall() {
+  const buttons = $$('[data-install-app]');
+  if (!buttons.length) return;
+
+  if (isPwaInstalled()) {
+    buttons.forEach((button) => {
+      button.classList.add('is-installed');
+      $('span', button).textContent = 'Aplicativo instalado';
+    });
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      if (isPwaInstalled()) {
+        toast('O CortaFlow já está instalado neste aparelho.');
+        return;
+      }
+      if (!deferredInstallPrompt) {
+        openInstallInstructions();
+        return;
+      }
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      button.classList.remove('install-ready');
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice.outcome === 'accepted') toast('Instalação iniciada.');
+    });
+  });
+}
+
 function initializeMotion() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const targets = $$('[data-reveal], .transform-grid article, .feature-card, .price-card, .proof-grid article, .security-list article');
@@ -916,6 +984,7 @@ async function initialize() {
   bindPhoneFormatting();
   bindAuthActions();
   bindPricing();
+  bindPwaInstall();
   await loadPublicConfiguration();
   await handleReturnRoute();
 }

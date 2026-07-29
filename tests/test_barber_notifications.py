@@ -132,6 +132,15 @@ class PwaAssetsTests(unittest.TestCase):
         self.assertIn("cortaflow-shell-20260729-1", worker)
         self.assertIn("url.pathname.startsWith('/api/')", worker)
 
+    def test_landing_offers_cross_platform_install_flow(self):
+        landing = (self.static / "landing.html").read_text("utf-8")
+        script = (self.static / "landing.js").read_text("utf-8")
+        self.assertIn("data-install-app", landing)
+        self.assertIn("Adicionar à Tela de Início", landing)
+        self.assertIn("beforeinstallprompt", script)
+        self.assertIn("navigator.standalone", script)
+        self.assertIn("promptEvent.prompt()", script)
+
 
 class NotificationDispatchTests(unittest.TestCase):
     user = {"id": 1, "barbearia_id": 7, "perfil": "administrador"}
