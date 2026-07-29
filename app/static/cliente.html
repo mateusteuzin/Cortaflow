@@ -77,7 +77,7 @@
         </div>
 
         <div id="loading" class="state"><span class="spinner"></span><p>Preparando a melhor experiência para você...</p></div>
-        <div id="fatal" class="state hidden"><span class="state-icon">!</span><span class="progress-kicker">PAUSA RÁPIDA</span><h2>Agenda indisponível</h2><p id="fatal-message"></p><button type="button" onclick="location.reload()">Tentar novamente <span>↗</span></button></div>
+        <div id="fatal" class="state hidden"><span class="state-icon">!</span><span class="progress-kicker">PAUSA RÁPIDA</span><h2>Agenda indisponível</h2><p id="fatal-message"></p><button type="button" data-reload-page>Tentar novamente <span>↗</span></button></div>
         <div id="flow" class="hidden">
           <section class="step" data-step="1">
             <div class="field-block"><div class="field-heading"><label>Qual experiência você quer?</label><span class="field-hint">ESCOLHA 1</span></div><div id="services" class="service-list" role="radiogroup" aria-label="Escolha um serviço"></div></div>
@@ -122,11 +122,11 @@
       <p>Confira abaixo todos os detalhes do seu atendimento.</p>
       <div id="summary" class="summary"></div>
       <div class="reservation-guidance"><span>i</span><p><b>Antes de sair de casa</b>Chegue com 5 minutos de antecedência para aproveitar sua experiência com tranquilidade.</p></div>
-      <div class="success-actions"><a id="whatsapp" class="primary link-button" target="_blank" rel="noopener"><span>Falar com a barbearia</span><b>↗</b></a><button class="secondary restart" type="button" onclick="location.reload()">Fazer outro agendamento</button></div>
+      <div class="success-actions"><a id="whatsapp" class="primary link-button" target="_blank" rel="noopener"><span>Falar com a barbearia</span><b>↗</b></a><button class="secondary restart" type="button" data-reload-page>Fazer outro agendamento</button></div>
     </div>
   </section>
 
   <dialog id="lookup"><form method="dialog"><div class="dialog-head"><div><span class="step-kicker">CONSULTA RÁPIDA</span><h2>Minhas reservas</h2></div><button value="cancel" class="close" type="submit" aria-label="Fechar">×</button></div><p class="dialog-copy">Use o mesmo WhatsApp informado no agendamento.</p><label class="input-label" for="lookup-phone">Telefone<input id="lookup-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label><button id="lookup-submit" type="button" class="primary"><span>Consultar agora</span><b>→</b></button><div id="lookup-result"></div></form></dialog>
-  <script src="/cliente.js?v=20260729-barber-email-pwa"></script>
+  <script src="/cliente.js?v=20260729-csp-fix"></script>
 </body>
 </html>

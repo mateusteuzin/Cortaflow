@@ -129,7 +129,7 @@ class PwaAssetsTests(unittest.TestCase):
         for icon in manifest["icons"]:
             self.assertTrue((self.static / icon["src"].lstrip("/")).is_file())
         worker = (self.static / "sw.js").read_text("utf-8")
-        self.assertIn("cortaflow-shell-20260729-2", worker)
+        self.assertIn("cortaflow-shell-20260729-3", worker)
         self.assertIn("url.pathname.startsWith('/api/')", worker)
 
     def test_landing_offers_cross_platform_install_flow(self):

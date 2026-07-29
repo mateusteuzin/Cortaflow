@@ -794,7 +794,7 @@ async function loadDashboard() {
     <span class="list-empty-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
     <b>Nenhum próximo atendimento hoje</b>
     <small>Sua agenda está livre. Que tal criar um novo agendamento agora?</small>
-    <button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+    <button class="button button-primary" type="button" data-action="add-appointment">+ Novo agendamento</button>
   </div>`;
   const nextAppointment = upcoming[0];
   $('#hero-next').textContent = nextAppointment
@@ -852,7 +852,7 @@ async function loadAppointmentsLegacy() {
     <span class="list-empty-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
     <b>Agenda livre nesta data</b>
     <small>Não há atendimentos marcados para o dia selecionado.</small>
-    <button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+    <button class="button button-primary" type="button" data-action="add-appointment">+ Novo agendamento</button>
   </div>`;
 }
 

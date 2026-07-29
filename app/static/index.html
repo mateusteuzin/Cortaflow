@@ -164,7 +164,7 @@
             <div class="hero-command">
               <span><i></i> Central operacional</span>
               <div class="hero-card-actions">
-                <button class="button button-light" type="button" onclick="openAppointment()">+ Novo agendamento</button>
+                <button class="button button-light" type="button" data-action="add-appointment">+ Novo agendamento</button>
                 <button class="button button-quiet" data-go="agenda" type="button">Abrir agenda <span>→</span></button>
               </div>
             </div>
@@ -195,7 +195,7 @@
       </section>
 
       <section id="agenda" class="view hidden">
-        <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" onclick="openAppointment()">+ Novo agendamento</button></div>
+        <div class="section-heading"><div><span class="eyebrow">ORGANIZAÇÃO</span><h2>Agenda</h2><p>Consulte e atualize os horários da equipe.</p></div><button class="button button-primary" type="button" data-action="add-appointment">+ Novo agendamento</button></div>
         <div class="agenda-toolbar"><div class="agenda-nav"><button id="agenda-prev" class="icon-button" type="button" aria-label="Semana anterior">‹</button><button id="agenda-today" class="button button-outline" type="button">Hoje</button><button id="agenda-next" class="icon-button" type="button" aria-label="Próxima semana">›</button><strong id="agenda-range">Semana atual</strong></div><div class="agenda-filters"><label for="agenda-date">Ir para a data<input id="agenda-date" type="date"></label><select id="agenda-barber" class="agenda-barber-native" aria-label="Profissional"><option value="">Todos os profissionais</option></select></div></div>
         <div class="professional-filter-wrap">
           <div class="professional-filter-head"><div><span class="eyebrow">FILTRAR AGENDA</span><strong>Escolha um profissional</strong></div><small>A semana atualiza automaticamente</small></div>
@@ -408,6 +408,6 @@
     </form>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260729-agenda-push"></script>
+  <script src="/app.js?v=20260729-agenda-csp-fix"></script>
 </body>
 </html>

@@ -3,6 +3,9 @@ const $$ = (selector) => document.querySelectorAll(selector);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
+document.addEventListener('click', (event) => {
+  if (event.target.closest('[data-reload-page]')) location.reload();
+});
 const bookingMatch = location.pathname.match(/^\/agendar\/([^/]+)\/?$/);
 const bookingSlug = bookingMatch ? decodeURIComponent(bookingMatch[1]).toLowerCase() : '';
 const publicBase = () => `/public/barbearias/${encodeURIComponent(bookingSlug)}`;

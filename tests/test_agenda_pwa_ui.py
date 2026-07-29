@@ -18,6 +18,15 @@ class AgendaPwaUiTests(unittest.TestCase):
         self.assertIn('data-client-id="${client.id}"', script)
         self.assertIn("function openAppointment(id = null, preset = {})", script)
 
+    def test_csp_compatible_buttons_do_not_use_inline_javascript(self):
+        for filename in ("index.html", "cliente.html"):
+            with self.subTest(filename=filename):
+                html = (STATIC / filename).read_text(encoding="utf-8")
+                self.assertNotIn("onclick=", html)
+        script = (STATIC / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("onclick=", script)
+        self.assertIn('data-action="add-appointment"', script)
+
     def test_pwa_has_push_subscription_and_service_worker_handlers(self):
         html = (STATIC / "index.html").read_text(encoding="utf-8")
         script = (STATIC / "app.js").read_text(encoding="utf-8")
