@@ -150,6 +150,15 @@ def _authenticated_user(auth: HTTPAuthorizationCredentials | None):
         raise HTTPException(401, "Sessão revogada. Entre novamente.")
     if not user["email_verificado"]:
         raise HTTPException(403, "Confirme seu e-mail para acessar o painel")
+    partner_emails = {
+        value.strip().lower()
+        for value in os.getenv("PARTNER_PRO_EMAILS", "ma2664223@gmail.com").split(",")
+        if value.strip()
+    }
+    if str(user.get("email") or "").strip().lower() in partner_emails:
+        user["plano_ativo"] = True
+        user["subscription_plan"] = "profissional"
+        user["subscription_status"] = "active"
     return user
 
 
