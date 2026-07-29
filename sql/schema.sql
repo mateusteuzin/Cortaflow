@@ -110,6 +110,22 @@ CREATE TABLE IF NOT EXISTS pagamentos (
 CREATE INDEX IF NOT EXISTS idx_agenda_data ON agendamentos(barbearia_id, data_hora);
 CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_barbeiro_data_ativa ON agendamentos(barbearia_id, barbeiro_id, data_hora) WHERE status <> 'cancelado';
 CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_status_data ON agendamentos(barbearia_id, status, data_hora);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+ id BIGSERIAL PRIMARY KEY,
+ barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+ usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+ barbeiro_id INTEGER REFERENCES barbeiros(id) ON DELETE CASCADE,
+ endpoint TEXT UNIQUE NOT NULL,
+ p256dh VARCHAR(512) NOT NULL,
+ auth VARCHAR(256) NOT NULL,
+ ativo BOOLEAN NOT NULL DEFAULT TRUE,
+ criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ ultimo_envio_em TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_destino
+ ON push_subscriptions(barbearia_id,barbeiro_id) WHERE ativo;
 CREATE INDEX IF NOT EXISTS idx_clientes_barbearia_atualizado ON clientes(barbearia_id, atualizado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativos ON barbeiros(barbearia_id, nome) WHERE ativo;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario ON barbeiros(usuario_id) WHERE usuario_id IS NOT NULL;

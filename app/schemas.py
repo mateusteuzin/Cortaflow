@@ -186,11 +186,36 @@ class Appointment(BaseModel):
 
 class AppointmentUpdate(BaseModel):
     barbeiro_id: int | None = None
+    servico_id: int | None = None
+    cliente_nome: str | None = None
+    cliente_telefone: str | None = None
+    cliente_email: EmailStr | None = None
     data_hora: datetime | None = None
     status: str | None = None
     servico: str | None = None
     preco: Decimal | None = None
     observacoes: str | None = Field(default=None, max_length=500)
+
+
+class PushSubscriptionKeys(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    p256dh: str = Field(min_length=20, max_length=512)
+    auth: str = Field(min_length=8, max_length=256)
+
+
+class PushSubscription(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    endpoint: str = Field(min_length=20, max_length=2048)
+    keys: PushSubscriptionKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def validate_endpoint(cls, value):
+        if not value.startswith("https://"):
+            raise ValueError("Endpoint de notificação inválido")
+        return value
 
 
 class PublicAppointment(Appointment):

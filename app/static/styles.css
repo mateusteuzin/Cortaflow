@@ -1232,3 +1232,87 @@ html[data-theme="dark"] .appointment-edit-notice { background:#28261e; }
   .account-subscription-renewal { padding: 18px 0 0; border-top: 1px solid rgba(255,255,255,.11); border-left: 0; }
   .account-subscription-summary > .button { grid-column: auto; }
 }
+
+.pwa-account-actions {
+  display: grid;
+  min-width: 190px;
+  gap: 8px;
+}
+.pwa-account-actions .button { width: 100%; }
+.pwa-account-actions small {
+  max-width: 220px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+#push-notifications.is-active {
+  border-color: #77a27f;
+  background: #e2f1e5;
+  color: #276038;
+}
+
+.appointment-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.appointment-action span { font-size: 15px; font-weight: 900; line-height: 1; }
+.appointment-action b { font: inherit; }
+.appointment-action.success { border-color: #9bc7a7; background: #e9f6ec; color: #276b3b; }
+.appointment-action.warning { border-color: #e6c88b; background: #fff8e8; color: #89600f; }
+.agenda-card.status-nao_compareceu { opacity: .78; border-left-color: #c0832c; }
+.agenda-card.status-nao_compareceu .agenda-card-status { background: #fff0d3; color: #85570b; }
+
+.agenda-card-actions {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+.agenda-card-actions .appointment-action {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #ded8cb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.agenda-card-actions .appointment-action b { display: none; }
+
+html[data-theme="dark"] #push-notifications.is-active {
+  border-color: #537a5d;
+  background: #243c2a;
+  color: #9dd4aa;
+}
+html[data-theme="dark"] .appointment-action.success { border-color: #42694d; background: #233a29; color: #91c99f; }
+html[data-theme="dark"] .appointment-action.warning { border-color: #6d5830; background: #3c321f; color: #e3c47d; }
+
+@media (max-width: 700px) {
+  .pwa-account-actions { grid-column: 1 / -1; width: 100%; }
+  .pwa-account-actions small { max-width: none; font-size: 11px; }
+  .agenda-mobile-day .agenda-card { padding: 14px; }
+  .agenda-card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 13px;
+  }
+  .agenda-card-actions .appointment-action {
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .agenda-card-actions .appointment-action span { font-size: 18px; }
+  .agenda-card-actions .appointment-action b { display: inline; }
+  .appointment-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .appointment-actions .appointment-action { min-height: 46px; }
+}

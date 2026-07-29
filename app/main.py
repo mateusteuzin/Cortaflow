@@ -40,6 +40,7 @@ from .services.email import (
 from .services.storage import StorageConfigurationError, StorageUploadError, image_storage
 from .services.slugs import unique_shop_slug
 from .services.financial_exports import build_financial_pdf, build_financial_xlsx
+from .services.push import push_public_key, send_appointment_push
 from .runtime import is_vercel, should_run_migrations, should_start_worker
 from .services.appointments import (
     AppointmentNotFoundError,
@@ -193,6 +194,20 @@ def ensure_current_schema():
           UNIQUE(agendamento_id,evento,event_key,destinatario))""")
         cur.execute("""CREATE INDEX IF NOT EXISTS idx_notificacoes_email_agendamento
             ON notificacoes_email(agendamento_id,criado_em DESC)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS push_subscriptions (
+          id BIGSERIAL PRIMARY KEY,
+          barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+          usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+          barbeiro_id INTEGER REFERENCES barbeiros(id) ON DELETE CASCADE,
+          endpoint TEXT UNIQUE NOT NULL,
+          p256dh VARCHAR(512) NOT NULL,
+          auth VARCHAR(256) NOT NULL,
+          ativo BOOLEAN NOT NULL DEFAULT TRUE,
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          ultimo_envio_em TIMESTAMPTZ)""")
+        cur.execute("""CREATE INDEX IF NOT EXISTS idx_push_subscriptions_destino
+            ON push_subscriptions(barbearia_id,barbeiro_id) WHERE ativo""")
         cur.execute("ALTER TABLE produtos ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
         cur.execute("ALTER TABLE vendas_produto ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
         cur.execute("""CREATE TABLE IF NOT EXISTS despesas (
@@ -1244,6 +1259,55 @@ def access_context(user=Depends(panel_user)):
     }
 
 
+@app.get("/api/push/config")
+def push_config(user=Depends(panel_user)):
+    public_key = push_public_key()
+    active = one(
+        """SELECT EXISTS(SELECT 1 FROM push_subscriptions
+        WHERE usuario_id=%s AND barbearia_id=%s AND ativo) ativo""",
+        (user["id"], user["barbearia_id"]),
+    )
+    return {
+        "enabled": bool(public_key),
+        "public_key": public_key,
+        "subscribed": bool(active and active["ativo"]),
+    }
+
+
+@app.post("/api/push/subscriptions", status_code=201)
+def subscribe_push(data: PushSubscription, user=Depends(panel_user)):
+    if not push_public_key():
+        raise HTTPException(503, "Notificações no celular ainda não foram configuradas")
+    return one(
+        """INSERT INTO push_subscriptions(
+          barbearia_id,usuario_id,barbeiro_id,endpoint,p256dh,auth,ativo)
+        VALUES(%s,%s,%s,%s,%s,%s,TRUE)
+        ON CONFLICT(endpoint) DO UPDATE SET
+          barbearia_id=EXCLUDED.barbearia_id,
+          usuario_id=EXCLUDED.usuario_id,
+          barbeiro_id=EXCLUDED.barbeiro_id,
+          p256dh=EXCLUDED.p256dh,
+          auth=EXCLUDED.auth,
+          ativo=TRUE,
+          atualizado_em=NOW()
+        RETURNING id,ativo""",
+        (
+            user["barbearia_id"], user["id"], user.get("barbeiro_id"),
+            data.endpoint, data.keys.p256dh, data.keys.auth,
+        ),
+    )
+
+
+@app.delete("/api/push/subscriptions")
+def unsubscribe_push(data: PushSubscription, user=Depends(panel_user)):
+    one(
+        """UPDATE push_subscriptions SET ativo=FALSE,atualizado_em=NOW()
+        WHERE endpoint=%s AND usuario_id=%s AND barbearia_id=%s RETURNING id""",
+        (data.endpoint, user["id"], user["barbearia_id"]),
+    )
+    return {"ok": True}
+
+
 @app.post("/api/auth/reenviar-confirmacao")
 def resend_email_verification(data: ResendVerification):
     pending = one("""SELECT id,email,nome,email_verificado FROM cadastros_pendentes
@@ -1669,6 +1733,7 @@ def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=D
     if data.cliente_email:
         background_tasks.add_task(send_appointment_confirmation,row["id"])
     background_tasks.add_task(send_owner_notification,row["id"])
+    background_tasks.add_task(send_appointment_push,row["id"],"novo")
     return row
 
 @app.put("/api/agendamentos/{appointment_id}")
@@ -1690,6 +1755,17 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
             AND barbearia_id=%s AND ativo""",
             (data.barbeiro_id,user["barbearia_id"]))
         if not valid_barber:raise HTTPException(404,"Profissional não encontrado")
+    if data.servico_id is not None:
+        service=one("""SELECT id,nome,duracao_minutos,preco FROM servicos
+            WHERE id=%s AND barbearia_id=%s AND ativo""",
+            (data.servico_id,user["barbearia_id"]))
+        if not service:raise HTTPException(404,"Serviço não encontrado")
+        values.update({
+            "servico_id": service["id"],
+            "servico": service["nome"],
+            "duracao_minutos": service["duracao_minutos"],
+            "preco": service["preco"],
+        })
     if data.status and data.status not in ('agendado','confirmado','em_andamento','cancelado','nao_compareceu'): raise HTTPException(422,"Status inválido")
     if not values:
         current=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",
@@ -1704,6 +1780,11 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
         background_tasks.add_task(
             send_barber_appointment_notification,appointment_id,"cancelado",
             f"cancelado-{current['atualizado_em'].isoformat()}")
+        background_tasks.add_task(send_appointment_push,appointment_id,"cancelado")
+    elif values.get("status") == "confirmado" and before["status"] != "confirmado":
+        background_tasks.add_task(send_appointment_push,appointment_id,"confirmado")
+    elif values.get("status") == "nao_compareceu" and before["status"] != "nao_compareceu":
+        background_tasks.add_task(send_appointment_push,appointment_id,"nao_compareceu")
     elif (
         ("data_hora" in values and values["data_hora"] != before["data_hora"])
         or ("barbeiro_id" in values and values["barbeiro_id"] != before["barbeiro_id"])
@@ -1711,6 +1792,7 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
         background_tasks.add_task(
             send_barber_appointment_notification,appointment_id,"reagendado",
             f"reagendado-{current['atualizado_em'].isoformat()}")
+        background_tasks.add_task(send_appointment_push,appointment_id,"reagendado")
     return current
 
 @app.patch("/api/agendamentos/{appointment_id}/concluir")
@@ -1735,13 +1817,15 @@ def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(curr
     background_tasks.add_task(
         send_barber_appointment_notification,appointment_id,"cancelado",
         f"cancelado-{row['atualizado_em'].isoformat()}")
+    background_tasks.add_task(send_appointment_push,appointment_id,"cancelado")
     return {"ok":True}
 
 @app.delete("/api/agendamentos/{appointment_id}/remover")
 def remove_cancelled_appointment(appointment_id:int,user=Depends(current_user)):
     with db() as cur:
-        cur.execute("SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s AND status='cancelado'",(appointment_id,user["barbearia_id"]))
-        if not cur.fetchone(): raise HTTPException(409,"Somente agendamentos cancelados podem ser apagados")
+        cur.execute("""SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s
+            AND status IN ('cancelado','nao_compareceu')""",(appointment_id,user["barbearia_id"]))
+        if not cur.fetchone(): raise HTTPException(409,"Somente agendamentos cancelados ou com falta podem ser apagados")
         cur.execute("DELETE FROM pagamentos WHERE agendamento_id=%s",(appointment_id,))
         cur.execute("DELETE FROM vendas_produto WHERE agendamento_id=%s",(appointment_id,))
         cur.execute("DELETE FROM agendamentos WHERE id=%s",(appointment_id,))
@@ -1795,6 +1879,7 @@ def public_create(slug:str,data:PublicAppointment,background_tasks:BackgroundTas
     dispatch_whatsapp(background_tasks)
     background_tasks.add_task(send_appointment_confirmation,row["id"])
     background_tasks.add_task(send_owner_notification,row["id"])
+    background_tasks.add_task(send_appointment_push,row["id"],"novo")
     return row
 @app.get("/api/public/barbearias/{slug}/reservas/{telefone}")
 def my_appointment(slug:str,telefone:str):

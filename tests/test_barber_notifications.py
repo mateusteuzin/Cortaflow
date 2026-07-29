@@ -129,7 +129,7 @@ class PwaAssetsTests(unittest.TestCase):
         for icon in manifest["icons"]:
             self.assertTrue((self.static / icon["src"].lstrip("/")).is_file())
         worker = (self.static / "sw.js").read_text("utf-8")
-        self.assertIn("cortaflow-shell-20260729-1", worker)
+        self.assertIn("cortaflow-shell-20260729-2", worker)
         self.assertIn("url.pathname.startsWith('/api/')", worker)
 
     def test_landing_offers_cross_platform_install_flow(self):
@@ -172,6 +172,7 @@ class NotificationDispatchTests(unittest.TestCase):
         functions = [task.func.__name__ for task in tasks.tasks]
         self.assertIn("send_appointment_confirmation", functions)
         self.assertIn("send_owner_notification", functions)
+        self.assertIn("send_appointment_push", functions)
 
     @patch("app.main.one")
     def test_rebooking_schedules_one_versioned_event(self, mocked_one):
@@ -197,9 +198,11 @@ class NotificationDispatchTests(unittest.TestCase):
             self.user,
         )
 
-        self.assertEqual(len(tasks.tasks), 1)
-        self.assertEqual(tasks.tasks[0].args[1], "reagendado")
-        self.assertIn("2026-07-29T12:00:00", tasks.tasks[0].args[2])
+        self.assertEqual(len(tasks.tasks), 2)
+        email_task = next(task for task in tasks.tasks if task.func.__name__ == "send_barber_appointment_notification")
+        self.assertEqual(email_task.args[1], "reagendado")
+        self.assertIn("2026-07-29T12:00:00", email_task.args[2])
+        self.assertTrue(any(task.func.__name__ == "send_appointment_push" for task in tasks.tasks))
 
     @patch("app.main.one")
     def test_cancellation_schedules_one_event(self, mocked_one):
@@ -211,8 +214,10 @@ class NotificationDispatchTests(unittest.TestCase):
 
         cancel(42, tasks, self.user)
 
-        self.assertEqual(len(tasks.tasks), 1)
-        self.assertEqual(tasks.tasks[0].args[1], "cancelado")
+        self.assertEqual(len(tasks.tasks), 2)
+        self.assertTrue(any(task.func.__name__ == "send_appointment_push" for task in tasks.tasks))
+        email_task = next(task for task in tasks.tasks if task.func.__name__ == "send_barber_appointment_notification")
+        self.assertEqual(email_task.args[1], "cancelado")
 
     def test_barber_cannot_use_owner_dependency(self):
         with self.assertRaises(HTTPException) as raised:

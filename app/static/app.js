@@ -26,6 +26,7 @@ let toastTimer;
 let agendaWeekAnchor = null;
 let agendaWeekDays = [];
 let agendaWeekAppointments = [];
+let appointmentCache = new Map();
 let deferredInstallPrompt = null;
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -302,9 +303,18 @@ function bindNavigation() {
     if (action === 'add-service') openService();
     if (action === 'add-product') openProduct();
     if (action === 'add-expense') openExpense();
-    if (action === 'add-appointment') openAppointment();
+    if (action === 'add-appointment') {
+      const client = customerClients.find((item) => Number(item.id) === Number(actionButton.dataset.clientId));
+      openAppointment(null, client ? {
+        cliente_nome: client.nome || '',
+        cliente_telefone: client.telefone || '',
+        cliente_email: client.email || ''
+      } : {});
+    }
     if (action === 'edit-appointment') openAppointment(id);
+    if (action === 'confirm') confirmAppointment(id);
     if (action === 'complete') concludeAppointment(id);
+    if (action === 'no-show') markNoShow(id);
     if (action === 'cancel') cancelAppointment(id);
     if (action === 'remove-appointment') removeAppointment(id);
     if (action === 'edit-barber') openBarber(id);
@@ -354,6 +364,9 @@ async function start() {
     sessionContext = await api('/auth/contexto');
     localStorage.setItem('name', sessionContext.nome || 'gestor');
     applyAccessMode();
+    await refreshPushStatus().catch(() => {
+      setPushButton('Indisponível agora', 'Não foi possível consultar as notificações neste momento.', { disabled: true });
+    });
     if (sessionContext.perfil === 'barbeiro') {
       await loadBarberSelf();
       show('conta');
@@ -369,6 +382,7 @@ async function start() {
     document.body.classList.remove('subscription-locked');
     await Promise.all([loadBarbers(), loadServices(), loadProfile()]);
     await loadDashboard();
+    if (location.hash === '#agenda') show('agenda');
   } catch (error) {
     if (/Sessão expirada|Autenticação|Token inválido/i.test(error.message)) {
       logout();
@@ -663,12 +677,103 @@ function bindPwaInstall() {
   });
 }
 
+function urlBase64ToUint8Array(value) {
+  const padding = '='.repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
+function setPushButton(label, status, { disabled = false, active = false } = {}) {
+  const button = $('#push-notifications');
+  if (!button) return;
+  button.querySelector('span').textContent = label;
+  button.disabled = disabled;
+  button.classList.toggle('is-active', active);
+  $('#push-notification-status').textContent = status;
+}
+
+async function refreshPushStatus() {
+  if (!$('#push-notifications')) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    setPushButton('Não compatível', 'Este aparelho ou navegador não oferece notificações para PWA.', { disabled: true });
+    return;
+  }
+  const config = await api('/push/config');
+  if (!config.enabled) {
+    setPushButton('Aguardando configuração', 'As chaves de notificação ainda precisam ser configuradas no servidor.', { disabled: true });
+    return;
+  }
+  const registration = await navigator.serviceWorker.ready;
+  const subscription = await registration.pushManager.getSubscription();
+  if (subscription && Notification.permission === 'granted') {
+    setPushButton('Notificações ativadas', 'Este aparelho receberá avisos de novos horários.', { active: true });
+  } else if (Notification.permission === 'denied') {
+    setPushButton('Permissão bloqueada', 'Libere as notificações nas configurações do navegador ou do aparelho.', { disabled: true });
+  } else {
+    setPushButton('Ativar notificações', 'Toque para permitir avisos mesmo com o aplicativo fechado.');
+  }
+}
+
+async function togglePushNotifications() {
+  const button = $('#push-notifications');
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  try {
+    const config = await api('/push/config');
+    if (!config.enabled) throw new Error('Notificações ainda não foram configuradas no servidor.');
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      await api('/push/subscriptions', { method: 'DELETE', body: JSON.stringify(subscription.toJSON()) });
+      await subscription.unsubscribe();
+      setPushButton('Ativar notificações', 'Notificações desativadas neste aparelho.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') throw new Error('Permissão de notificação não concedida.');
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.public_key)
+    });
+    await api('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription.toJSON()) });
+    setPushButton('Notificações ativadas', 'Este aparelho receberá avisos de novos horários.', { active: true });
+    toast('Notificações ativadas neste aparelho');
+  } catch (error) {
+    toast(error.message);
+    await refreshPushStatus().catch(() => {});
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function rememberAppointments(items) {
+  items.forEach((item) => appointmentCache.set(Number(item.id), item));
+}
+
+function appointmentActionButton(action, id, icon, label, tone = '') {
+  return `<button class="appointment-action ${tone}" type="button" data-action="${action}" data-id="${id}" title="${escapeHTML(label)}" aria-label="${escapeHTML(label)}"><span aria-hidden="true">${icon}</span><b>${escapeHTML(label)}</b></button>`;
+}
+
+function appointmentActions(appointment, compact = false) {
+  const status = appointment.status || 'agendado';
+  const id = appointment.id;
+  if (status === 'cancelado' || status === 'nao_compareceu') {
+    return appointmentActionButton('remove-appointment', id, '⌫', 'Apagar', 'danger');
+  }
+  if (['concluido', 'realizado'].includes(status)) return '<span class="appointment-completed">✓ Concluído</span>';
+  const edit = appointmentActionButton('edit-appointment', id, '↻', 'Reagendar');
+  const noShow = appointmentActionButton('no-show', id, '!', 'Não veio', 'warning');
+  const cancel = appointmentActionButton('cancel', id, '×', 'Cancelar', 'danger');
+  if (status === 'agendado') {
+    return edit + appointmentActionButton('confirm', id, '✓', 'Confirmar', 'success') + noShow + cancel;
+  }
+  return edit + appointmentActionButton('complete', id, '✓', compact ? 'Concluir' : 'Concluir atendimento', 'success') + noShow + cancel;
+}
+
 function appointmentHTML(appointment) {
   const status = appointment.status || 'agendado';
-  const actions = !['concluido', 'realizado', 'cancelado', 'nao_compareceu'].includes(status)
-    ? `<button type="button" data-action="edit-appointment" data-id="${appointment.id}">Reagendar</button><button type="button" data-action="complete" data-id="${appointment.id}">Concluir</button><button class="danger" type="button" data-action="cancel" data-id="${appointment.id}">Cancelar</button>`
-    : status === 'cancelado' ? `<button class="danger" type="button" data-action="remove-appointment" data-id="${appointment.id}">Apagar</button>`
-    : ['concluido', 'realizado'].includes(status) ? '<span class="appointment-completed">✓ Concluído</span>' : '';
+  const actions = appointmentActions(appointment);
   return `<div class="appointment"><div class="appointment-time">${new Date(appointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="appointment-info"><b>${escapeHTML(appointment.cliente_nome)}</b><small><strong>Responsável:</strong> ${escapeHTML(appointment.barbeiro_nome || 'Equipe')} · ${escapeHTML(appointment.servico)} · ${money(appointment.preco)}</small></div><span class="badge status-${escapeHTML(status)}">${escapeHTML(statusLabel[status] || status)}</span><div class="appointment-actions">${actions}</div></div>`;
 }
 
@@ -680,6 +785,7 @@ async function loadDashboard() {
     api('/produtos'),
     api('/relatorios/fidelidade')
   ]);
+  rememberAppointments(appointments);
   $('#revenue').textContent = money(report.total.total);
   $('#cuts').textContent = report.total.cortes;
   const upcoming = appointments.filter((appointment) => new Date(appointment.data_hora) > new Date() && !['cancelado', 'concluido', 'realizado', 'nao_compareceu'].includes(appointment.status));
@@ -781,6 +887,7 @@ async function loadAppointments() {
   const selected = new Date($('#agenda-date').value + 'T12:00:00'); agendaWeekAnchor = startOfWeek(selected);
   agendaWeekDays = Array.from({ length: 7 }, (_, index) => addDays(agendaWeekAnchor, index));
   agendaWeekAppointments = await api(`/agendamentos/semana?inicio=${isoDate(agendaWeekDays[0])}&fim=${isoDate(agendaWeekDays[6])}`);
+  rememberAppointments(agendaWeekAppointments);
   renderAgendaCalendar();
 }
 
@@ -794,7 +901,7 @@ function renderAgendaCalendar() {
     : agendaWeekAppointments;
   $('#agenda-range').textContent = `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${days[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   const today = localDate(); const byDay = (day) => appointments.filter((item) => isoDate(new Date(item.data_hora)) === isoDate(day));
-  const card = (item) => { const status = item.status || 'agendado'; const finished = ['concluido', 'realizado'].includes(status); const actions = finished ? '<span class="agenda-completed" title="Atendimento concluído">✓</span>' : status === 'cancelado' ? '' : `<button type="button" data-action="edit-appointment" data-id="${item.id}" title="Reagendar atendimento">↗</button><button type="button" data-action="complete" data-id="${item.id}" title="Concluir atendimento">✓</button><button type="button" data-action="cancel" data-id="${item.id}" title="Cancelar atendimento">×</button>`; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${actions}</div></article>`; };
+  const card = (item) => { const status = item.status || 'agendado'; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${appointmentActions(item, true)}</div></article>`; };
   $('#agenda-week').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<div class="agenda-day ${key === today ? 'is-today' : ''}"><header><span>${day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span><b>${day.getDate()}</b><small>${list.length} ${list.length === 1 ? 'atendimento' : 'atendimentos'}</small></header><div class="agenda-day-list">${list.map(card).join('') || '<div class="agenda-empty">Horários livres</div>'}</div></div>`; }).join('');
   $('#agenda-mobile-list').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<section class="agenda-mobile-day ${key === today ? 'is-today' : ''}"><h3>${day.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</h3>${list.map(card).join('') || '<p class="agenda-empty">Horários livres</p>'}</section>`; }).join('');
 }
@@ -837,7 +944,7 @@ function renderClients(query = '') {
         <span><small>Serviço habitual</small><b>${escapeHTML(client.ultimo_servico || client.proximo_servico || 'A descobrir')}</b></span>
       </div>
       ${next ? `<div class="client-next"><small>PRÓXIMO HORÁRIO</small><b>${next.toLocaleDateString('pt-BR')} às ${next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b><span>${escapeHTML(client.proximo_servico || '')} · ${escapeHTML(client.barbeiro_nome || 'Equipe')}</span>${whatsappStatus ? `<em class="whatsapp-status status-${escapeHTML(String(client.whatsapp_status || '').toLowerCase())}">${escapeHTML(whatsappStatus)}</em>` : ''}</div>` : ''}
-      <footer><a class="client-whatsapp" href="https://wa.me/${destination}?text=${message}" target="_blank" rel="noopener">Chamar no WhatsApp <span>↗</span></a><button type="button" data-action="add-appointment">Novo horário</button></footer>
+      <footer><a class="client-whatsapp" href="https://wa.me/${destination}?text=${message}" target="_blank" rel="noopener">Chamar no WhatsApp <span>↗</span></a><button type="button" data-action="add-appointment" data-client-id="${client.id}">Novo horário</button></footer>
     </article>`;
   }).join('') || `<div class="client-empty"><b>${normalized ? 'Nenhum cliente encontrado' : 'Sua base de clientes aparecerá aqui'}</b><span>${normalized ? 'Tente buscar por outro nome ou telefone.' : 'Os clientes entram automaticamente depois do primeiro agendamento.'}</span></div>`;
 }
@@ -904,29 +1011,37 @@ async function removeBarber(id) {
   toast('Profissional desativado');
 }
 
-function openAppointment(id = null) {
+function nextAppointmentDateTime() {
+  const next = new Date(Date.now() + 30 * 60000);
+  next.setMinutes(Math.ceil(next.getMinutes() / 30) * 30, 0, 0);
+  const offset = next.getTimezoneOffset() * 60000;
+  return new Date(next.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function openAppointment(id = null, preset = {}) {
   const active = barbers.filter((barber) => barber.ativo);
   if (!active.length) return toast('Cadastre um barbeiro primeiro.');
   if (!services.length) return toast('Cadastre um serviço primeiro.');
-  const appointment = id
-    ? [...agendaWeekAppointments].find((item) => Number(item.id) === Number(id))
-    : null;
-  if (id && !appointment) return toast('Agendamento não encontrado nesta semana.');
+  const appointment = id ? appointmentCache.get(Number(id)) : null;
+  if (id && !appointment) return toast('Agendamento não encontrado. Atualize a agenda e tente novamente.');
   const dateValue = appointment
     ? new Date(appointment.data_hora).toLocaleString('sv-SE').slice(0, 16)
-    : '';
+    : nextAppointmentDateTime();
   const barberOptions = active.map((item) => `<option value="${item.id}"${Number(item.id) === Number(appointment?.barbeiro_id) ? ' selected' : ''}>${escapeHTML(item.nome)}</option>`).join('');
+  const serviceOptions = services.map((service) => `<option value="${service.id}"${Number(service.id) === Number(appointment?.servico_id) ? ' selected' : ''}>${escapeHTML(service.nome)} · ${money(service.preco)}</option>`).join('');
   if (appointment) {
-    fields(`<div class="appointment-edit-notice"><b>Reagendar #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>O profissional responsável receberá um aviso por e-mail após salvar.</small></div><div class="grid2"><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Nova data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`, 'Reagendar atendimento', async (data) => {
+    fields(`<div class="appointment-edit-notice"><b>Editar agendamento #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>Alterações de horário ou profissional geram um novo aviso.</small></div><div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(appointment.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(appointment.cliente_telefone || '')}"></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(appointment.cliente_email || '')}" placeholder="cliente@email.com"></label><label>Responsável<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`, 'Editar agendamento', async (data) => {
       data.barbeiro_id = Number(data.barbeiro_id);
+      data.servico_id = Number(data.servico_id);
+      data.cliente_email = data.cliente_email.trim() || null;
       await api('/agendamentos/' + appointment.id, { method: 'PUT', body: JSON.stringify(data) });
       await loadDashboard();
       await loadAppointments();
-      toast('Agendamento atualizado e profissional avisado');
+      toast('Agendamento atualizado');
     });
     return;
   }
-  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" required></label><label>Telefone<input name="cliente_telefone" type="tel" required></label><label>E-mail do cliente<input name="cliente_email" type="email" placeholder="cliente@email.com"><small>Opcional. Envia a confirmação da reserva.</small></label><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" required></label><label>Serviço<select name="servico_id">${services.map((service) => `<option value="${service.id}">${escapeHTML(service.nome)} · ${money(service.preco)}</option>`).join('')}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea></label>`, 'Novo agendamento', async (data) => {
+  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(preset.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(preset.cliente_telefone || '')}" required></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(preset.cliente_email || '')}" placeholder="cliente@email.com"><small>Opcional. Envia a confirmação da reserva.</small></label><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea></label>`, 'Novo agendamento', async (data) => {
     data.barbeiro_id = Number(data.barbeiro_id);
     data.servico_id = Number(data.servico_id);
     data.cliente_email = data.cliente_email.trim() || null;
@@ -934,6 +1049,35 @@ function openAppointment(id = null) {
     await loadDashboard();
     if (!$('#agenda').classList.contains('hidden')) await loadAppointments();
   });
+}
+
+async function updateAppointmentStatus(id, status, successMessage) {
+  await api('/agendamentos/' + id, { method: 'PUT', body: JSON.stringify({ status }) });
+  toast(successMessage);
+  await loadDashboard();
+  if (!$('#agenda').classList.contains('hidden')) await loadAppointments();
+}
+
+async function confirmAppointment(id) {
+  if (!await confirmAction({
+    title: 'Confirmar este horário?',
+    message: 'O horário ficará marcado como confirmado. Isso ainda não conclui o atendimento.',
+    confirmLabel: 'Confirmar horário',
+    cancelLabel: 'Voltar',
+    tone: 'success'
+  })) return;
+  await updateAppointmentStatus(id, 'confirmado', 'Horário confirmado');
+}
+
+async function markNoShow(id) {
+  if (!await confirmAction({
+    title: 'Cliente não compareceu?',
+    message: 'O horário será encerrado sem contar visita ou faturamento. Depois você poderá apagá-lo da agenda.',
+    confirmLabel: 'Marcar que não veio',
+    cancelLabel: 'Voltar',
+    tone: 'danger'
+  })) return;
+  await updateAppointmentStatus(id, 'nao_compareceu', 'Marcado como não compareceu');
 }
 
 function confirmAction({ title = 'Confirmar ação', message = '', confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', tone = 'danger' } = {}) {
@@ -1012,7 +1156,7 @@ async function cancelAppointment(id) {
 }
 
 async function removeAppointment(id) {
-  if (!confirm('Apagar este agendamento cancelado definitivamente? Esta ação não pode ser desfeita.')) return;
+  if (!await confirmAction({ title: 'Apagar agendamento?', message: 'O agendamento será removido definitivamente da agenda.', confirmLabel: 'Apagar', cancelLabel: 'Voltar' })) return;
   await api('/agendamentos/' + id + '/remover', { method: 'DELETE' });
   toast('Agendamento apagado');
   await loadDashboard();
@@ -1324,5 +1468,6 @@ bindNavigation();
 bindTheme();
 bindPricing();
 bindPwaInstall();
+$('#push-notifications').onclick = togglePushNotifications;
 if (token) start();
 else location.replace('/');

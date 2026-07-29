@@ -314,7 +314,11 @@
         <section class="pwa-account-card" aria-labelledby="pwa-account-title">
           <span class="pwa-account-icon" aria-hidden="true"><img src="/icons/icon-192.png" width="58" height="58" alt=""></span>
           <div><span class="eyebrow">APLICATIVO CORTAFLOW</span><h3 id="pwa-account-title">Instale no seu celular</h3><p>Acesse agenda, clientes e caixa direto pela tela inicial, sem procurar o site no navegador.</p></div>
-          <button class="button button-primary" data-install-app type="button"><span>Baixar aplicativo</span></button>
+          <div class="pwa-account-actions">
+            <button class="button button-primary" data-install-app type="button"><span>Baixar aplicativo</span></button>
+            <button id="push-notifications" class="button button-outline" type="button" aria-describedby="push-notification-status"><span>Ativar notificações</span></button>
+            <small id="push-notification-status">Receba novos horários mesmo com o aplicativo fechado.</small>
+          </div>
         </section>
         <form id="account-form" class="panel account-panel owner-only">
           <div class="account-data-heading">
@@ -404,6 +408,6 @@
     </form>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260729-pwa-install"></script>
+  <script src="/app.js?v=20260729-agenda-push"></script>
 </body>
 </html>

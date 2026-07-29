@@ -8,3 +8,4 @@ python-multipart==0.0.20
 stripe==12.5.0
 xlsxwriter==3.2.5
 reportlab==4.4.3
+pywebpush==2.3.0
