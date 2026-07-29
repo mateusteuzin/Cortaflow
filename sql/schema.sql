@@ -35,7 +35,10 @@ CREATE TABLE IF NOT EXISTS stripe_webhook_events (
  processed_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS barbeiros (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
- nome VARCHAR(120) NOT NULL, telefone VARCHAR(30), comissao_percentual NUMERIC(5,2) DEFAULT 40,
+ usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL, nome VARCHAR(120) NOT NULL,
+ cargo VARCHAR(80) NOT NULL DEFAULT 'Barbeiro', notification_email VARCHAR(254),
+ telefone VARCHAR(30), whatsapp VARCHAR(30) NOT NULL DEFAULT '',
+ comissao_percentual NUMERIC(5,2) DEFAULT 40,
  foto_url TEXT, ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS horarios_funcionamento (
  id SERIAL PRIMARY KEY, barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS agendamentos (
  cliente_telefone VARCHAR(30), cliente_email VARCHAR(254), data_hora TIMESTAMP NOT NULL, duracao_minutos INTEGER DEFAULT 30,
  servico VARCHAR(100) DEFAULT 'Corte', preco NUMERIC(10,2) NOT NULL DEFAULT 45,
  status VARCHAR(20) DEFAULT 'agendado' CHECK(status IN ('agendado','confirmado','em_andamento','concluido','realizado','cancelado','nao_compareceu')),
+ observacoes VARCHAR(500) NOT NULL DEFAULT '',
  pago_em TIMESTAMPTZ, criado_em TIMESTAMPTZ DEFAULT NOW(), atualizado_em TIMESTAMPTZ DEFAULT NOW(), concluido_em TIMESTAMPTZ,
  whatsapp_autorizado BOOLEAN NOT NULL DEFAULT FALSE,
  whatsapp_enviado BOOLEAN NOT NULL DEFAULT FALSE,
@@ -57,6 +61,17 @@ CREATE TABLE IF NOT EXISTS agendamentos (
  email_enviado BOOLEAN NOT NULL DEFAULT FALSE, email_enviado_em TIMESTAMPTZ,
  email_message_id TEXT, email_erro TEXT, email_dono_enviado BOOLEAN NOT NULL DEFAULT FALSE,
  email_dono_message_id TEXT, email_dono_erro TEXT);
+CREATE TABLE IF NOT EXISTS notificacoes_email (
+ id BIGSERIAL PRIMARY KEY, agendamento_id INTEGER NOT NULL REFERENCES agendamentos(id) ON DELETE CASCADE,
+ barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+ barbeiro_id INTEGER REFERENCES barbeiros(id) ON DELETE SET NULL,
+ evento VARCHAR(24) NOT NULL CHECK(evento IN ('novo','reagendado','cancelado')),
+ event_key VARCHAR(80) NOT NULL, destinatario VARCHAR(254) NOT NULL,
+ origem_destinatario VARCHAR(20) NOT NULL CHECK(origem_destinatario IN ('barbeiro','administrativo')),
+ status VARCHAR(20) NOT NULL DEFAULT 'processando' CHECK(status IN ('processando','enviado','erro')),
+ resend_message_id TEXT, erro VARCHAR(500), criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ enviado_em TIMESTAMPTZ, atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(agendamento_id,evento,event_key,destinatario));
 CREATE UNIQUE INDEX IF NOT EXISTS agenda_slot_ativo ON agendamentos(barbeiro_id, data_hora) WHERE status <> 'cancelado';
 CREATE INDEX IF NOT EXISTS idx_agenda_whatsapp_fila ON agendamentos(whatsapp_status,whatsapp_proxima_tentativa) WHERE whatsapp_autorizado AND NOT whatsapp_enviado;
 CREATE TABLE IF NOT EXISTS clientes (
@@ -97,6 +112,8 @@ CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_barbeiro_data_ativa ON agendamen
 CREATE INDEX IF NOT EXISTS idx_agenda_barbearia_status_data ON agendamentos(barbearia_id, status, data_hora);
 CREATE INDEX IF NOT EXISTS idx_clientes_barbearia_atualizado ON clientes(barbearia_id, atualizado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_barbeiros_barbearia_ativos ON barbeiros(barbearia_id, nome) WHERE ativo;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario ON barbeiros(usuario_id) WHERE usuario_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_notificacoes_email_agendamento ON notificacoes_email(agendamento_id, criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_servicos_barbearia_ativos ON servicos(barbearia_id, nome) WHERE ativo;
 CREATE INDEX IF NOT EXISTS idx_vendas_produto_agendamento ON vendas_produto(agendamento_id);
 CREATE INDEX IF NOT EXISTS idx_despesas_barbearia_data ON despesas(barbearia_id, data DESC);

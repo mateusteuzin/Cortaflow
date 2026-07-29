@@ -11,6 +11,19 @@ def normalize_email(value: EmailStr | None):
     return str(value).strip().lower()
 
 
+def normalize_brazilian_phone(value: str | None) -> str:
+    digits = "".join(character for character in str(value or "") if character.isdigit())
+    if not digits:
+        return ""
+    if digits.startswith("55") and len(digits) in {12, 13}:
+        digits = digits[2:]
+    if len(digits) not in {10, 11} or digits[:2] in {"00", "01", "10"}:
+        raise ValueError("Informe um telefone brasileiro válido com DDD")
+    if len(digits) == 11 and digits[2] != "9":
+        raise ValueError("Celular brasileiro deve começar com 9 após o DDD")
+    return digits
+
+
 def validate_password(value: str) -> str:
     if len(value.encode("utf-8")) > 72:
         raise ValueError("A senha não pode ultrapassar 72 bytes")
@@ -113,10 +126,48 @@ class CheckoutSessionRequest(BaseModel):
 
 
 class Barber(BaseModel):
-    nome: str
-    telefone: str = ""
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    nome: str = Field(min_length=2, max_length=120)
+    cargo: str = Field(default="Barbeiro", max_length=80)
+    notification_email: EmailStr | None = None
+    telefone: str = Field(default="", max_length=30)
+    whatsapp: str = Field(default="", max_length=30)
     comissao_percentual: Decimal = Field(default=40, ge=0, le=100)
     foto_url: str = ""
+    ativo: bool = True
+    enviar_convite: bool = False
+
+    @field_validator("notification_email")
+    @classmethod
+    def normalize_barber_email(cls, value):
+        return normalize_email(value)
+
+    @field_validator("telefone", "whatsapp")
+    @classmethod
+    def validate_barber_phone(cls, value):
+        return normalize_brazilian_phone(value)
+
+
+class BarberSelfUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    nome: str = Field(min_length=2, max_length=120)
+    cargo: str = Field(default="Barbeiro", max_length=80)
+    notification_email: EmailStr | None = None
+    telefone: str = Field(default="", max_length=30)
+    whatsapp: str = Field(default="", max_length=30)
+    foto_url: str = ""
+
+    @field_validator("notification_email")
+    @classmethod
+    def normalize_self_email(cls, value):
+        return normalize_email(value)
+
+    @field_validator("telefone", "whatsapp")
+    @classmethod
+    def validate_self_phone(cls, value):
+        return normalize_brazilian_phone(value)
 
 
 class Appointment(BaseModel):
@@ -129,6 +180,7 @@ class Appointment(BaseModel):
     duracao_minutos: int = Field(default=30, ge=15, le=240)
     servico: str = "Corte"
     preco: Decimal = Field(default=45, ge=0)
+    observacoes: str = Field(default="", max_length=500)
     whatsapp_autorizado: bool = False
 
 
@@ -138,6 +190,7 @@ class AppointmentUpdate(BaseModel):
     status: str | None = None
     servico: str | None = None
     preco: Decimal | None = None
+    observacoes: str | None = Field(default=None, max_length=500)
 
 
 class PublicAppointment(Appointment):

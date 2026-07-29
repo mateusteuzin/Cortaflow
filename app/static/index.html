@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0c0a">
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-cortaflow-transparent.png?v=20260727">
-  <link rel="apple-touch-icon" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" href="/icons/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
   <meta name="description" content="Painel de gestão CortaFlow">
   <title>CortaFlow | Painel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260729-financial-panel">
+  <link rel="stylesheet" href="/styles.css?v=20260729-barber-email-pwa">
   <link rel="stylesheet" href="/support.css?v=20260728">
 </head>
 <body>
@@ -296,7 +298,7 @@
 
       <section id="conta" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">CONTA E IDENTIDADE</span><h2>Minha conta</h2><p>Consulte seu acesso atual e mantenha os dados da barbearia organizados.</p></div></div>
-        <section class="account-subscription-summary" aria-labelledby="account-subscription-title">
+        <section class="account-subscription-summary owner-only" aria-labelledby="account-subscription-title">
           <div class="account-subscription-plan">
             <span id="account-subscription-badge" class="subscription-badge">ASSINATURA</span>
             <small>PLANO ATUAL</small>
@@ -310,7 +312,7 @@
           </div>
           <button class="button button-outline" data-go="assinatura" type="button">Renovar ou alterar plano <span>→</span></button>
         </section>
-        <form id="account-form" class="panel account-panel">
+        <form id="account-form" class="panel account-panel owner-only">
           <div class="account-data-heading">
             <span class="eyebrow">DADOS DA CONTA</span>
             <h3>Identidade e funcionamento</h3>
@@ -346,6 +348,31 @@
           <p id="account-error" class="error" role="alert"></p>
           <button class="button button-primary" type="submit">Salvar identidade</button>
         </form>
+        <form id="barber-account-form" class="panel account-panel hidden">
+          <div class="account-data-heading">
+            <span class="eyebrow">MEU PERFIL PROFISSIONAL</span>
+            <h3>Seus dados de atendimento</h3>
+            <p>Você pode atualizar somente os seus próprios contatos. Configurações administrativas continuam protegidas.</p>
+          </div>
+          <div class="account-branding">
+            <div><span class="eyebrow">FOTO PROFISSIONAL</span><h3>Sua imagem na agenda</h3><p>Use uma foto nítida e centralizada.</p></div>
+            <label class="account-logo-picker">
+              <span class="account-logo-preview"><img id="barber-account-photo-preview" src="/assets/cortaflow-icon-default.png" alt="Prévia da foto"></span>
+              <span><b>Escolher foto</b><small>JPG, PNG ou WebP · até 5 MB</small></span>
+              <input id="barber-account-photo-file" type="file" accept="image/jpeg,image/png,image/webp">
+            </label>
+            <input name="foto_url" type="hidden">
+          </div>
+          <div class="account-fields grid2">
+            <label>Nome<input name="nome" required></label>
+            <label>Cargo<input name="cargo" maxlength="80" placeholder="Barbeiro"></label>
+            <label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" placeholder="profissional@email.com"><small>Os avisos dos seus horários serão enviados aqui.</small></label>
+            <label>Telefone<input name="telefone" type="tel" inputmode="tel" placeholder="(00) 00000-0000"></label>
+            <label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" placeholder="Use o mesmo telefone se preferir"></label>
+          </div>
+          <p id="barber-account-error" class="error" role="alert"></p>
+          <button class="button button-primary" type="submit">Salvar meus dados</button>
+        </form>
       </section>
     </main>
   </div>
@@ -356,6 +383,6 @@
     <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3Zm0 23.6a10.6 10.6 0 0 1-5.4-1.5l-.4-.2-3.9 1 1-3.8-.3-.4A10.6 10.6 0 1 1 16 26.6Zm5.8-7.9c-.3-.2-1.9-.9-2.2-1-.3-.1-.5-.2-.7.2l-1 1.2c-.2.2-.4.2-.7.1-1.8-.9-3-1.7-4.2-3.7-.3-.5.3-.6.9-1.8.1-.2.1-.4 0-.6l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1.1 1.1-1.1 2.6s1.1 3.1 1.3 3.3c.2.2 2.3 3.5 5.5 4.9.8.3 1.4.5 1.9.6.8.3 1.6.2 2.1.1.7-.1 1.9-.8 2.1-1.5.3-.7.3-1.4.2-1.5-.1-.2-.4-.3-.7-.5Z"/></svg>
     <span>Suporte</span>
   </a>
-  <script src="/app.js?v=20260729-financial-panel"></script>
+  <script src="/app.js?v=20260729-barber-email-pwa"></script>
 </body>
 </html>

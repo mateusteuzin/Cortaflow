@@ -1,4 +1,5 @@
 ﻿import json
+import hashlib
 import logging
 import os
 from datetime import datetime
@@ -145,6 +146,7 @@ def _send_transactional_email(
     html: str,
     text: str,
     log_label: str,
+    idempotency_key: str | None = None,
 ) -> bool:
     api_key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("EMAIL_FROM", DEFAULT_SENDER).strip()
@@ -162,11 +164,14 @@ def _send_transactional_email(
             "X-Entity-Ref-ID": f"cortaflow-{uuid4().hex}",
         },
     }).encode("utf-8")
-    request = Request(RESEND_ENDPOINT, data=payload, method="POST", headers={
+    headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "CortaFlow/1.0",
-    })
+    }
+    if idempotency_key:
+        headers["Idempotency-Key"] = idempotency_key[:256]
+    request = Request(RESEND_ENDPOINT, data=payload, method="POST", headers=headers)
     try:
         with urlopen(request, timeout=15) as response:
             response.read()
@@ -266,6 +271,57 @@ def send_password_reset(email: str, owner_name: str, reset_token: str) -> bool:
         html=html,
         text=text,
         log_label="recuperação de senha",
+    )
+
+
+def send_barber_invitation(
+    email: str,
+    barber_name: str,
+    reset_token: str,
+    shop_name: str,
+    barber_id: int,
+) -> bool:
+    access_url = _public_url(
+        f"/api/auth/redefinir-senha?token={quote(reset_token, safe='')}"
+    )
+    html = _transactional_html(
+        preheader=f"Você recebeu acesso à equipe da {shop_name} no CortaFlow.",
+        eyebrow="Convite para a equipe",
+        title="Crie sua senha de acesso",
+        owner_name=barber_name,
+        intro=(
+            f"A administração da {shop_name} vinculou você à equipe. "
+            "Crie sua senha para atualizar seus próprios dados de contato."
+        ),
+        action_label="Criar minha senha",
+        action_url=access_url,
+        callout_title="Acesso individual",
+        callout_text=(
+            "Sua conta permite editar somente os seus dados profissionais. "
+            "As configurações administrativas continuam protegidas."
+        ),
+        expiry_text="Por segurança, este convite expira em 30 minutos.",
+        closing_text="Se você não reconhece este convite, ignore esta mensagem.",
+        footer_text="Mensagem automática de acesso à equipe CortaFlow.",
+    )
+    text = (
+        "CORTAFLOW\n\n"
+        "Crie sua senha de acesso\n\n"
+        f"Olá, {barber_name}.\n\n"
+        f"A administração da {shop_name} vinculou você à equipe.\n\n"
+        f"Criar minha senha: {access_url}\n\n"
+        "O convite expira em 30 minutos e permite editar somente seus próprios dados."
+    )
+    return _send_transactional_email(
+        email=email,
+        subject=f"Convite para a equipe | {shop_name}",
+        html=html,
+        text=text,
+        log_label="convite de profissional",
+        idempotency_key=(
+            f"barber-invite/{barber_id}/"
+            f"{hashlib.sha256(reset_token.encode('utf-8')).hexdigest()[:16]}"
+        ),
     )
 
 
@@ -493,6 +549,137 @@ def _owner_email_html(item: dict) -> str:
       </div></div></body></html>"""
 
 
+def _barber_notification_html(item: dict, event: str) -> str:
+    day, hour = _format_date(item["data_hora"])
+    labels = {
+        "novo": ("NOVO AGENDAMENTO", "Novo horário na sua agenda"),
+        "reagendado": ("AGENDAMENTO ALTERADO", "Um horário foi reagendado"),
+        "cancelado": ("AGENDAMENTO CANCELADO", "Um horário foi cancelado"),
+    }
+    eyebrow, title = labels[event]
+    panel_url = _public_url(f"/painel?view=agenda&appointment={item['id']}")
+    client_email = escape(item.get("cliente_email") or "Não informado")
+    observations = escape(item.get("observacoes") or "Nenhuma observação")
+    amount = f"{float(item['preco']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
+    <div style="max-width:640px;margin:28px auto;background:#fff;border:1px solid #ded9ce">
+      {_brand_header(eyebrow, item['barbearia_nome'], item.get('barbearia_logo_url'))}
+      <div style="padding:30px">
+        <p style="font-size:18px;margin:0 0 8px"><strong>{escape(title)}</strong></p>
+        <p style="color:#62645e;margin:0 0 22px">Olá, {escape(item['barbeiro_nome'])}. Confira os dados:</p>
+        <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
+          <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
+          Telefone: {escape(item.get('cliente_telefone') or 'Não informado')}<br>
+          E-mail: <a href="mailto:{client_email}" style="color:#9a6b13">{client_email}</a><br>
+          Serviço: {escape(item['servico'])}<br>
+          Profissional: {escape(item['barbeiro_nome'])}<br>
+          Data: {escape(day)} às {hour}<br>
+          Valor: R$ {amount}<br>
+          Observações: {observations}<br>
+          Reserva: #{int(item['id']):04d}
+        </div>
+        <p style="margin:24px 0;text-align:center">
+          <a href="{escape(panel_url, quote=True)}" style="display:inline-block;background:#171915;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px">Abrir no painel</a>
+        </p>
+        <p style="font-size:12px;color:#777">Este aviso foi enviado somente ao profissional responsável. Quando ele não possui e-mail cadastrado, o endereço administrativo é usado como contingência.</p>
+      </div>
+    </div></body></html>"""
+
+
+def send_barber_appointment_notification(
+    appointment_id: int,
+    event: str = "novo",
+    event_key: str | None = None,
+) -> bool:
+    if event not in {"novo", "reagendado", "cancelado"}:
+        raise ValueError("Evento de notificação inválido")
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    sender = os.getenv("EMAIL_FROM", DEFAULT_SENDER).strip()
+    item = one("""SELECT a.id,a.barbearia_id,a.barbeiro_id,a.cliente_nome,
+        a.cliente_telefone,a.cliente_email,a.data_hora,a.servico,a.preco,
+        a.observacoes,a.atualizado_em,b.nome barbeiro_nome,
+        b.notification_email,s.nome barbearia_nome,s.logo_url barbearia_logo_url,
+        s.email_notificacoes,s.notificar_novos_agendamentos
+        FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
+        JOIN barbearias s ON s.id=a.barbearia_id WHERE a.id=%s""", (appointment_id,))
+    if not item or not item["notificar_novos_agendamentos"]:
+        return False
+    recipient = str(item.get("notification_email") or "").strip().lower()
+    recipient_source = "barbeiro"
+    if not recipient:
+        recipient = str(item.get("email_notificacoes") or "").strip().lower()
+        recipient_source = "administrativo"
+        logger.warning(
+            "Profissional %s sem e-mail de notificação; usando contingência administrativa",
+            item["barbeiro_id"],
+        )
+    if not recipient:
+        logger.warning(
+            "Agendamento %s sem destinatário de notificação configurado",
+            appointment_id,
+        )
+        return False
+    if not api_key:
+        logger.warning("RESEND_API_KEY não configurada; aviso do agendamento %s não enviado", appointment_id)
+        return False
+    key = event_key or str(item.get("atualizado_em") or item["id"])
+    claimed = one("""INSERT INTO notificacoes_email(
+        agendamento_id,barbearia_id,barbeiro_id,evento,event_key,destinatario,
+        origem_destinatario,status)
+        VALUES(%s,%s,%s,%s,%s,%s,%s,'processando')
+        ON CONFLICT(agendamento_id,evento,event_key,destinatario) DO UPDATE
+          SET status='processando',erro=NULL,atualizado_em=NOW()
+          WHERE notificacoes_email.status='erro'
+        RETURNING id""", (
+            appointment_id,item["barbearia_id"],item["barbeiro_id"],event,
+            key[:80],recipient,recipient_source,
+        ))
+    if not claimed:
+        return False
+    notification_id = claimed["id"]
+    subjects = {
+        "novo": f"Novo agendamento #{appointment_id:04d} - {item['barbearia_nome']}",
+        "reagendado": f"Agendamento reagendado #{appointment_id:04d} - {item['barbearia_nome']}",
+        "cancelado": f"Agendamento cancelado #{appointment_id:04d} - {item['barbearia_nome']}",
+    }
+    payload = json.dumps({
+        "from": sender,
+        "to": [recipient],
+        "subject": subjects[event],
+        "html": _barber_notification_html(item, event),
+        "headers": TRANSACTIONAL_HEADERS,
+    }).encode("utf-8")
+    request = Request(RESEND_ENDPOINT, data=payload, method="POST", headers={
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": f"appointment/{event}/{notification_id}",
+        "User-Agent": "CortaFlow/1.0",
+    })
+    try:
+        with urlopen(request, timeout=15) as response:
+            result = json.loads(response.read())
+        one("""UPDATE notificacoes_email SET status='enviado',resend_message_id=%s,
+            enviado_em=NOW(),erro=NULL,atualizado_em=NOW() WHERE id=%s RETURNING id""",
+            (result.get("id"),notification_id))
+        return True
+    except (HTTPError, URLError, TimeoutError, ValueError) as error:
+        detail = str(error)
+        if isinstance(error, HTTPError):
+            try:
+                detail = error.read().decode("utf-8", errors="replace") or detail
+            except OSError:
+                pass
+        one("""UPDATE notificacoes_email SET status='erro',erro=%s,
+            atualizado_em=NOW() WHERE id=%s RETURNING id""",
+            (detail[:500],notification_id))
+        logger.warning(
+            "Falha ao enviar evento %s do agendamento %s", event, appointment_id
+        )
+        return False
+
+
 def send_appointment_confirmation(appointment_id: int) -> bool:
     api_key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
@@ -531,39 +718,10 @@ def send_appointment_confirmation(appointment_id: int) -> bool:
 
 
 def send_owner_notification(appointment_id: int) -> bool:
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
-    sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
-    item = one("""SELECT a.id,a.cliente_nome,a.cliente_telefone,a.cliente_email,a.data_hora,
-        a.servico,a.preco,b.nome barbeiro_nome,s.nome barbearia_nome,
-        s.logo_url barbearia_logo_url,s.email_notificacoes
-        FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
-        JOIN barbearias s ON s.id=a.barbearia_id WHERE a.id=%s
-        AND s.notificar_novos_agendamentos AND s.email_notificacoes IS NOT NULL
-        AND NOT a.email_dono_enviado
-        AND a.status NOT IN ('concluido','realizado')""", (appointment_id,))
-    if not api_key or not item:
-        return False
-    html = _owner_email_html(item)
-    payload = json.dumps({"from": sender, "to": [item["email_notificacoes"]],
-        "subject": f"Novo agendamento #{item['id']:04d} - {item['barbearia_nome']}", "html": html}).encode()
-    request = Request("https://api.resend.com/emails", data=payload, method="POST", headers={
-        "Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
-        "Idempotency-Key": f"agendamento-dono-{appointment_id}",
-        "User-Agent": "CortaFlow/1.0"})
-    try:
-        with urlopen(request, timeout=45) as response:
-            result = json.loads(response.read())
-        one("""UPDATE agendamentos SET email_dono_enviado=true,email_dono_message_id=%s,
-            email_dono_erro=NULL WHERE id=%s RETURNING id""", (result.get("id"), appointment_id))
-        return True
-    except (HTTPError, URLError, TimeoutError, ValueError) as error:
-        detail = str(error)
-        if isinstance(error, HTTPError):
-            try:
-                detail = error.read().decode("utf-8", errors="replace") or detail
-            except OSError:
-                pass
-        one("UPDATE agendamentos SET email_dono_erro=%s WHERE id=%s RETURNING id", (detail[:500], appointment_id))
-        logger.warning("Falha ao notificar dono sobre o agendamento %s", appointment_id)
-        return False
+    """Compatibilidade: agora direciona o aviso ao profissional responsável."""
+    return send_barber_appointment_notification(
+        appointment_id,
+        event="novo",
+        event_key=f"novo-{appointment_id}",
+    )
 

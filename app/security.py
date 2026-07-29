@@ -138,10 +138,18 @@ def _authenticated_user(auth: HTTPAuthorizationCredentials | None):
     except (JWTError, KeyError, TypeError, ValueError):
         raise HTTPException(401, "Token inválido ou expirado")
     user = one(
-        """SELECT u.id,u.email,u.nome,u.email_verificado,u.auth_version,b.id barbearia_id,
+        """SELECT u.id,u.email,u.nome,u.telefone,u.email_verificado,u.auth_version,
+        b.id barbearia_id,
         b.plano_ativo,b.subscription_plan,b.subscription_status,
-        b.subscription_current_period_end,b.subscription_cancel_at_period_end
-        FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id WHERE u.id=%s""",
+        b.subscription_current_period_end,b.subscription_cancel_at_period_end,
+        CASE WHEN owned.id IS NOT NULL THEN 'administrador' ELSE 'barbeiro' END perfil,
+        CASE WHEN owned.id IS NULL THEN staff.id ELSE NULL END barbeiro_id
+        FROM usuarios u
+        LEFT JOIN barbearias owned ON owned.usuario_id=u.id
+        LEFT JOIN barbeiros staff ON staff.usuario_id=u.id AND staff.ativo
+        JOIN barbearias b ON b.id=COALESCE(owned.id,staff.barbearia_id)
+        WHERE u.id=%s
+        ORDER BY (owned.id IS NOT NULL) DESC LIMIT 1""",
         (user_id,),
     )
     if not user:
@@ -170,4 +178,10 @@ def current_user(auth: HTTPAuthorizationCredentials = Depends(bearer)):
     user = _authenticated_user(auth)
     if not user.get("plano_ativo"):
         raise HTTPException(402, "Escolha uma assinatura para liberar o painel")
+    return user
+
+
+def owner_user(user=Depends(current_user)):
+    if user.get("perfil") != "administrador":
+        raise HTTPException(403, "Esta função está disponível somente para o administrador")
     return user

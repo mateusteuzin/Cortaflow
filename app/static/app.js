@@ -1,5 +1,8 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const localDate = () => {
   const now = new Date();
@@ -18,6 +21,7 @@ let businessHours = [];
 let subscription = null;
 let customerClients = [];
 let financeExpenses = [];
+let sessionContext = null;
 let toastTimer;
 let agendaWeekAnchor = null;
 let agendaWeekDays = [];
@@ -260,6 +264,11 @@ function bindNavigation() {
     if (file) $('#account-logo-preview').src = URL.createObjectURL(file);
   };
   $('#account-form').onsubmit = saveProfile;
+  $('#barber-account-form').onsubmit = saveBarberSelf;
+  $('#barber-account-photo-file').onchange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) $('#barber-account-photo-preview').src = URL.createObjectURL(file);
+  };
   $('#copy-booking-link').onclick = copyBookingLink;
   $('#manage-subscription').onclick = openBillingPortal;
   $('#finance-export-xlsx').onclick = () => downloadFinancial('xlsx').catch((error) => toast(error.message));
@@ -277,6 +286,7 @@ function bindNavigation() {
     if (action === 'add-product') openProduct();
     if (action === 'add-expense') openExpense();
     if (action === 'add-appointment') openAppointment();
+    if (action === 'edit-appointment') openAppointment(id);
     if (action === 'complete') concludeAppointment(id);
     if (action === 'cancel') cancelAppointment(id);
     if (action === 'remove-appointment') removeAppointment(id);
@@ -324,6 +334,14 @@ async function start() {
   $('#today').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
   $('#agenda-date').value = localDate();
   try {
+    sessionContext = await api('/auth/contexto');
+    localStorage.setItem('name', sessionContext.nome || 'gestor');
+    applyAccessMode();
+    if (sessionContext.perfil === 'barbeiro') {
+      await loadBarberSelf();
+      show('conta');
+      return;
+    }
     await confirmCheckout();
     subscription = await api('/billing/subscription');
     if (!subscription.active) {
@@ -486,6 +504,7 @@ async function copyBookingLink() {
 }
 
 async function loadProfile() {
+  if (sessionContext?.perfil === 'barbeiro') return loadBarberSelf();
   [shopProfile, businessHours, subscription] = await Promise.all([
     api('/barbearia/perfil'),
     api('/barbearia/horarios-funcionamento'),
@@ -573,13 +592,17 @@ async function loadBarbers() {
   const savedProfessional = localStorage.getItem('agendaProfessional') || '';
   $('#agenda-barber').value = active.some((barber) => String(barber.id) === savedProfessional) ? savedProfessional : '';
   renderAgendaProfessionalFilter([]);
-  $('#barber-grid').innerHTML = active.map((barber) => `<article class="media-card professional-card"><div class="admin-card-photo professional-admin-photo">${barber.foto_url ? `<img src="${escapeHTML(barber.foto_url)}" alt="Foto de ${escapeHTML(barber.nome)}" loading="lazy">` : `<span>${escapeHTML(barber.nome.slice(0, 2).toUpperCase())}</span>`}<i class="photo-status"></i></div><div class="admin-card-body"><span class="badge">Ativo</span><h3>${escapeHTML(barber.nome)}</h3><p>${escapeHTML(barber.telefone || 'Sem telefone')}</p><footer><b>${Number(barber.comissao_percentual)}% comissão</b><button class="link" type="button" data-action="edit-barber" data-id="${barber.id}">Editar</button><button class="danger" type="button" data-action="remove-barber" data-id="${barber.id}">Desativar</button></footer></div></article>`).join('') || '<p class="empty">Adicione o primeiro profissional.</p>';
+  $('#barber-grid').innerHTML = barbers.map((barber) => {
+    const emailReady = Boolean(barber.notification_email);
+    const contact = barber.whatsapp || barber.telefone || 'Telefone não informado';
+    return `<article class="media-card professional-card${barber.ativo ? '' : ' is-inactive'}"><div class="admin-card-photo professional-admin-photo">${barber.foto_url ? `<img src="${escapeHTML(barber.foto_url)}" alt="Foto de ${escapeHTML(barber.nome)}" loading="lazy">` : `<span>${escapeHTML(barber.nome.slice(0, 2).toUpperCase())}</span>`}<i class="photo-status"></i></div><div class="admin-card-body"><div class="professional-badges"><span class="badge">${barber.ativo ? 'Ativo' : 'Inativo'}</span><span class="notification-badge ${emailReady ? 'is-ready' : 'is-missing'}">${emailReady ? 'E-mail configurado' : 'E-mail não configurado'}</span></div><h3>${escapeHTML(barber.nome)}</h3><p>${escapeHTML(barber.cargo || 'Barbeiro')}</p><div class="professional-contacts"><span>${escapeHTML(barber.notification_email || 'Sem e-mail para avisos')}</span><span>${escapeHTML(contact)}</span></div><footer><b>${Number(barber.comissao_percentual)}% comissão</b><button class="link" type="button" data-action="edit-barber" data-id="${barber.id}">Editar</button>${barber.ativo ? `<button class="danger" type="button" data-action="remove-barber" data-id="${barber.id}">Desativar</button>` : ''}</footer></div></article>`;
+  }).join('') || '<p class="empty">Adicione o primeiro profissional.</p>';
 }
 
 function appointmentHTML(appointment) {
   const status = appointment.status || 'agendado';
   const actions = !['concluido', 'realizado', 'cancelado', 'nao_compareceu'].includes(status)
-    ? `<button type="button" data-action="complete" data-id="${appointment.id}">Concluir</button><button class="danger" type="button" data-action="cancel" data-id="${appointment.id}">Cancelar</button>`
+    ? `<button type="button" data-action="edit-appointment" data-id="${appointment.id}">Reagendar</button><button type="button" data-action="complete" data-id="${appointment.id}">Concluir</button><button class="danger" type="button" data-action="cancel" data-id="${appointment.id}">Cancelar</button>`
     : status === 'cancelado' ? `<button class="danger" type="button" data-action="remove-appointment" data-id="${appointment.id}">Apagar</button>`
     : ['concluido', 'realizado'].includes(status) ? '<span class="appointment-completed">✓ Concluído</span>' : '';
   return `<div class="appointment"><div class="appointment-time">${new Date(appointment.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="appointment-info"><b>${escapeHTML(appointment.cliente_nome)}</b><small><strong>Responsável:</strong> ${escapeHTML(appointment.barbeiro_nome || 'Equipe')} · ${escapeHTML(appointment.servico)} · ${money(appointment.preco)}</small></div><span class="badge status-${escapeHTML(status)}">${escapeHTML(statusLabel[status] || status)}</span><div class="appointment-actions">${actions}</div></div>`;
@@ -707,7 +730,7 @@ function renderAgendaCalendar() {
     : agendaWeekAppointments;
   $('#agenda-range').textContent = `${days[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${days[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
   const today = localDate(); const byDay = (day) => appointments.filter((item) => isoDate(new Date(item.data_hora)) === isoDate(day));
-  const card = (item) => { const status = item.status || 'agendado'; const finished = ['concluido', 'realizado'].includes(status); const actions = finished ? '<span class="agenda-completed" title="Atendimento concluído">✓</span>' : status === 'cancelado' ? '' : `<button type="button" data-action="complete" data-id="${item.id}" title="Concluir atendimento">✓</button><button type="button" data-action="cancel" data-id="${item.id}" title="Cancelar atendimento">×</button>`; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${actions}</div></article>`; };
+  const card = (item) => { const status = item.status || 'agendado'; const finished = ['concluido', 'realizado'].includes(status); const actions = finished ? '<span class="agenda-completed" title="Atendimento concluído">✓</span>' : status === 'cancelado' ? '' : `<button type="button" data-action="edit-appointment" data-id="${item.id}" title="Reagendar atendimento">↗</button><button type="button" data-action="complete" data-id="${item.id}" title="Concluir atendimento">✓</button><button type="button" data-action="cancel" data-id="${item.id}" title="Cancelar atendimento">×</button>`; return `<article class="agenda-card status-${escapeHTML(status)}"><div class="agenda-card-time">${new Date(item.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div><div class="agenda-card-body"><strong>${escapeHTML(item.cliente_nome)}</strong><span>${escapeHTML(item.servico || 'Atendimento')}</span><small><b>Responsável:</b> ${escapeHTML(item.barbeiro_nome || 'Equipe')} · ${Number(item.duracao_minutos || 30)} min · ${money(item.preco)}</small></div><span class="agenda-card-status">${escapeHTML(statusLabel[status] || status)}</span><div class="agenda-card-actions">${actions}</div></article>`; };
   $('#agenda-week').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<div class="agenda-day ${key === today ? 'is-today' : ''}"><header><span>${day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</span><b>${day.getDate()}</b><small>${list.length} ${list.length === 1 ? 'atendimento' : 'atendimentos'}</small></header><div class="agenda-day-list">${list.map(card).join('') || '<div class="agenda-empty">Horários livres</div>'}</div></div>`; }).join('');
   $('#agenda-mobile-list').innerHTML = days.map((day) => { const list = byDay(day); const key = isoDate(day); return `<section class="agenda-mobile-day ${key === today ? 'is-today' : ''}"><h3>${day.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</h3>${list.map(card).join('') || '<p class="agenda-empty">Horários livres</p>'}</section>`; }).join('');
 }
@@ -797,11 +820,14 @@ function openBarber(id = null) {
   const barber = id ? barbers.find((item) => item.id === id) : null;
   if (id && !barber) return toast('Profissional não encontrado.');
   const value = (key, fallback = '') => escapeHTML(barber?.[key] ?? fallback);
-  fields(`<label>Nome<input name="nome" value="${value('nome')}" required></label><label>Telefone<input name="telefone" type="tel" value="${value('telefone')}"></label>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido pelo profissional em cada serviço concluído.</small></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
+  fields(`<div class="grid2"><label>Nome<input name="nome" value="${value('nome')}" required></label><label>Cargo<input name="cargo" maxlength="80" value="${value('cargo', 'Barbeiro')}"></label><label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" value="${value('notification_email')}" placeholder="profissional@email.com"><small>Receberá somente os agendamentos deste profissional.</small></label><label>Telefone<input name="telefone" type="tel" inputmode="tel" value="${value('telefone')}" placeholder="(00) 00000-0000"></label><label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" value="${value('whatsapp')}" placeholder="Deixe vazio para usar o telefone"></label><label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido por serviço concluído.</small></label></div>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label class="notification-toggle compact"><input name="ativo" type="checkbox"${barber?.ativo !== false ? ' checked' : ''}><span><b>Profissional ativo</b><small>Profissionais inativos não aparecem no agendamento.</small></span></label><label class="notification-toggle compact"><input name="enviar_convite" type="checkbox"><span><b>${barber?.usuario_id ? 'Reenviar acesso ao painel' : 'Convidar para acessar o painel'}</b><small>Envia um link para criar a senha e editar os próprios contatos.</small></span></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
     const file = data.foto_url_arquivo;
     delete data.foto_url_arquivo;
     if (file?.size) data.foto_url = await uploadImage(file);
     data.comissao_percentual = Number(data.comissao_percentual);
+    data.notification_email = data.notification_email.trim() || null;
+    data.ativo = $('#modal-form').elements.ativo.checked;
+    data.enviar_convite = $('#modal-form').elements.enviar_convite.checked;
     await api(barber ? '/barbearia/barbeiros/' + barber.id : '/barbearia/barbeiros', { method: barber ? 'PUT' : 'POST', body: JSON.stringify(data) });
     await loadBarbers();
   });
@@ -814,13 +840,32 @@ async function removeBarber(id) {
   toast('Profissional desativado');
 }
 
-function openAppointment() {
+function openAppointment(id = null) {
   const active = barbers.filter((barber) => barber.ativo);
   if (!active.length) return toast('Cadastre um barbeiro primeiro.');
   if (!services.length) return toast('Cadastre um serviço primeiro.');
-  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" required></label><label>Telefone<input name="cliente_telefone" type="tel" required></label><label>Responsável pelo atendimento<select name="barbeiro_id" required>${active.map((barber) => `<option value="${barber.id}">${escapeHTML(barber.nome)}</option>`).join('')}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" required></label><label>Serviço<select name="servico_id">${services.map((service) => `<option value="${service.id}">${escapeHTML(service.nome)} · ${money(service.preco)}</option>`).join('')}</select></label></div>`, 'Novo agendamento', async (data) => {
+  const appointment = id
+    ? [...agendaWeekAppointments].find((item) => Number(item.id) === Number(id))
+    : null;
+  if (id && !appointment) return toast('Agendamento não encontrado nesta semana.');
+  const dateValue = appointment
+    ? new Date(appointment.data_hora).toLocaleString('sv-SE').slice(0, 16)
+    : '';
+  const barberOptions = active.map((item) => `<option value="${item.id}"${Number(item.id) === Number(appointment?.barbeiro_id) ? ' selected' : ''}>${escapeHTML(item.nome)}</option>`).join('');
+  if (appointment) {
+    fields(`<div class="appointment-edit-notice"><b>Reagendar #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>O profissional responsável receberá um aviso por e-mail após salvar.</small></div><div class="grid2"><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Nova data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`, 'Reagendar atendimento', async (data) => {
+      data.barbeiro_id = Number(data.barbeiro_id);
+      await api('/agendamentos/' + appointment.id, { method: 'PUT', body: JSON.stringify(data) });
+      await loadDashboard();
+      await loadAppointments();
+      toast('Agendamento atualizado e profissional avisado');
+    });
+    return;
+  }
+  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" required></label><label>Telefone<input name="cliente_telefone" type="tel" required></label><label>E-mail do cliente<input name="cliente_email" type="email" placeholder="cliente@email.com"><small>Opcional. Envia a confirmação da reserva.</small></label><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" required></label><label>Serviço<select name="servico_id">${services.map((service) => `<option value="${service.id}">${escapeHTML(service.nome)} · ${money(service.preco)}</option>`).join('')}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea></label>`, 'Novo agendamento', async (data) => {
     data.barbeiro_id = Number(data.barbeiro_id);
     data.servico_id = Number(data.servico_id);
+    data.cliente_email = data.cliente_email.trim() || null;
     await api('/agendamentos', { method: 'POST', body: JSON.stringify(data) });
     await loadDashboard();
     if (!$('#agenda').classList.contains('hidden')) await loadAppointments();
@@ -953,6 +998,48 @@ function openProduct(id = null) {
     await api(product ? '/produtos/' + product.id : '/produtos', { method: product ? 'PUT' : 'POST', body: JSON.stringify(data) });
     await loadProducts();
   });
+}
+
+function applyAccessMode() {
+  const barberMode = sessionContext?.perfil === 'barbeiro';
+  document.body.classList.toggle('barber-session', barberMode);
+  $$('.owner-only').forEach((element) => element.classList.toggle('hidden', barberMode));
+  $('#barber-account-form').classList.toggle('hidden', !barberMode);
+  $$('nav button[data-view]').forEach((button) => {
+    button.classList.toggle('hidden', barberMode && button.dataset.view !== 'conta');
+  });
+}
+
+async function loadBarberSelf() {
+  const profile = await api('/barbeiro/me');
+  const form = $('#barber-account-form');
+  ['nome', 'cargo', 'notification_email', 'telefone', 'whatsapp', 'foto_url'].forEach((name) => {
+    form.elements[name].value = profile[name] || '';
+  });
+  $('#barber-account-photo-preview').src = profile.foto_url || '/assets/favicon-cortaflow-transparent.png';
+}
+
+async function saveBarberSelf(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector('button[type="submit"]');
+  const data = Object.fromEntries(new FormData(form));
+  data.notification_email = data.notification_email.trim() || null;
+  submit.disabled = true;
+  $('#barber-account-error').textContent = '';
+  try {
+    const file = $('#barber-account-photo-file').files?.[0];
+    if (file) data.foto_url = await uploadImage(file);
+    const profile = await api('/barbeiro/me', { method: 'PUT', body: JSON.stringify(data) });
+    form.elements.foto_url.value = profile.foto_url || '';
+    $('#barber-account-photo-preview').src = profile.foto_url || '/assets/favicon-cortaflow-transparent.png';
+    $('#barber-account-photo-file').value = '';
+    toast('Seus dados foram atualizados');
+  } catch (error) {
+    $('#barber-account-error').textContent = error.message;
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 Object.assign(window, { openBarber, openService, openProduct });

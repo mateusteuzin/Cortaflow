@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a09">
-  <link rel="icon" type="image/png" sizes="any" href="/assets/favicon%20cortaflow.png?v=20260722">
-  <link rel="apple-touch-icon" href="/assets/favicon%20cortaflow.png?v=20260722">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="icon" href="/icons/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
   <meta name="description" content="Agende seu corte, barba ou tratamento em poucos minutos.">
   <title>CortaFlow · Agendamento online</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/cliente.css?v=20260729-compact-services">
+  <link rel="stylesheet" href="/cliente.css?v=20260729-barber-email-pwa">
 </head>
 <body>
   <header class="topbar">
@@ -90,6 +92,7 @@
             <label class="input-label" for="name">Nome completo<input id="name" autocomplete="name" required placeholder="Como devemos chamar você?"></label>
             <label class="input-label" for="phone">WhatsApp<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(00) 00000-0000"><small>A confirmação será enviada para este número.</small></label>
             <label class="input-label" for="client-email">E-mail<input id="client-email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@email.com"><small>Enviaremos os detalhes da reserva para este e-mail.</small></label>
+            <label class="input-label" for="observations">Observações <span class="optional-label">opcional</span><textarea id="observations" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea><small>O profissional responsável receberá esta informação.</small></label>
             <button id="to-review" class="primary" type="button"><span>Revisar agendamento</span><b>→</b></button>
           </section>
 
@@ -124,6 +127,6 @@
   </section>
 
   <dialog id="lookup"><form method="dialog"><div class="dialog-head"><div><span class="step-kicker">CONSULTA RÁPIDA</span><h2>Minhas reservas</h2></div><button value="cancel" class="close" type="submit" aria-label="Fechar">×</button></div><p class="dialog-copy">Use o mesmo WhatsApp informado no agendamento.</p><label class="input-label" for="lookup-phone">Telefone<input id="lookup-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label><button id="lookup-submit" type="button" class="primary"><span>Consultar agora</span><b>→</b></button><div id="lookup-result"></div></form></dialog>
-  <script src="/cliente.js?v=20260729-compact-services"></script>
+  <script src="/cliente.js?v=20260729-barber-email-pwa"></script>
 </body>
 </html>

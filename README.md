@@ -47,7 +47,11 @@ Os resultados ficam nos campos `whatsapp_status`, `whatsapp_message_id`, `whatsa
 
 ## Confirmação por e-mail
 
-Defina `RESEND_API_KEY` e `EMAIL_FROM` no `.env`. A página pública solicita um e-mail válido e envia a confirmação pelo Resend em segundo plano. A reserva permanece salva mesmo quando o provedor rejeita ou não consegue entregar a mensagem. Com `onboarding@resend.dev`, use no teste o mesmo e-mail cadastrado na conta Resend; para destinatários externos, configure um domínio verificado.
+Defina `RESEND_API_KEY`, `EMAIL_FROM` e `PUBLIC_BASE_URL` no `.env`. A página pública envia a confirmação ao cliente em segundo plano. Cada profissional pode ter seu próprio e-mail de notificação e recebe somente eventos dos agendamentos pelos quais é responsável: novo, reagendado e cancelado. Se o profissional estiver sem e-mail, o sistema usa o e-mail administrativo da barbearia e registra essa contingência no log.
+
+Em produção, verifique o domínio no Resend e use um remetente como `CortaFlow <nao-responda@cortaflow.com.br>`. A tabela `notificacoes_email` impede duplicidade por agendamento, evento, versão do evento e destinatário, além de registrar a situação e o ID retornado pelo Resend. A reserva permanece salva mesmo quando o provedor rejeita ou não consegue entregar a mensagem.
+
+Para liberar o acesso individual, marque **Convidar para acessar o painel** no cadastro do profissional. O convite permite que ele crie uma senha e altere apenas nome, cargo, foto, telefone, WhatsApp e o próprio e-mail de avisos.
 
 Para executar os testes sem enviar mensagens reais:
 

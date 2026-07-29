@@ -591,3 +591,5 @@ main { min-height: calc(100dvh - 95px); }
   .service-option strong { font-size: 14px; }
   .service-option small { font-size: 10px; -webkit-line-clamp: 1; }
 }
+.input-label textarea { width:100%; min-height:88px; resize:vertical; }
+.optional-label { float:right; color:#99958b; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }

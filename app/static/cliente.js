@@ -1,5 +1,8 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 const bookingMatch = location.pathname.match(/^\/agendar\/([^/]+)\/?$/);
 const bookingSlug = bookingMatch ? decodeURIComponent(bookingMatch[1]).toLowerCase() : '';
 const publicBase = () => `/public/barbearias/${encodeURIComponent(bookingSlug)}`;
@@ -189,7 +192,7 @@ $('#confirm').onclick = async () => {
   button.disabled = true;
   button.textContent = 'Confirmando...';
   try {
-    const appointment = await api(`${publicBase()}/agendamentos`, { method: 'POST', body: JSON.stringify({ barbeiro_id: barber.id, servico_id: service.id, cliente_nome: $('#name').value.trim(), cliente_telefone: $('#phone').value, cliente_email: $('#client-email').value.trim(), data_hora: `${dateInput.value}T${slot}:00`, servico: service.nome, preco: Number(service.preco), duracao_minutos: service.duracao_minutos, whatsapp_autorizado: true }) });
+    const appointment = await api(`${publicBase()}/agendamentos`, { method: 'POST', body: JSON.stringify({ barbeiro_id: barber.id, servico_id: service.id, cliente_nome: $('#name').value.trim(), cliente_telefone: $('#phone').value, cliente_email: $('#client-email').value.trim(), data_hora: `${dateInput.value}T${slot}:00`, servico: service.nome, preco: Number(service.preco), duracao_minutos: service.duracao_minutos, observacoes: $('#observations').value.trim(), whatsapp_autorizado: true }) });
     const reference = String(appointment.id).padStart(4, '0');
     const locationLogo = shop.logo_url
       ? `<span class="summary-shop-logo"><img src="${escapeHTML(shop.logo_url)}" alt="Logo da ${escapeHTML(shop.nome)}"></span>`

@@ -18,10 +18,11 @@ from .database import all_rows, db, one
 from .schemas import *
 from .security import (
     authenticated_user,
-    current_user,
+    current_user as panel_user,
     decode_oidc_state,
     hash_password,
     oidc_state,
+    owner_user as current_user,
     token,
     verify_password,
 )
@@ -30,6 +31,8 @@ from .services.whatsapp_worker import whatsapp_worker
 from .services.email import (
     send_account_verification,
     send_appointment_confirmation,
+    send_barber_appointment_notification,
+    send_barber_invitation,
     send_owner_notification,
     send_password_reset,
     send_subscription_confirmation,
@@ -162,6 +165,34 @@ def ensure_current_schema():
         cur.execute("""UPDATE barbearias b SET email_notificacoes=u.email FROM usuarios u
             WHERE b.usuario_id=u.id AND (b.email_notificacoes IS NULL OR b.email_notificacoes='')""")
         cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS foto_url TEXT")
+        cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS notification_email VARCHAR(254)")
+        cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(30) NOT NULL DEFAULT ''")
+        cur.execute("ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS cargo VARCHAR(80) NOT NULL DEFAULT 'Barbeiro'")
+        cur.execute("""ALTER TABLE barbeiros ADD COLUMN IF NOT EXISTS usuario_id INTEGER
+            REFERENCES usuarios(id) ON DELETE SET NULL""")
+        cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_barbeiros_usuario
+            ON barbeiros(usuario_id) WHERE usuario_id IS NOT NULL""")
+        cur.execute("ALTER TABLE agendamentos ADD COLUMN IF NOT EXISTS observacoes VARCHAR(500) NOT NULL DEFAULT ''")
+        cur.execute("""CREATE TABLE IF NOT EXISTS notificacoes_email (
+          id BIGSERIAL PRIMARY KEY,
+          agendamento_id INTEGER NOT NULL REFERENCES agendamentos(id) ON DELETE CASCADE,
+          barbearia_id INTEGER NOT NULL REFERENCES barbearias(id) ON DELETE CASCADE,
+          barbeiro_id INTEGER REFERENCES barbeiros(id) ON DELETE SET NULL,
+          evento VARCHAR(24) NOT NULL CHECK(evento IN ('novo','reagendado','cancelado')),
+          event_key VARCHAR(80) NOT NULL,
+          destinatario VARCHAR(254) NOT NULL,
+          origem_destinatario VARCHAR(20) NOT NULL
+            CHECK(origem_destinatario IN ('barbeiro','administrativo')),
+          status VARCHAR(20) NOT NULL DEFAULT 'processando'
+            CHECK(status IN ('processando','enviado','erro')),
+          resend_message_id TEXT,
+          erro VARCHAR(500),
+          criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          enviado_em TIMESTAMPTZ,
+          atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE(agendamento_id,evento,event_key,destinatario))""")
+        cur.execute("""CREATE INDEX IF NOT EXISTS idx_notificacoes_email_agendamento
+            ON notificacoes_email(agendamento_id,criado_em DESC)""")
         cur.execute("ALTER TABLE produtos ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
         cur.execute("ALTER TABLE vendas_produto ADD COLUMN IF NOT EXISTS custo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0")
         cur.execute("""CREATE TABLE IF NOT EXISTS despesas (
@@ -636,7 +667,10 @@ def google_oidc_callback(
         _clear_google_state_cookies(response, state)
         return response
     user = one("""SELECT u.id,u.email,u.nome,b.subscription_plan
-        FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id
+        FROM usuarios u
+        LEFT JOIN barbearias owned ON owned.usuario_id=u.id
+        LEFT JOIN barbeiros staff ON staff.usuario_id=u.id AND staff.ativo
+        JOIN barbearias b ON b.id=COALESCE(owned.id,staff.barbearia_id)
         WHERE (u.google_subject=%s OR (u.google_subject IS NULL AND u.email=%s))
           AND u.email_verificado""", (google_subject, email))
     if not user:
@@ -1095,7 +1129,7 @@ async def stripe_webhook(request: Request):
     return {"received": True}
 
 @app.post("/api/uploads/imagem", status_code=201)
-async def upload_image(arquivo: UploadFile = File(...), user=Depends(current_user)):
+async def upload_image(arquivo: UploadFile = File(...), user=Depends(panel_user)):
     image_type = image_types.get(arquivo.content_type or '')
     if not image_type:
         raise HTTPException(415, "Use uma imagem JPG, PNG ou WebP")
@@ -1181,8 +1215,15 @@ def register(data: Register):
 
 @app.post("/api/auth/login")
 def login(data: Login):
-    user=one("""SELECT u.*,b.plano_ativo,b.subscription_plan,b.subscription_status
-        FROM usuarios u JOIN barbearias b ON b.usuario_id=u.id WHERE u.email=%s""",(data.email.lower(),))
+    user=one("""SELECT u.*,b.plano_ativo,b.subscription_plan,b.subscription_status,
+        CASE WHEN owned.id IS NOT NULL THEN 'administrador' ELSE 'barbeiro' END perfil,
+        CASE WHEN owned.id IS NULL THEN staff.id ELSE NULL END barbeiro_id
+        FROM usuarios u
+        LEFT JOIN barbearias owned ON owned.usuario_id=u.id
+        LEFT JOIN barbeiros staff ON staff.usuario_id=u.id AND staff.ativo
+        JOIN barbearias b ON b.id=COALESCE(owned.id,staff.barbearia_id)
+        WHERE u.email=%s
+        ORDER BY (owned.id IS NOT NULL) DESC LIMIT 1""",(data.email.lower(),))
     if not user or not verify_password(data.senha,user["senha_hash"]): raise HTTPException(401,"E-mail ou senha inválidos")
     if not user.get("email_verificado"):
         raise HTTPException(403,"Confirme seu e-mail antes de entrar. Confira também a caixa de spam.")
@@ -1190,7 +1231,17 @@ def login(data: Login):
     return {"access_token":token(user["id"], user.get("auth_version", 1)),"token_type":"bearer","nome":user["nome"],
         "subscription_required":not bool(user["plano_ativo"]) and not partner_email,
         "subscription_plan":"profissional" if partner_email else user["subscription_plan"],
-        "subscription_status":"active" if partner_email else user["subscription_status"]}
+        "subscription_status":"active" if partner_email else user["subscription_status"],
+        "perfil":user["perfil"],"barbeiro_id":user.get("barbeiro_id")}
+
+
+@app.get("/api/auth/contexto")
+def access_context(user=Depends(panel_user)):
+    return {
+        "id": user["id"], "nome": user["nome"], "email": user["email"],
+        "perfil": user["perfil"], "barbearia_id": user["barbearia_id"],
+        "barbeiro_id": user.get("barbeiro_id"),
+    }
 
 
 @app.post("/api/auth/reenviar-confirmacao")
@@ -1235,7 +1286,7 @@ def password_reset_page(token: str = Query(min_length=20, max_length=200)):
 def reset_password(data: ResetPassword):
     token_hash = hashlib.sha256(data.token.encode()).hexdigest()
     user = one("""UPDATE usuarios SET senha_hash=%s,password_reset_token_hash=NULL,
-        password_reset_expires_at=NULL,auth_version=auth_version+1
+        password_reset_expires_at=NULL,email_verificado=TRUE,auth_version=auth_version+1
         WHERE password_reset_token_hash=%s
         AND password_reset_expires_at>NOW() RETURNING id,email""",
         (hash_password(data.senha), token_hash))
@@ -1379,6 +1430,38 @@ def update_business_hours(items: list[BusinessHour], user=Depends(current_user))
 @app.get("/api/barbearia/barbeiros")
 def barbers(user=Depends(current_user)): return all_rows("SELECT * FROM barbeiros WHERE barbearia_id=%s ORDER BY ativo DESC,nome",(user["barbearia_id"],))
 
+def _link_barber_access(cur, barber: dict) -> tuple[str, str, str, str]:
+    email = str(barber.get("notification_email") or "").strip().lower()
+    if not email:
+        raise HTTPException(422, "Cadastre o e-mail do profissional antes de enviar o convite")
+    cur.execute("SELECT id FROM usuarios WHERE email=%s FOR UPDATE", (email,))
+    invited_user = cur.fetchone()
+    if invited_user:
+        invited_user_id = invited_user["id"]
+        cur.execute("SELECT id FROM barbearias WHERE usuario_id=%s", (invited_user_id,))
+        if cur.fetchone():
+            raise HTTPException(409, "Este e-mail já pertence ao administrador de outra conta")
+        cur.execute("SELECT id FROM barbeiros WHERE usuario_id=%s AND id<>%s",
+            (invited_user_id,barber["id"]))
+        if cur.fetchone():
+            raise HTTPException(409, "Este e-mail já está vinculado a outro profissional")
+    else:
+        cur.execute("""INSERT INTO usuarios(email,senha_hash,nome,telefone,email_verificado)
+            VALUES(%s,%s,%s,%s,FALSE) RETURNING id""", (
+                email,hash_password(secrets.token_urlsafe(32)),barber["nome"],
+                barber.get("telefone") or "",
+            ))
+        invited_user_id = cur.fetchone()["id"]
+    raw_token, token_hash, expires_at = _new_password_reset()
+    cur.execute("""UPDATE usuarios SET password_reset_token_hash=%s,
+        password_reset_expires_at=%s WHERE id=%s""",
+        (token_hash,expires_at,invited_user_id))
+    cur.execute("UPDATE barbeiros SET usuario_id=%s WHERE id=%s",
+        (invited_user_id,barber["id"]))
+    cur.execute("SELECT nome FROM barbearias WHERE id=%s", (barber["barbearia_id"],))
+    shop = cur.fetchone()
+    return raw_token,email,barber["nome"],shop["nome"]
+
 def resolve_public_shop(slug:str):
     shop=one("""SELECT id,nome,slug,telefone,endereco,logo_url,plano_ativo,public_booking_enabled
         FROM barbearias WHERE slug=%s""",(slug.lower(),))
@@ -1411,23 +1494,53 @@ def public_services(slug:str):
     return all_rows("SELECT id,nome,descricao,duracao_minutos,preco,imagem_url FROM servicos WHERE barbearia_id=%s AND ativo ORDER BY nome",(shop["id"],))
 
 @app.post("/api/barbearia/barbeiros",status_code=201)
-def create_barber(data: Barber,user=Depends(current_user)):
+def create_barber(data: Barber,background_tasks:BackgroundTasks,user=Depends(current_user)):
     limit = {"essencial": 1, "profissional": 2}.get(user.get("subscription_plan"))
     if limit is not None:
         total = one("SELECT COUNT(*) total FROM barbeiros WHERE barbearia_id=%s AND ativo",
             (user["barbearia_id"],))["total"]
         if total >= limit:
             raise HTTPException(403, f"Seu plano permite até {limit} profissional(is). Altere o plano para ampliar a equipe.")
-    return one("""INSERT INTO barbeiros(barbearia_id,nome,telefone,comissao_percentual,foto_url)
-        VALUES(%s,%s,%s,%s,%s) RETURNING *""",
-        (user["barbearia_id"],data.nome,data.telefone,data.comissao_percentual,data.foto_url))
+    invitation = None
+    with db() as cur:
+        cur.execute("""INSERT INTO barbeiros(
+            barbearia_id,nome,cargo,notification_email,telefone,whatsapp,
+            comissao_percentual,foto_url,ativo)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""", (
+                user["barbearia_id"],data.nome,data.cargo,data.notification_email,
+                data.telefone,data.whatsapp or data.telefone,
+                data.comissao_percentual,data.foto_url,data.ativo,
+            ))
+        row=cur.fetchone()
+        if data.enviar_convite:
+            invitation=_link_barber_access(cur,row)
+    if invitation:
+        raw_token,email,name,shop_name=invitation
+        background_tasks.add_task(
+            send_barber_invitation,email,name,raw_token,shop_name,row["id"])
+        row["usuario_id_configurado"]=True
+    return row
 
 @app.put("/api/barbearia/barbeiros/{barber_id}")
-def update_barber(barber_id:int,data:Barber,user=Depends(current_user)):
-    row=one("""UPDATE barbeiros SET nome=%s,telefone=%s,comissao_percentual=%s,foto_url=%s
-      WHERE id=%s AND barbearia_id=%s AND ativo RETURNING *""",
-      (data.nome,data.telefone,data.comissao_percentual,data.foto_url,barber_id,user["barbearia_id"]))
+def update_barber(barber_id:int,data:Barber,background_tasks:BackgroundTasks,user=Depends(current_user)):
+    invitation=None
+    with db() as cur:
+        cur.execute("""UPDATE barbeiros SET nome=%s,cargo=%s,notification_email=%s,
+          telefone=%s,whatsapp=%s,comissao_percentual=%s,foto_url=%s,ativo=%s
+          WHERE id=%s AND barbearia_id=%s RETURNING *""", (
+            data.nome,data.cargo,data.notification_email,data.telefone,
+            data.whatsapp or data.telefone,data.comissao_percentual,data.foto_url,
+            data.ativo,barber_id,user["barbearia_id"],
+        ))
+        row=cur.fetchone()
+        if row and data.enviar_convite:
+            invitation=_link_barber_access(cur,row)
     if not row: raise HTTPException(404,"Barbeiro não encontrado")
+    if invitation:
+        raw_token,email,name,shop_name=invitation
+        background_tasks.add_task(
+            send_barber_invitation,email,name,raw_token,shop_name,row["id"])
+        row["usuario_id_configurado"]=True
     return row
 
 @app.delete("/api/barbearia/barbeiros/{barber_id}")
@@ -1435,6 +1548,33 @@ def delete_barber(barber_id:int,user=Depends(current_user)):
     row=one("UPDATE barbeiros SET ativo=false WHERE id=%s AND barbearia_id=%s RETURNING id",(barber_id,user["barbearia_id"]))
     if not row: raise HTTPException(404,"Barbeiro não encontrado")
     return {"ok":True}
+
+@app.get("/api/barbeiro/me")
+def barber_self_profile(user=Depends(panel_user)):
+    if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
+        raise HTTPException(403, "Perfil profissional não vinculado")
+    row=one("""SELECT id,nome,cargo,notification_email,telefone,whatsapp,
+        foto_url,ativo FROM barbeiros WHERE id=%s AND barbearia_id=%s""",
+        (user["barbeiro_id"],user["barbearia_id"]))
+    if not row:raise HTTPException(404,"Profissional não encontrado")
+    return row
+
+
+@app.put("/api/barbeiro/me")
+def update_barber_self(data:BarberSelfUpdate,user=Depends(panel_user)):
+    if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
+        raise HTTPException(403, "Perfil profissional não vinculado")
+    row=one("""UPDATE barbeiros SET nome=%s,cargo=%s,notification_email=%s,
+        telefone=%s,whatsapp=%s,foto_url=%s
+        WHERE id=%s AND barbearia_id=%s AND usuario_id=%s RETURNING
+        id,nome,cargo,notification_email,telefone,whatsapp,foto_url,ativo""", (
+            data.nome,data.cargo,data.notification_email,data.telefone,
+            data.whatsapp or data.telefone,data.foto_url,user["barbeiro_id"],
+            user["barbearia_id"],user["id"],
+        ))
+    if not row:raise HTTPException(404,"Profissional não encontrado")
+    return row
+
 
 @app.get("/api/servicos")
 def services(user=Depends(current_user)):
@@ -1468,13 +1608,14 @@ def insert_appointment(data, shop_id):
                 raise HTTPException(404,"Serviço não encontrado")
             cur.execute("""INSERT INTO agendamentos(
               barbearia_id,barbeiro_id,servico_id,cliente_nome,cliente_telefone,cliente_email,
-              data_hora,duracao_minutos,servico,preco,whatsapp_autorizado)
-              SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+              data_hora,duracao_minutos,servico,preco,observacoes,whatsapp_autorizado)
+              SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
               WHERE EXISTS(SELECT 1 FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo)
               RETURNING *""",
               (shop_id,data.barbeiro_id,service["id"],data.cliente_nome,data.cliente_telefone,
                data.cliente_email,data.data_hora,service["duracao_minutos"],service["nome"],
-               service["preco"],data.whatsapp_autorizado,data.barbeiro_id,shop_id))
+               service["preco"],data.observacoes,data.whatsapp_autorizado,
+               data.barbeiro_id,shop_id))
             row=cur.fetchone()
             if row and data.cliente_telefone:
                 cur.execute("""INSERT INTO clientes(
@@ -1525,10 +1666,14 @@ def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=D
     row=insert_appointment(data,user["barbearia_id"])
     if not row: raise HTTPException(404,"Barbeiro não encontrado")
     dispatch_whatsapp(background_tasks)
+    if data.cliente_email:
+        background_tasks.add_task(send_appointment_confirmation,row["id"])
+    background_tasks.add_task(send_owner_notification,row["id"])
     return row
 
 @app.put("/api/agendamentos/{appointment_id}")
-def update_appointment(appointment_id:int,data:AppointmentUpdate,user=Depends(current_user)):
+def update_appointment(appointment_id:int,data:AppointmentUpdate,
+    background_tasks:BackgroundTasks,user=Depends(current_user)):
     if data.status in ('concluido','realizado'):
         try:
             return complete_appointment(appointment_id,user["barbearia_id"])
@@ -1536,7 +1681,15 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,user=Depends(cu
             raise HTTPException(404,"Agendamento não encontrado")
         except InvalidAppointmentStatusError:
             raise HTTPException(409,"Agendamento cancelado não pode ser concluído")
+    before=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",
+        (appointment_id,user["barbearia_id"]))
+    if not before:raise HTTPException(404,"Agendamento não encontrado")
     values=data.model_dump(exclude_none=True)
+    if data.barbeiro_id is not None:
+        valid_barber=one("""SELECT id FROM barbeiros WHERE id=%s
+            AND barbearia_id=%s AND ativo""",
+            (data.barbeiro_id,user["barbearia_id"]))
+        if not valid_barber:raise HTTPException(404,"Profissional não encontrado")
     if data.status and data.status not in ('agendado','confirmado','em_andamento','cancelado','nao_compareceu'): raise HTTPException(422,"Status inválido")
     if not values:
         current=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",
@@ -1547,6 +1700,17 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,user=Depends(cu
           WHERE id=%s AND barbearia_id=%s RETURNING *""",
           (*values.values(),appointment_id,user["barbearia_id"]))
     if not current: raise HTTPException(404,"Agendamento não encontrado")
+    if values.get("status") == "cancelado" and before["status"] != "cancelado":
+        background_tasks.add_task(
+            send_barber_appointment_notification,appointment_id,"cancelado",
+            f"cancelado-{current['atualizado_em'].isoformat()}")
+    elif (
+        ("data_hora" in values and values["data_hora"] != before["data_hora"])
+        or ("barbeiro_id" in values and values["barbeiro_id"] != before["barbeiro_id"])
+    ):
+        background_tasks.add_task(
+            send_barber_appointment_notification,appointment_id,"reagendado",
+            f"reagendado-{current['atualizado_em'].isoformat()}")
     return current
 
 @app.patch("/api/agendamentos/{appointment_id}/concluir")
@@ -1563,9 +1727,14 @@ def conclude_appointment(appointment_id:int,user=Depends(current_user)):
     }
 
 @app.delete("/api/agendamentos/{appointment_id}")
-def cancel(appointment_id:int,user=Depends(current_user)):
-    row=one("UPDATE agendamentos SET status='cancelado' WHERE id=%s AND barbearia_id=%s RETURNING id",(appointment_id,user["barbearia_id"]))
+def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(current_user)):
+    row=one("""UPDATE agendamentos SET status='cancelado',atualizado_em=NOW()
+        WHERE id=%s AND barbearia_id=%s AND status<>'cancelado'
+        RETURNING id,atualizado_em""",(appointment_id,user["barbearia_id"]))
     if not row: raise HTTPException(404,"Agendamento não encontrado")
+    background_tasks.add_task(
+        send_barber_appointment_notification,appointment_id,"cancelado",
+        f"cancelado-{row['atualizado_em'].isoformat()}")
     return {"ok":True}
 
 @app.delete("/api/agendamentos/{appointment_id}/remover")
