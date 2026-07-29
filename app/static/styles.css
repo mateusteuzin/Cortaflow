@@ -509,15 +509,23 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 .report-metrics .metric-card { padding: 16px 18px; }
 .report-metrics .metric-card strong { margin: 10px 0 4px; font-size: clamp(24px, 2.2vw, 30px); }
 .report-chart-panel { margin-bottom: 14px; }
+.report-chart-panel .panel-head { align-items: flex-start; }
+.report-chart-panel .panel-head p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
 .chart-legend { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
 .chart-legend i { width: 19px; height: 3px; border-radius: 2px; background: var(--gold); }
-.attendance-chart { width: 100%; min-height: 270px; margin-top: 19px; overflow-x: auto; }
+.chart-insights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 20px; }
+.chart-insights span { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--canvas); }
+.chart-insights small, .chart-insights b { display: block; }
+.chart-insights small { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .07em; }
+.chart-insights b { margin-top: 5px; overflow: hidden; color: var(--ink); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.attendance-chart { position: relative; width: 100%; min-height: 270px; margin-top: 12px; overflow-x: auto; }
 .attendance-chart svg { display: block; width: 100%; min-width: 560px; height: auto; overflow: visible; }
 .chart-grid line { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 5; }
 .chart-grid text { fill: var(--muted); font: 600 11px var(--sans); }
-.chart-bar { fill: rgba(201,149,54,.4); transition: fill .15s, opacity .15s; }
-.chart-bar:hover, .chart-bar.is-best { fill: var(--gold); }
+.chart-bar { fill: rgba(201,149,54,.42); outline: none; transition: fill .15s, opacity .15s, filter .15s; }
+.chart-bar:hover, .chart-bar:focus, .chart-bar.is-best { fill: var(--gold); filter: drop-shadow(0 4px 5px rgba(157,108,26,.2)); }
 .chart-value { fill: var(--ink); font: 700 11px var(--sans); }
+.chart-empty { position: absolute; inset: 38% 20px auto; z-index: 1; margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
 .report-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; min-height: 52px; padding: 10px 0; border-bottom: 1px solid #e9e6de; font-size: 13px; }
 .report-row:last-child { border-bottom: 0; }
 .report-row span { color: var(--muted); font-size: 12px; }
@@ -811,6 +819,8 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
   .report-row { grid-template-columns: minmax(0,1fr) auto; }
   .report-filters { display: grid; grid-template-columns: 1fr 1fr; }
   .report-filters label:first-child { grid-column: 1 / -1; }
+  .chart-insights { grid-template-columns: 1fr 1fr; }
+  .chart-insights span:last-child { grid-column: 1 / -1; }
   .attendance-chart { min-height: 230px; }
   .report-row span:last-child { grid-column: 2; }
   .subscription-summary { grid-template-columns:1fr; gap:20px; padding:21px; }.subscription-renewal { padding:18px 0 0; border-top:1px solid rgba(255,255,255,.1); border-left:0; }.subscription-main h3 { font-size:26px; }.subscription-plans article { padding:22px; }

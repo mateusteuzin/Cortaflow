@@ -969,11 +969,21 @@ function setupReportFilters() {
 
 function completeReportPoints(report, month, year) {
   const values = new Map(report.pontos.map((item) => [String(item.periodo).slice(0, 10), Number(item.atendimentos)]));
-  if (report.periodo === 'anual') return reportMonths.map((label, index) => ({ label: label.slice(0, 3), value: values.get(`${year}-${String(index + 1).padStart(2, '0')}-01`) || 0 }));
+  if (report.periodo === 'anual') return reportMonths.map((label, index) => ({
+    label: label.slice(0, 3),
+    fullLabel: label,
+    value: values.get(`${year}-${String(index + 1).padStart(2, '0')}-01`) || 0
+  }));
   const days = new Date(year, month, 0).getDate();
   return Array.from({ length: days }, (_, index) => {
     const day = index + 1;
-    return { label: String(day), value: values.get(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`) || 0 };
+    const date = new Date(year, month - 1, day, 12);
+    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+    return {
+      label: String(day),
+      fullLabel: `${String(day).padStart(2, '0')} de ${reportMonths[month - 1]} · ${weekday}`,
+      value: values.get(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`) || 0
+    };
   });
 }
 
@@ -1003,6 +1013,9 @@ async function loadReports() {
   $('#report-cuts').textContent = report.total.atendimentos;
   $('#report-ticket').textContent = money(report.total.ticket_medio);
   $('#report-chart-title').textContent = period === 'anual' ? 'Atendimentos por mês' : 'Atendimentos por dia';
+  $('#report-chart-description').textContent = period === 'anual'
+    ? `Visão consolidada de ${year}, mês a mês.`
+    : `Movimento diário de ${reportMonths[month - 1]} de ${year}. Passe sobre uma coluna para ver os detalhes.`;
   if (report.melhor_periodo) {
     const date = String(report.melhor_periodo.periodo).slice(0, 10);
     $('#report-best').textContent = period === 'anual' ? reportMonths[Number(date.slice(5, 7)) - 1] : `${Number(date.slice(8, 10))}/${date.slice(5, 7)}`;
@@ -1011,14 +1024,21 @@ async function loadReports() {
     $('#report-best').textContent = '—';
     $('#report-best-detail').textContent = 'sem atendimentos';
   }
-  renderAttendanceChart(completeReportPoints(report, month, year));
+  const chartPoints = completeReportPoints(report, month, year);
+  const chartTotal = chartPoints.reduce((sum, point) => sum + point.value, 0);
+  const activePeriods = chartPoints.filter((point) => point.value > 0).length;
+  const peak = chartPoints.reduce((best, point) => point.value > best.value ? point : best, { value: 0, fullLabel: '—' });
+  $('#chart-active-periods').textContent = `${activePeriods} de ${chartPoints.length}`;
+  $('#chart-average').textContent = (chartTotal / Math.max(chartPoints.length, 1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  $('#chart-peak').textContent = peak.value ? `${peak.value} · ${peak.fullLabel}` : '—';
+  renderAttendanceChart(chartPoints);
   $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
   $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
 }
 
 // Bar chart: one column per period makes daily volume easier to compare than a smoothed line.
 function renderAttendanceChart(points) {
-  const width = 760, height = 270, left = 42, right = 18, top = 22, bottom = 42;
+  const width = 760, height = 286, left = 46, right = 18, top = 30, bottom = 46;
   const chartWidth = width - left - right, chartHeight = height - top - bottom;
   const maximum = Math.max(1, ...points.map((point) => point.value));
   const scaleMax = Math.max(4, Math.ceil(maximum / 4) * 4);
@@ -1042,9 +1062,11 @@ function renderAttendanceChart(points) {
     const best = point.value === bestValue && bestValue > 0 ? ' is-best' : '';
     const valueLabel = point.value > 0 && (point.value === bestValue || points.length <= 12)
       ? `<text class="chart-value" x="${x(index)}" y="${barY - 7}" text-anchor="middle">${point.value}</text>` : '';
-    return `<rect class="chart-bar${best}" x="${barX.toFixed(1)}" y="${barY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="2"><title>${escapeHTML(point.label)}: ${point.value} atendimento${point.value === 1 ? '' : 's'}</title></rect>${valueLabel}`;
+    const accessibleLabel = `${point.fullLabel || point.label}: ${point.value} atendimento${point.value === 1 ? '' : 's'}`;
+    return `<rect class="chart-bar${best}" tabindex="0" aria-label="${escapeHTML(accessibleLabel)}" x="${barX.toFixed(1)}" y="${barY.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="5"><title>${escapeHTML(accessibleLabel)}</title></rect>${valueLabel}`;
   }).join('');
-  $('#attendance-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><g class="chart-bars">${bars}</g></svg>`;
+  const empty = bestValue === 0 ? '<p class="chart-empty">Ainda não há atendimentos concluídos neste período.</p>' : '';
+  $('#attendance-chart').innerHTML = `${empty}<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><g class="chart-bars">${bars}</g></svg>`;
 }
 
 const modal = $('#modal');

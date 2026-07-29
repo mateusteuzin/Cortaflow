@@ -2,6 +2,7 @@ import hashlib, json, logging, os, secrets, time as time_module
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from urllib.parse import quote, urlencode, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest, urlopen
@@ -46,6 +47,16 @@ origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "http://loc
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 hits = defaultdict(deque)
 auth_hits = defaultdict(deque)
+
+
+def local_now() -> datetime:
+    """Horário local usado pela agenda pública, sem depender do fuso do servidor."""
+    timezone_name = os.getenv("APP_TIMEZONE", "America/Sao_Paulo").strip()
+    try:
+        local_timezone = ZoneInfo(timezone_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        local_timezone = timezone(timedelta(hours=-3))
+    return datetime.now(local_timezone).replace(tzinfo=None)
 AUTH_RATE_LIMITS = {
     "/api/auth/register": (5, 600),
     "/api/auth/login": (10, 300),
@@ -1563,10 +1574,11 @@ def available(shop_id:int, day:date, barber_id:int|None, duration:int=30):
     busy=all_rows(f"""SELECT data_hora,duracao_minutos FROM agendamentos
       WHERE {' AND '.join(clauses)}""",tuple(params))
     cursor=datetime.combine(day,hours["hora_inicio"]); end=datetime.combine(day,hours["hora_fim"]); slots=[]
+    now = local_now()
     while cursor+timedelta(minutes=duration)<=end:
         candidate_end=cursor+timedelta(minutes=duration)
         free=all(candidate_end<=item["data_hora"] or cursor>=item["data_hora"]+timedelta(minutes=item["duracao_minutos"]) for item in busy)
-        if free and cursor>datetime.now(): slots.append(cursor.strftime('%H:%M'))
+        if free and cursor>now: slots.append(cursor.strftime('%H:%M'))
         cursor+=timedelta(minutes=30)
     return slots
 

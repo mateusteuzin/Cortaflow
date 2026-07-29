@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -59,6 +59,22 @@ class SlugTests(unittest.TestCase):
 
 
 class PublicBookingIsolationTests(unittest.TestCase):
+    @patch("app.main.local_now", return_value=datetime(2026, 7, 29, 10, 44))
+    @patch("app.main.all_rows", return_value=[])
+    @patch("app.main.one", return_value={"hora_inicio": time(9), "hora_fim": time(18)})
+    def test_today_slots_use_brazil_time_instead_of_server_time(self, _hours, _busy, _now):
+        slots = main.available(7, datetime(2026, 7, 29).date(), 9, 30)
+        self.assertEqual(slots[0], "11:00")
+        self.assertEqual(slots[-1], "17:30")
+
+    @patch("app.main.local_now", return_value=datetime(2026, 7, 29, 10, 44))
+    @patch("app.main.all_rows", return_value=[])
+    @patch("app.main.one", return_value={"hora_inicio": time(9), "hora_fim": time(18)})
+    def test_service_duration_is_respected_at_closing_time(self, _hours, _busy, _now):
+        slots = main.available(7, datetime(2026, 7, 29).date(), 9, 60)
+        self.assertEqual(slots[0], "11:00")
+        self.assertEqual(slots[-1], "17:00")
+
     @patch("app.main.one", return_value=ACTIVE_SHOP)
     def test_valid_slug_returns_only_public_fields(self, _one):
         result = main.public_shop("barbearia-gold")
@@ -148,15 +164,18 @@ class PublicBookingIsolationTests(unittest.TestCase):
         response = main.booking_page("barbearia-gold")
         self.assertTrue(Path(response.path).name == "cliente.html")
 
-    def test_whatsapp_support_button_is_available_on_every_public_surface(self):
+    def test_whatsapp_support_button_is_not_shown_to_booking_customers(self):
         static = Path(main.__file__).parent / "static"
         expected = "https://wa.me/5585998265953"
-        for page in ("index.html", "landing.html", "cliente.html"):
+        for page in ("index.html", "landing.html"):
             with self.subTest(page=page):
                 content = (static / page).read_text(encoding="utf-8")
                 self.assertIn(expected, content)
                 self.assertIn('aria-label="Falar com o suporte do CortaFlow pelo WhatsApp"', content)
                 self.assertIn("/support.css?v=", content)
+        booking_content = (static / "cliente.html").read_text(encoding="utf-8")
+        self.assertNotIn(expected, booking_content)
+        self.assertNotIn("/support.css?v=", booking_content)
 
     def test_account_and_subscription_actions_are_clearly_separated(self):
         content = (Path(main.__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
