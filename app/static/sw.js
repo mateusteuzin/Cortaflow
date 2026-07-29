@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cortaflow-shell-20260729-4';
+const CACHE_NAME = 'cortaflow-shell-20260729-5';
 const APP_SHELL = [
   '/painel',
   '/styles.css',
@@ -43,8 +43,8 @@ self.addEventListener('push', (event) => {
   }
   event.waitUntil(self.registration.showNotification(data.title || 'CortaFlow', {
     body: data.body || 'Sua agenda foi atualizada.',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/favicon-32.png',
+    icon: '/assets/favicon-cortaflow-transparent.png',
+    badge: '/assets/favicon-cortaflow-transparent.png',
     tag: data.tag || 'cortaflow-agenda',
     data: { url: data.url || '/painel#agenda' },
     vibrate: [120, 60, 120]

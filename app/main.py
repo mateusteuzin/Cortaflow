@@ -1832,8 +1832,8 @@ def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(curr
 def remove_cancelled_appointment(appointment_id:int,user=Depends(current_user)):
     with db() as cur:
         cur.execute("""SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s
-            AND status IN ('cancelado','nao_compareceu')""",(appointment_id,user["barbearia_id"]))
-        if not cur.fetchone(): raise HTTPException(409,"Somente agendamentos cancelados ou com falta podem ser apagados")
+            AND status IN ('cancelado','nao_compareceu','concluido','realizado')""",(appointment_id,user["barbearia_id"]))
+        if not cur.fetchone(): raise HTTPException(409,"Somente agendamentos encerrados podem ser apagados")
         cur.execute("DELETE FROM pagamentos WHERE agendamento_id=%s",(appointment_id,))
         cur.execute("DELETE FROM vendas_produto WHERE agendamento_id=%s",(appointment_id,))
         cur.execute("DELETE FROM agendamentos WHERE id=%s",(appointment_id,))
@@ -2059,6 +2059,15 @@ def customer_relationships(user=Depends(current_user)):
       WHERE c.barbearia_id=%s
       ORDER BY next_booking.data_hora NULLS LAST,c.ultima_visita DESC NULLS LAST,c.nome""",
       (user["barbearia_id"],))
+
+@app.delete("/api/clientes/{client_id}")
+def remove_customer(client_id:int,user=Depends(current_user)):
+    row=one("""DELETE FROM clientes
+      WHERE id=%s AND barbearia_id=%s
+      RETURNING id,nome""",(client_id,user["barbearia_id"]))
+    if not row: raise HTTPException(404,"Cliente não encontrado")
+    return {"ok":True,"cliente":row}
+
 @app.get("/api/fidelidade/{telefone}")
 def loyalty(telefone:str,barbearia_id:int=1): return one("SELECT *,total_cortes%%10 saldo,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s AND cliente_telefone=%s",(barbearia_id,telefone)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
 @app.post("/api/fidelidade/registrar-corte")

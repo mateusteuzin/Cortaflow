@@ -37,6 +37,14 @@ class AgendaPwaUiTests(unittest.TestCase):
         self.assertIn("self.addEventListener('push'", worker)
         self.assertIn("self.addEventListener('notificationclick'", worker)
 
+    def test_clients_and_completed_appointments_have_management_actions(self):
+        script = (STATIC / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function removeClient(id)", script)
+        self.assertIn("data-action=\"remove-client\"", script)
+        self.assertIn("['concluido', 'realizado'].includes(status)", script)
+        self.assertIn("'edit-appointment', id, '✎', 'Editar'", script)
+        self.assertIn("'remove-appointment', id, '⌫', 'Apagar'", script)
+
 
 if __name__ == "__main__":
     unittest.main()

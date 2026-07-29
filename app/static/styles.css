@@ -600,9 +600,11 @@ html[data-theme="dark"] .theme-icon-sun { opacity: 1; transform: rotate(0) scale
 .client-next > span { color: var(--muted); font-size: 10px; }
 .whatsapp-status { width: max-content; margin-top: 5px; color: #50795a; font-size: 8px; font-style: normal; font-weight: 800; text-transform: uppercase; }
 .whatsapp-status.status-falhou { color: #ad493d; }
-.client-card footer { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+.client-card footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
 .client-card footer a, .client-card footer button { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: transparent; color: var(--ink); font-size: 9px; font-weight: 800; text-decoration: none; }
 .client-card footer a { display: inline-flex; align-items: center; gap: 7px; border-color: #8dbb98; color: #2e6841; }
+.client-card footer .client-delete { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); color: var(--danger); }
+.client-card footer .client-delete:hover { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, transparent); }
 .client-card footer button:hover, .client-card footer a:hover { border-color: var(--gold); background: var(--gold-wash); }
 .client-empty { display: grid; min-height: 260px; grid-column: 1 / -1; place-items: center; align-content: center; padding: 30px; text-align: center; }
 .client-empty b { font: 700 18px/1.2 var(--sans); color: var(--ink); }

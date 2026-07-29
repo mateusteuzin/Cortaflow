@@ -317,6 +317,7 @@ function bindNavigation() {
     if (action === 'no-show') markNoShow(id);
     if (action === 'cancel') cancelAppointment(id);
     if (action === 'remove-appointment') removeAppointment(id);
+    if (action === 'remove-client') removeClient(id);
     if (action === 'edit-barber') openBarber(id);
     if (action === 'remove-barber') removeBarber(id);
     if (action === 'edit-service') openService(id);
@@ -782,7 +783,10 @@ function appointmentActions(appointment, compact = false) {
   if (status === 'cancelado' || status === 'nao_compareceu') {
     return appointmentActionButton('remove-appointment', id, '⌫', 'Apagar', 'danger');
   }
-  if (['concluido', 'realizado'].includes(status)) return '<span class="appointment-completed">✓ Concluído</span>';
+  if (['concluido', 'realizado'].includes(status)) {
+    return appointmentActionButton('edit-appointment', id, '✎', 'Editar')
+      + appointmentActionButton('remove-appointment', id, '⌫', 'Apagar', 'danger');
+  }
   const edit = appointmentActionButton('edit-appointment', id, '↻', 'Reagendar');
   const noShow = appointmentActionButton('no-show', id, '!', 'Não veio', 'warning');
   const cancel = appointmentActionButton('cancel', id, '×', 'Cancelar', 'danger');
@@ -965,7 +969,7 @@ function renderClients(query = '') {
         <span><small>Serviço habitual</small><b>${escapeHTML(client.ultimo_servico || client.proximo_servico || 'A descobrir')}</b></span>
       </div>
       ${next ? `<div class="client-next"><small>PRÓXIMO HORÁRIO</small><b>${next.toLocaleDateString('pt-BR')} às ${next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b><span>${escapeHTML(client.proximo_servico || '')} · ${escapeHTML(client.barbeiro_nome || 'Equipe')}</span>${whatsappStatus ? `<em class="whatsapp-status status-${escapeHTML(String(client.whatsapp_status || '').toLowerCase())}">${escapeHTML(whatsappStatus)}</em>` : ''}</div>` : ''}
-      <footer><a class="client-whatsapp" href="https://wa.me/${destination}?text=${message}" target="_blank" rel="noopener">Chamar no WhatsApp <span>↗</span></a><button type="button" data-action="add-appointment" data-client-id="${client.id}">Novo horário</button></footer>
+      <footer><a class="client-whatsapp" href="https://wa.me/${destination}?text=${message}" target="_blank" rel="noopener">Chamar no WhatsApp <span>↗</span></a><button type="button" data-action="add-appointment" data-client-id="${client.id}">Novo horário</button><button class="client-delete" type="button" data-action="remove-client" data-id="${client.id}">Apagar</button></footer>
     </article>`;
   }).join('') || `<div class="client-empty"><b>${normalized ? 'Nenhum cliente encontrado' : 'Sua base de clientes aparecerá aqui'}</b><span>${normalized ? 'Tente buscar por outro nome ou telefone.' : 'Os clientes entram automaticamente depois do primeiro agendamento.'}</span></div>`;
 }
@@ -983,6 +987,21 @@ async function loadClients() {
   const search = $('#client-search');
   search.oninput = () => renderClients(search.value);
   renderClients(search.value);
+}
+
+async function removeClient(id) {
+  const client = customerClients.find((item) => Number(item.id) === Number(id));
+  const name = client?.nome || 'este cliente';
+  if (!await confirmAction({
+    title: 'Apagar cliente?',
+    message: `${name} será removido da lista de clientes. Os agendamentos já registrados continuarão na agenda.`,
+    confirmLabel: 'Apagar cliente',
+    cancelLabel: 'Voltar',
+    tone: 'danger'
+  })) return;
+  await api('/clientes/' + id, { method: 'DELETE' });
+  toast('Cliente apagado');
+  await loadClients();
 }
 
 function fields(html, title, handler) {
@@ -1177,7 +1196,12 @@ async function cancelAppointment(id) {
 }
 
 async function removeAppointment(id) {
-  if (!await confirmAction({ title: 'Apagar agendamento?', message: 'O agendamento será removido definitivamente da agenda.', confirmLabel: 'Apagar', cancelLabel: 'Voltar' })) return;
+  const appointment = appointmentCache.get(Number(id));
+  const completed = ['concluido', 'realizado'].includes(appointment?.status);
+  const message = completed
+    ? 'O atendimento será removido definitivamente da agenda e deixará de contar nos relatórios financeiros. O histórico de visitas do cliente não será alterado.'
+    : 'O agendamento será removido definitivamente da agenda.';
+  if (!await confirmAction({ title: completed ? 'Apagar atendimento concluído?' : 'Apagar agendamento?', message, confirmLabel: 'Apagar', cancelLabel: 'Voltar' })) return;
   await api('/agendamentos/' + id + '/remover', { method: 'DELETE' });
   toast('Agendamento apagado');
   await loadDashboard();
