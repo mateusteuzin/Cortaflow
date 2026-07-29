@@ -457,9 +457,9 @@ def _owner_whatsapp_url(item: dict) -> str | None:
     except ValueError:
         return None
     message = (
-        f"OlÃ¡, {item.get('cliente_nome') or 'cliente'}! "
-        f"Aqui Ã© da {item.get('barbearia_nome') or 'barbearia'}. "
-        f"Recebemos seu agendamento de {item.get('servico') or 'serviÃ§o'}."
+        f"Olá, {item.get('cliente_nome') or 'cliente'}! "
+        f"Aqui é da {item.get('barbearia_nome') or 'barbearia'}. "
+        f"Recebemos seu agendamento de {item.get('servico') or 'serviço'}."
     )
     return f"https://wa.me/{phone}?text={quote(message)}"
 
@@ -474,22 +474,22 @@ def _owner_email_html(item: dict) -> str:
             'style="display:inline-block;background:#1f9d55;color:#fff;text-decoration:none;'
             'font-weight:bold;padding:14px 20px;margin:22px 0 4px">Abrir conversa no WhatsApp</a>'
         )
-    client_email = escape(item.get("cliente_email") or "NÃ£o informado")
-    return f"""<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
+    client_email = escape(item.get("cliente_email") or "Não informado")
+    return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
     <div style="max-width:620px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
       {_brand_header('NOVO AGENDAMENTO', item['barbearia_nome'], item.get('barbearia_logo_url'))}
       <div style="padding:30px"><p>Uma nova reserva foi registrada pelo site.</p>
       <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
         <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
-        WhatsApp: {escape(item['cliente_telefone'] or 'NÃ£o informado')}<br>
+        WhatsApp: {escape(item['cliente_telefone'] or 'Não informado')}<br>
         E-mail: <a href="mailto:{client_email}" style="color:#9a6b13">{client_email}</a><br>
-        ServiÃ§o: {escape(item['servico'])}<br>
+        Serviço: {escape(item['servico'])}<br>
         Profissional: {escape(item['barbeiro_nome'])}<br>
-        Data: {escape(day)} Ã s {hour}<br>
+        Data: {escape(day)} às {hour}<br>
         Valor: R$ {item['preco']:.2f}<br>
         Reserva: #{item['id']:04d}
       </div>{whatsapp_button}
-      <p style="font-size:12px;color:#777">VocÃª recebeu este aviso porque as notificaÃ§Ãµes de novos agendamentos estÃ£o ativadas no CortaFlow.</p>
+      <p style="font-size:12px;color:#777">Você recebeu este aviso porque as notificações de novos agendamentos estão ativadas no CortaFlow.</p>
       </div></div></body></html>"""
 
 
@@ -497,7 +497,7 @@ def send_appointment_confirmation(appointment_id: int) -> bool:
     api_key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("EMAIL_FROM", "onboarding@resend.dev").strip()
     if not api_key:
-        one("UPDATE agendamentos SET email_erro=%s WHERE id=%s RETURNING id", ("Resend nÃ£o configurado", appointment_id))
+        one("UPDATE agendamentos SET email_erro=%s WHERE id=%s RETURNING id", ("Resend não configurado", appointment_id))
         return False
     item = one("""SELECT a.id,a.cliente_nome,a.cliente_email,a.data_hora,a.servico,a.preco,
         b.nome barbeiro_nome,s.nome barbearia_nome,s.logo_url barbearia_logo_url FROM agendamentos a
@@ -526,7 +526,7 @@ def send_appointment_confirmation(appointment_id: int) -> bool:
             except (ValueError, AttributeError):
                 pass
         one("UPDATE agendamentos SET email_erro=%s WHERE id=%s RETURNING id", (detail[:500], appointment_id))
-        logger.warning("Falha ao enviar confirmaÃ§Ã£o do agendamento %s", appointment_id)
+        logger.warning("Falha ao enviar confirmação do agendamento %s", appointment_id)
         return False
 
 
