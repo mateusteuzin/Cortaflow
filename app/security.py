@@ -160,7 +160,7 @@ def _authenticated_user(auth: HTTPAuthorizationCredentials | None):
         raise HTTPException(403, "Confirme seu e-mail para acessar o painel")
     partner_emails = {
         value.strip().lower()
-        for value in os.getenv("PARTNER_PRO_EMAILS", "ma2664223@gmail.com").split(",")
+        for value in os.getenv("PARTNER_PRO_EMAILS", "eepemanuel@gmail.com").split(",")
         if value.strip()
     }
     if str(user.get("email") or "").strip().lower() in partner_emails:

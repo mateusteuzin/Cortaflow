@@ -1227,7 +1227,7 @@ def login(data: Login):
     if not user or not verify_password(data.senha,user["senha_hash"]): raise HTTPException(401,"E-mail ou senha inválidos")
     if not user.get("email_verificado"):
         raise HTTPException(403,"Confirme seu e-mail antes de entrar. Confira também a caixa de spam.")
-    partner_email = user["email"].strip().lower() == "ma2664223@gmail.com"
+    partner_email = user["email"].strip().lower() == "eepemanuel@gmail.com"
     return {"access_token":token(user["id"], user.get("auth_version", 1)),"token_type":"bearer","nome":user["nome"],
         "subscription_required":not bool(user["plano_ativo"]) and not partner_email,
         "subscription_plan":"profissional" if partner_email else user["subscription_plan"],

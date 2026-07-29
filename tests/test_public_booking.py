@@ -164,18 +164,15 @@ class PublicBookingIsolationTests(unittest.TestCase):
         response = main.booking_page("barbearia-gold")
         self.assertTrue(Path(response.path).name == "cliente.html")
 
-    def test_whatsapp_support_button_is_not_shown_to_booking_customers(self):
+    def test_whatsapp_support_button_is_removed_from_all_pages(self):
         static = Path(main.__file__).parent / "static"
         expected = "https://wa.me/5585998265953"
-        for page in ("index.html", "landing.html"):
+        for page in ("index.html", "landing.html", "cliente.html"):
             with self.subTest(page=page):
                 content = (static / page).read_text(encoding="utf-8")
-                self.assertIn(expected, content)
-                self.assertIn('aria-label="Falar com o suporte do CortaFlow pelo WhatsApp"', content)
-                self.assertIn("/support.css?v=", content)
-        booking_content = (static / "cliente.html").read_text(encoding="utf-8")
-        self.assertNotIn(expected, booking_content)
-        self.assertNotIn("/support.css?v=", booking_content)
+                self.assertNotIn(expected, content)
+                self.assertNotIn('aria-label="Falar com o suporte do CortaFlow pelo WhatsApp"', content)
+                self.assertNotIn("/support.css?v=", content)
 
     def test_account_and_subscription_actions_are_clearly_separated(self):
         content = (Path(main.__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
