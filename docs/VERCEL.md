@@ -50,6 +50,9 @@ WHATSAPP_TEMPLATE_NAME=confirmacao_agendamento
 WHATSAPP_TEMPLATE_LANGUAGE=pt_BR
 WHATSAPP_WEBHOOK_VERIFY_TOKEN=UM_SEGREDO_DE_VERIFICACAO
 WHATSAPP_APP_SECRET=SEGREDO_DO_APLICATIVO_META
+VAPID_PUBLIC_KEY=CHAVE_PUBLICA_GERADA
+VAPID_PRIVATE_KEY=CHAVE_PRIVADA_GERADA
+VAPID_CLAIMS_EMAIL=seu-email@dominio.com
 ```
 
 As variáveis `WHATSAPP_*` são opcionais até a integração da Meta estar pronta. O template
@@ -101,6 +104,27 @@ Authorization: Bearer SEU_CRON_SECRET
 Configure um agendador compatível com sua conta Vercel para chamar o endpoint periodicamente.
 Não exponha `CRON_SECRET`. A reserva continua salva se Meta ou Resend estiverem indisponíveis.
 
+## 7. Notificações do aplicativo PWA
+
+1. No Supabase, abra **SQL Editor**, cole o conteúdo de
+   `sql/014_web_push.sql` e clique em **Run**.
+2. No PowerShell, dentro da pasta do projeto, gere um único par de chaves:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\generate_vapid_keys.py
+```
+
+3. Na Vercel, abra **Settings > Environment Variables** e cadastre os três
+   valores exibidos: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e
+   `VAPID_CLAIMS_EMAIL`. Marque pelo menos o ambiente **Production**.
+4. Em **Deployments**, abra o menu do último deploy e escolha **Redeploy**.
+5. No celular, abra o CortaFlow instalado, entre em **Minha conta** e toque em
+   **Ativar notificações**. Aceite a permissão solicitada pelo aparelho.
+
+Cada aparelho precisa ativar a permissão uma vez. No iPhone, o CortaFlow deve
+estar adicionado à Tela de Início. A chave privada existe somente na Vercel;
+nunca a coloque no GitHub ou no JavaScript.
+
 ## Checklist
 
 - [ ] `.env` não foi enviado ao GitHub
@@ -112,3 +136,4 @@ Não exponha `CRON_SECRET`. A reserva continua salva se Meta ou Resend estiverem
 - [ ] Domínio está verificado no Resend
 - [ ] Upload de logo, barbeiro e serviço foi testado
 - [ ] Cadastro, login e agendamento foram testados no celular
+- [ ] Migração `014_web_push.sql` e variáveis VAPID foram configuradas
