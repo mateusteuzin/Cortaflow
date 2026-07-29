@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260729-barber-email-pwa">
+  <link rel="stylesheet" href="/styles.css?v=20260729-pwa-install">
 </head>
 <body>
   <section id="login" class="auth-screen">
@@ -311,6 +311,11 @@
           </div>
           <button class="button button-outline" data-go="assinatura" type="button">Renovar ou alterar plano <span>→</span></button>
         </section>
+        <section class="pwa-account-card" aria-labelledby="pwa-account-title">
+          <span class="pwa-account-icon" aria-hidden="true"><img src="/icons/icon-192.png" width="58" height="58" alt=""></span>
+          <div><span class="eyebrow">APLICATIVO CORTAFLOW</span><h3 id="pwa-account-title">Instale no seu celular</h3><p>Acesse agenda, clientes e caixa direto pela tela inicial, sem procurar o site no navegador.</p></div>
+          <button class="button button-primary" data-install-app type="button"><span>Baixar aplicativo</span></button>
+        </section>
         <form id="account-form" class="panel account-panel owner-only">
           <div class="account-data-heading">
             <span class="eyebrow">DADOS DA CONTA</span>
@@ -377,7 +382,28 @@
   </div>
 
   <dialog id="modal"><form id="modal-form"><div class="modal-head"><div><span class="eyebrow">ATUALIZAÇÃO</span><h2 id="modal-title"></h2></div><button id="modal-close" type="button" class="icon-button modal-close" aria-label="Fechar">×</button></div><div id="modal-fields"></div><p id="modal-error" class="error" role="alert"></p><button id="modal-submit" class="button button-primary" type="submit">Salvar alterações</button></form></dialog>
+  <dialog id="pwa-install-dialog" class="pwa-install-dialog" aria-labelledby="pwa-install-title">
+    <form method="dialog">
+      <header>
+        <span class="pwa-install-icon" aria-hidden="true"><img src="/icons/icon-192.png" width="54" height="54" alt=""></span>
+        <div><small>CORTAFLOW NO CELULAR</small><h2 id="pwa-install-title">Instalar aplicativo</h2></div>
+        <button class="pwa-install-close" value="cancel" aria-label="Fechar instruções" type="submit">×</button>
+      </header>
+      <div data-install-ios class="hidden">
+        <p>No Safari do iPhone ou iPad:</p>
+        <ol>
+          <li>Toque em <b>Compartilhar</b> <span class="ios-share-symbol" aria-hidden="true">□↑</span></li>
+          <li>Escolha <b>Adicionar à Tela de Início</b></li>
+          <li>Confirme em <b>Adicionar</b></li>
+        </ol>
+      </div>
+      <div data-install-browser class="hidden">
+        <p>Abra o menu do navegador e escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</p>
+      </div>
+      <button class="pwa-install-done" value="done" type="submit">Entendi</button>
+    </form>
+  </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js?v=20260729-barber-email-pwa"></script>
+  <script src="/app.js?v=20260729-pwa-install"></script>
 </body>
 </html>

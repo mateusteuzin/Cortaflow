@@ -141,6 +141,13 @@ class PwaAssetsTests(unittest.TestCase):
         self.assertIn("navigator.standalone", script)
         self.assertIn("promptEvent.prompt()", script)
 
+        panel = (self.static / "index.html").read_text("utf-8")
+        panel_script = (self.static / "app.js").read_text("utf-8")
+        self.assertIn("pwa-account-title", panel)
+        self.assertIn("data-install-app", panel)
+        self.assertIn("beforeinstallprompt", panel_script)
+        self.assertIn("navigator.standalone", panel_script)
+
 
 class NotificationDispatchTests(unittest.TestCase):
     user = {"id": 1, "barbearia_id": 7, "perfil": "administrador"}

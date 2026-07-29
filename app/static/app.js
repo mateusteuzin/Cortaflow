@@ -26,6 +26,23 @@ let toastTimer;
 let agendaWeekAnchor = null;
 let agendaWeekDays = [];
 let agendaWeekAppointments = [];
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  $$('[data-install-app]').forEach((button) => button.classList.add('install-ready'));
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  $$('[data-install-app]').forEach((button) => {
+    button.classList.remove('install-ready');
+    button.classList.add('is-installed');
+    button.querySelector('span').textContent = 'Aplicativo instalado';
+  });
+  toast('CortaFlow instalado com sucesso.');
+});
 
 function setTheme(theme) {
   const dark = theme === 'dark';
@@ -597,6 +614,53 @@ async function loadBarbers() {
     const contact = barber.whatsapp || barber.telefone || 'Telefone não informado';
     return `<article class="media-card professional-card${barber.ativo ? '' : ' is-inactive'}"><div class="admin-card-photo professional-admin-photo">${barber.foto_url ? `<img src="${escapeHTML(barber.foto_url)}" alt="Foto de ${escapeHTML(barber.nome)}" loading="lazy">` : `<span>${escapeHTML(barber.nome.slice(0, 2).toUpperCase())}</span>`}<i class="photo-status"></i></div><div class="admin-card-body"><div class="professional-badges"><span class="badge">${barber.ativo ? 'Ativo' : 'Inativo'}</span><span class="notification-badge ${emailReady ? 'is-ready' : 'is-missing'}">${emailReady ? 'E-mail configurado' : 'E-mail não configurado'}</span></div><h3>${escapeHTML(barber.nome)}</h3><p>${escapeHTML(barber.cargo || 'Barbeiro')}</p><div class="professional-contacts"><span>${escapeHTML(barber.notification_email || 'Sem e-mail para avisos')}</span><span>${escapeHTML(contact)}</span></div><footer><b>${Number(barber.comissao_percentual)}% comissão</b><button class="link" type="button" data-action="edit-barber" data-id="${barber.id}">Editar</button>${barber.ativo ? `<button class="danger" type="button" data-action="remove-barber" data-id="${barber.id}">Desativar</button>` : ''}</footer></div></article>`;
   }).join('') || '<p class="empty">Adicione o primeiro profissional.</p>';
+}
+
+function isPwaInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
+function isAppleMobile() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function openInstallInstructions() {
+  const dialog = $('#pwa-install-dialog');
+  const appleMobile = isAppleMobile();
+  dialog.querySelector('[data-install-ios]').classList.toggle('hidden', !appleMobile);
+  dialog.querySelector('[data-install-browser]').classList.toggle('hidden', appleMobile);
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function bindPwaInstall() {
+  const buttons = $$('[data-install-app]');
+  if (!buttons.length) return;
+  if (isPwaInstalled()) {
+    buttons.forEach((button) => {
+      button.classList.add('is-installed');
+      button.querySelector('span').textContent = 'Aplicativo instalado';
+    });
+  }
+  buttons.forEach((button) => {
+    button.addEventListener('click', async () => {
+      if (isPwaInstalled()) {
+        toast('O CortaFlow já está instalado neste aparelho.');
+        return;
+      }
+      if (!deferredInstallPrompt) {
+        openInstallInstructions();
+        return;
+      }
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      button.classList.remove('install-ready');
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice.outcome === 'accepted') toast('Instalação iniciada.');
+    });
+  });
 }
 
 function appointmentHTML(appointment) {
@@ -1259,5 +1323,6 @@ bindAuth();
 bindNavigation();
 bindTheme();
 bindPricing();
+bindPwaInstall();
 if (token) start();
 else location.replace('/');
