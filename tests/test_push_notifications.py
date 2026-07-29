@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch
 
+from app.schemas import PushSubscription
 from app.services import push
 
 
@@ -13,6 +14,17 @@ PUSH_ENV = {
 
 
 class PushNotificationTests(unittest.TestCase):
+    def test_browser_subscription_accepts_standard_expiration_time(self):
+        subscription = PushSubscription(**{
+            "endpoint": "https://push.example/subscription",
+            "expirationTime": None,
+            "keys": {
+                "p256dh": "p256dh-key-with-enough-length",
+                "auth": "auth-key-value",
+            },
+        })
+        self.assertIsNone(subscription.expiration_time)
+
     def test_requires_complete_vapid_configuration(self):
         with patch.dict("os.environ", {}, clear=True):
             self.assertFalse(push.push_is_configured())

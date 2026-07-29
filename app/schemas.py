@@ -205,9 +205,10 @@ class PushSubscriptionKeys(BaseModel):
 
 
 class PushSubscription(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid", populate_by_name=True)
 
     endpoint: str = Field(min_length=20, max_length=2048)
+    expiration_time: int | None = Field(default=None, alias="expirationTime")
     keys: PushSubscriptionKeys
 
     @field_validator("endpoint")
