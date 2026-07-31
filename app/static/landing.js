@@ -594,13 +594,13 @@ async function handleReturnRoute() {
   const google = params.get('google');
   resetToken = params.get('reset_password') || '';
 
+  if (confirmedPlan && plans[confirmedPlan]) updateSelectedPlan(confirmedPlan);
+
   if (access === 'login' || access === 'register') {
     cleanReturnUrl();
     showAuth(access);
     return;
   }
-
-  if (confirmedPlan && plans[confirmedPlan]) updateSelectedPlan(confirmedPlan);
 
   if (google === 'conta_nao_encontrada') {
     cleanReturnUrl();

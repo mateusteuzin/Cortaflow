@@ -22,16 +22,13 @@ class PreviewDesignTests(unittest.TestCase):
     def test_navigation_and_signup_entry_points_exist(self):
         for label in ("Produto", "Como funciona", "Para sua equipe", "Planos", "Entrar", "Começar grátis"):
             self.assertIn(label, self.html)
-        self.assertIn('id="signup-modal"', self.html)
+        self.assertNotIn('id="signup-modal"', self.html)
         self.assertIn('data-open-signup', self.html)
 
-    def test_signup_has_three_steps_and_safe_team_plan_mapping(self):
-        for number in (1, 2, 3):
-            self.assertIn(f'data-step="{number}"', self.html)
-        self.assertIn("const teamPlanMap = { solo: 'essencial', duo: 'profissional', team: 'premium' }", self.script)
-        self.assertIn("plans[plan].rank >= plans[recommendedPlanForTeam(team)].rank", self.script)
-        self.assertNotIn("barbershop_id", self.script)
-        self.assertNotIn("payment_status", self.script)
+    def test_signup_uses_the_complete_legacy_auth_flow(self):
+        self.assertIn("goToAuth('register')", self.script)
+        self.assertIn("goToAuth('register', button.dataset.plan)", self.script)
+        self.assertNotIn("fetch('/api/auth/register'", self.script)
 
     def test_exact_plan_prices_and_trial_copy(self):
         for price in ("29<sup>,90", "44<sup>,90", "64<sup>,90"):
@@ -45,14 +42,14 @@ class PreviewDesignTests(unittest.TestCase):
         for key in ("ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"):
             self.assertIn(key, self.script)
 
-    def test_mobile_menu_faq_and_modal_accessibility(self):
+    def test_mobile_menu_faq_and_lightbox_accessibility(self):
         self.assertIn("aria-expanded", self.script)
         self.assertIn("event.key === 'Escape'", self.script)
-        self.assertIn("event.key === 'Tab'", self.script)
         self.assertIn("(max-width: 820px)", self.script)
 
     def test_login_and_payment_callbacks_keep_the_complete_auth_flow(self):
-        self.assertIn("/landing.html?access=login", self.script)
+        self.assertIn("goToAuth('login')", self.script)
+        self.assertIn("return `/landing.html?${query.toString()}`", self.script)
         for parameter in ("email_confirmado", "checkout", "google", "reset_password"):
             self.assertIn(parameter, self.script)
         self.assertIn("/landing.html${window.location.search}", self.script)
