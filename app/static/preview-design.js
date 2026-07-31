@@ -179,6 +179,26 @@
     });
   });
 
+  const showcaseLightbox = document.querySelector('#showcase-lightbox');
+  let showcaseLastFocused = null;
+  function closeShowcase() {
+    if (!showcaseLightbox || showcaseLightbox.hidden) return;
+    showcaseLightbox.hidden = true;
+    document.body.classList.remove('modal-open');
+    showcaseLastFocused?.focus();
+  }
+  document.querySelectorAll('[data-expand-image]').forEach(button => button.addEventListener('click', () => {
+    showcaseLastFocused = button;
+    const image = showcaseLightbox.querySelector('img');
+    image.src = button.dataset.expandImage;
+    image.alt = button.dataset.expandAlt || '';
+    showcaseLightbox.querySelector('#showcase-lightbox-title').textContent = button.dataset.expandAlt || 'Tela do CortaFlow';
+    showcaseLightbox.hidden = false;
+    document.body.classList.add('modal-open');
+    showcaseLightbox.querySelector('header [data-close-showcase]')?.focus();
+  }));
+  document.querySelectorAll('[data-close-showcase]').forEach(button => button.addEventListener('click', closeShowcase));
+
   const menu = document.querySelector('.menu-button');
   const nav = document.querySelector('#nav');
   menu?.addEventListener('click', () => { const open = nav.classList.toggle('open'); menu.setAttribute('aria-expanded', String(open)); });
@@ -187,6 +207,10 @@
     if (details.open && window.matchMedia('(max-width: 820px)').matches) document.querySelectorAll('.faq details').forEach(item => { if (item !== details) item.open = false; });
   }));
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && showcaseLightbox && !showcaseLightbox.hidden) {
+      closeShowcase();
+      return;
+    }
     if (event.key === 'Escape' && !modal.hidden) closeSignup();
     if (event.key === 'Tab' && !modal.hidden) {
       const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled])')].filter(item => item.offsetParent !== null);

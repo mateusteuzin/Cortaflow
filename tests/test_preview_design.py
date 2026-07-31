@@ -41,7 +41,7 @@ class PreviewDesignTests(unittest.TestCase):
 
     def test_product_tabs_are_accessible_and_keyboard_operable(self):
         self.assertIn('role="tablist"', self.html)
-        self.assertEqual(self.html.count('role="tabpanel"'), 4)
+        self.assertEqual(self.html.count('role="tabpanel"'), 5)
         for key in ("ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"):
             self.assertIn(key, self.script)
 
@@ -69,6 +69,15 @@ class PreviewDesignTests(unittest.TestCase):
         self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", self.css)
         self.assertIn(".product-stage figure.active{display:block;width:100%;min-width:0", self.css)
         self.assertNotIn(".product-stage{display:flex;gap:14px;overflow:auto", self.css)
+
+    def test_product_gallery_uses_distinct_real_screens_and_fullscreen_view(self):
+        showcase = STATIC / "assets" / "showcase"
+        for area in ("agenda", "equipe", "clientes", "financeiro", "insights"):
+            self.assertIn(f'/assets/showcase/admin-{area}.png', self.html)
+            self.assertTrue((showcase / f"admin-{area}.png").is_file())
+        self.assertEqual(self.html.count('data-expand-image='), 5)
+        self.assertIn('id="showcase-lightbox"', self.html)
+        self.assertIn("function closeShowcase()", self.script)
 
 
 if __name__ == "__main__":
