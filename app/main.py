@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Quer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from jose import JWTError
+from jwt import InvalidTokenError as JWTError
 from psycopg2 import IntegrityError
 from .database import all_rows, db, one
 from .schemas import *
@@ -48,9 +48,47 @@ from .services.appointments import (
     complete_appointment,
 )
 
-app = FastAPI(title="CortaFlow API", version="1.0.0", docs_url="/api/docs")
-origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",") if origin.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(
+    title="CortaFlow API",
+    version="1.0.0",
+    docs_url=None if is_vercel() else "/api/docs",
+    redoc_url=None,
+    openapi_url=None if is_vercel() else "/api/openapi.json",
+)
+
+
+def _cors_origins() -> list[str]:
+    configured = os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://cortaflow.com.br,https://www.cortaflow.com.br,http://localhost:8000,http://127.0.0.1:8000",
+    )
+    origins = []
+    for raw_origin in configured.split(","):
+        origin = raw_origin.strip().rstrip("/")
+        parsed = urlparse(origin)
+        local_http = parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1"}
+        if (
+            origin
+            and origin != "*"
+            and parsed.netloc
+            and not parsed.path.rstrip("/")
+            and not parsed.query
+            and not parsed.fragment
+            and (parsed.scheme == "https" or local_http)
+            and origin not in origins
+        ):
+            origins.append(origin)
+    return origins
+
+
+origins = _cors_origins()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Stripe-Signature", "X-Hub-Signature-256"],
+)
 hits = defaultdict(deque)
 auth_hits = defaultdict(deque)
 
@@ -72,6 +110,13 @@ AUTH_RATE_LIMITS = {
     "/api/auth/confirmar-sessao": (10, 600),
     "/api/auth/google/iniciar": (20, 600),
     "/api/auth/google/callback": (30, 600),
+}
+PUBLIC_RATE_LIMITS = {
+    ("POST", "/api/agendamentos"): (30, 60),
+    ("POST", "/api/public/barbearias/*/agendamentos"): (12, 600),
+    ("GET", "/api/public/barbearias/*/reservas/*"): (30, 600),
+    ("GET", "/api/public/barbearias/*/fidelidade/*"): (30, 600),
+    ("GET", "/api/whatsapp/webhook"): (30, 300),
 }
 static = Path(__file__).parent/'static'
 uploads = static/'uploads'
@@ -126,6 +171,7 @@ def ensure_current_schema():
         cur.execute("""ALTER TABLE cadastros_pendentes
             ADD COLUMN IF NOT EXISTS checkout_idempotency_key VARCHAR(64)""")
         cur.execute("ALTER TABLE cadastros_pendentes ADD COLUMN IF NOT EXISTS google_subject VARCHAR(255)")
+        cur.execute("ALTER TABLE cadastros_pendentes ADD COLUMN IF NOT EXISTS checkout_login_consumed_at TIMESTAMPTZ")
         cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_cadastros_pendentes_google_subject
             ON cadastros_pendentes(google_subject)
             WHERE google_subject IS NOT NULL AND usuario_id IS NULL""")
@@ -296,7 +342,10 @@ def dispatch_whatsapp(background_tasks: BackgroundTasks | None = None):
 
 @app.middleware("http")
 async def security_and_rate_limit(request: Request, call_next):
-    ip = request.client.host if request.client else "unknown"
+    if is_vercel():
+        ip = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip() or "unknown"
+    else:
+        ip = request.client.host if request.client else "unknown"
     now = time_module.time()
     bucket = hits[ip]
     while bucket and bucket[0] < now - 60: bucket.popleft()
@@ -308,7 +357,7 @@ async def security_and_rate_limit(request: Request, call_next):
         )
     bucket.append(now)
     auth_limit = AUTH_RATE_LIMITS.get(request.url.path)
-    if auth_limit and request.method == "POST":
+    if auth_limit and request.method in {"GET", "POST"}:
         limit, window = auth_limit
         auth_bucket = auth_hits[(ip, request.url.path)]
         while auth_bucket and auth_bucket[0] < now - window:
@@ -321,6 +370,27 @@ async def security_and_rate_limit(request: Request, call_next):
                 headers={"Retry-After": str(retry_after)},
             )
         auth_bucket.append(now)
+    normalized_path = request.url.path
+    if normalized_path.startswith("/api/public/barbearias/"):
+        parts = normalized_path.split("/")
+        if len(parts) >= 7 and parts[5] in {"reservas", "fidelidade"}:
+            normalized_path = f"/api/public/barbearias/*/{parts[5]}/*"
+        elif len(parts) >= 6 and parts[5] == "agendamentos":
+            normalized_path = "/api/public/barbearias/*/agendamentos"
+    public_limit = PUBLIC_RATE_LIMITS.get((request.method, normalized_path))
+    if public_limit:
+        limit, window = public_limit
+        public_bucket = auth_hits[(ip, request.method, normalized_path)]
+        while public_bucket and public_bucket[0] < now - window:
+            public_bucket.popleft()
+        if len(public_bucket) >= limit:
+            retry_after = max(1, int(window - (now - public_bucket[0])))
+            return JSONResponse(
+                {"detail": "Muitas tentativas. Aguarde antes de tentar novamente."},
+                429,
+                headers={"Retry-After": str(retry_after)},
+            )
+        public_bucket.append(now)
     response = await call_next(request)
     sensitive_auth_response = (
         request.url.path in {
@@ -351,6 +421,8 @@ async def security_and_rate_limit(request: Request, call_next):
     })
     if sensitive_auth_response:
         response.headers["Cache-Control"] = "no-store"
+    if is_vercel() or request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     return response
 
 def _env_configured(name: str) -> bool:
@@ -729,7 +801,7 @@ def _public_site_url(request: Request) -> str:
 
 
 @app.post("/api/billing/checkout")
-def create_checkout(data: CheckoutRequest, request: Request, user=Depends(authenticated_user)):
+def create_checkout(data: CheckoutRequest, request: Request, user=Depends(current_user)):
     """Cria um Checkout recorrente usando apenas preços cadastrados na Stripe."""
     plan = data.plan
     stripe = _stripe_client()
@@ -860,6 +932,23 @@ def _checkout_matches_pending(pending, session, subscription) -> bool:
     ))
 
 
+def _verified_subscription_plan(subscription, claimed_plan: str | None = None) -> str:
+    items = ((subscription.get("items") or {}).get("data") or [])
+    if len(items) != 1:
+        raise HTTPException(409, "A assinatura recebida possui itens inválidos.")
+    price = items[0].get("price") or {}
+    recurring = price.get("recurring") or {}
+    matches = [
+        plan for plan, config in STRIPE_PLANS.items()
+        if price.get("currency") == "brl"
+        and price.get("unit_amount") == config["amount"]
+        and recurring.get("interval") == "month"
+    ]
+    if len(matches) != 1 or (claimed_plan and claimed_plan != matches[0]):
+        raise HTTPException(409, "Plano ou valor da assinatura não corresponde ao catálogo do servidor.")
+    return matches[0]
+
+
 def _activate_pending_signup(pending_id: int, session, subscription):
     with db() as cur:
         cur.execute("SELECT * FROM cadastros_pendentes WHERE id=%s FOR UPDATE", (pending_id,))
@@ -867,6 +956,11 @@ def _activate_pending_signup(pending_id: int, session, subscription):
         if not pending:
             return None
         if not _checkout_matches_pending(pending, session, subscription):
+            return None
+        verified_plan = _verified_subscription_plan(
+            subscription, (session.get("metadata") or {}).get("plan")
+        )
+        if verified_plan != pending["plano"]:
             return None
         if pending["usuario_id"]:
             cur.execute("""SELECT u.id,u.email,u.nome,b.id barbearia_id
@@ -921,7 +1015,7 @@ def _save_stripe_subscription(shop_id: int, subscription, plan: str | None = Non
     status = str(subscription.get("status") or "inactive")
     active = status in {"active", "trialing"}
     metadata = subscription.get("metadata") or {}
-    selected_plan = plan or metadata.get("plan")
+    selected_plan = _verified_subscription_plan(subscription, plan or metadata.get("plan"))
     return one("""UPDATE barbearias SET plano_ativo=%s,subscription_plan=COALESCE(%s,subscription_plan),
         subscription_status=%s,stripe_subscription_id=%s,
         subscription_current_period_end=%s,subscription_cancel_at_period_end=%s,
@@ -948,7 +1042,7 @@ def _send_subscription_email_once(shop_id: int, plan: str | None, period_end=Non
             WHERE id=%s RETURNING id""", (shop_id,))
 
 @app.get("/api/billing/subscription")
-def subscription_details(user=Depends(authenticated_user)):
+def subscription_details(user=Depends(current_user)):
     shop = one("""SELECT subscription_plan,subscription_status,plano_ativo,
         subscription_current_period_end,subscription_cancel_at_period_end,
         stripe_customer_id,stripe_subscription_id,data_assinatura
@@ -970,34 +1064,20 @@ def subscription_details(user=Depends(authenticated_user)):
     }
 
 @app.post("/api/billing/confirm")
-def confirm_checkout(data: CheckoutSessionRequest, user=Depends(authenticated_user)):
-    session_id = data.session_id
-    stripe = _stripe_client()
-    try:
-        session = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
-    except stripe.error.StripeError as error:
-        raise HTTPException(502, "Não foi possível confirmar a assinatura.") from error
-    metadata = session.get("metadata") or {}
-    if str(session.get("client_reference_id")) != str(user["id"]) or str(metadata.get("barbearia_id")) != str(user["barbearia_id"]):
-        raise HTTPException(403, "Esta assinatura não pertence à sua conta.")
-    if session.get("payment_status") not in {"paid", "no_payment_required"}:
-        raise HTTPException(409, "O pagamento ainda não foi confirmado.")
-    subscription = session.get("subscription")
-    if not subscription:
-        raise HTTPException(409, "A assinatura ainda não foi criada pela Stripe.")
-    if isinstance(subscription, str):
-        subscription = stripe.Subscription.retrieve(subscription)
-    status = str(subscription.get("status") or "")
-    if status not in {"active", "trialing"}:
-        raise HTTPException(409, "A assinatura ainda não está ativa na Stripe.")
-    _save_stripe_subscription(user["barbearia_id"], subscription, metadata.get("plan"))
-    _send_subscription_email_once(
-        user["barbearia_id"], metadata.get("plan"), subscription.get("current_period_end")
-    )
-    return {"active": True, "plan": metadata.get("plan"), "status": status}
+def confirm_checkout(data: CheckoutSessionRequest, user=Depends(current_user)):
+    """Apenas consulta o estado persistido pelo webhook; o retorno do navegador não ativa planos."""
+    shop = one("""SELECT plano_ativo,subscription_plan,subscription_status
+        FROM barbearias WHERE id=%s""", (user["barbearia_id"],))
+    if not shop or not shop["plano_ativo"] or shop["subscription_status"] not in {"active", "trialing"}:
+        raise HTTPException(409, "A assinatura ainda está sendo processada pelo webhook da Stripe.")
+    return {
+        "active": True,
+        "plan": shop["subscription_plan"],
+        "status": shop["subscription_status"],
+    }
 
 @app.post("/api/billing/portal")
-def billing_portal(request: Request, user=Depends(authenticated_user)):
+def billing_portal(request: Request, user=Depends(current_user)):
     stripe = _stripe_client()
     shop = one("SELECT stripe_customer_id FROM barbearias WHERE id=%s", (user["barbearia_id"],))
     if not shop["stripe_customer_id"]:
@@ -1169,9 +1249,11 @@ async def upload_image(arquivo: UploadFile = File(...), user=Depends(panel_user)
             local_directory=uploads,
         )
     except StorageConfigurationError as error:
-        raise HTTPException(503, str(error)) from error
+        logging.warning("Image storage configuration error: %s", type(error).__name__)
+        raise HTTPException(503, "O armazenamento de imagens não está disponível agora.") from error
     except StorageUploadError as error:
-        raise HTTPException(502, str(error)) from error
+        logging.warning("Image storage upload error: %s", type(error).__name__)
+        raise HTTPException(502, "Não foi possível salvar a imagem agora.") from error
     return {"url": stored.public_url}
 
 def _new_secure_token(ttl: timedelta) -> tuple[str, str, datetime]:
@@ -1242,12 +1324,20 @@ def login(data: Login):
     if not user or not verify_password(data.senha,user["senha_hash"]): raise HTTPException(401,"E-mail ou senha inválidos")
     if not user.get("email_verificado"):
         raise HTTPException(403,"Confirme seu e-mail antes de entrar. Confira também a caixa de spam.")
-    partner_email = user["email"].strip().lower() == "eepemanuel@gmail.com"
     return {"access_token":token(user["id"], user.get("auth_version", 1)),"token_type":"bearer","nome":user["nome"],
-        "subscription_required":not bool(user["plano_ativo"]) and not partner_email,
-        "subscription_plan":"profissional" if partner_email else user["subscription_plan"],
-        "subscription_status":"active" if partner_email else user["subscription_status"],
+        "subscription_required":not bool(user["plano_ativo"]),
+        "subscription_plan":user["subscription_plan"],
+        "subscription_status":user["subscription_status"],
         "perfil":user["perfil"],"barbeiro_id":user.get("barbeiro_id")}
+
+
+@app.post("/api/auth/logout")
+def logout(user=Depends(authenticated_user)):
+    revoked = one("""UPDATE usuarios SET auth_version=auth_version+1
+        WHERE id=%s RETURNING id""", (user["id"],))
+    if not revoked:
+        raise HTTPException(401, "Sessão inválida.")
+    return {"ok": True}
 
 
 @app.get("/api/auth/contexto")
@@ -1431,29 +1521,20 @@ def confirm_verification_session(data: VerificationSession, request: Request):
 
 @app.post("/api/auth/concluir-pagamento")
 def finish_paid_signup(data: CheckoutSessionRequest):
-    session_id = data.session_id
-    stripe = _stripe_client()
-    try:
-        session = stripe.checkout.Session.retrieve(session_id, expand=["subscription"])
-    except stripe.error.StripeError as error:
-        raise HTTPException(502, "Não foi possível confirmar o pagamento agora.") from error
-    metadata = session.get("metadata") or {}
-    pending_id = _metadata_pending_id(metadata)
-    if not pending_id or session.get("payment_status") not in {"paid", "no_payment_required"}:
-        raise HTTPException(409, "O pagamento ainda não foi confirmado.")
-    subscription = session.get("subscription")
-    if not subscription:
-        raise HTTPException(409, "A assinatura ainda está sendo processada.")
-    if isinstance(subscription, str):
-        subscription = stripe.Subscription.retrieve(subscription)
-    created = _activate_pending_signup(pending_id, session, subscription)
+    created = one("""UPDATE cadastros_pendentes pending
+        SET checkout_login_consumed_at=NOW(),atualizado_em=NOW()
+        FROM usuarios u,barbearias b
+        WHERE u.id=pending.usuario_id AND b.usuario_id=u.id
+          AND pending.stripe_checkout_session_id=%s
+          AND pending.status='paid' AND b.plano_ativo
+          AND b.subscription_status IN ('active','trialing')
+          AND pending.checkout_login_consumed_at IS NULL
+          AND pending.concluido_em>NOW()-INTERVAL '30 minutes'
+        RETURNING u.id,u.nome,u.auth_version""", (data.session_id,))
     if not created:
         raise HTTPException(409, "A assinatura ainda está sendo processada.")
-    _link_stripe_metadata(stripe, session, subscription, created, metadata.get("plan", ""))
-    _send_subscription_email_once(
-        created["barbearia_id"], metadata.get("plan"), subscription.get("current_period_end"))
     return {
-        "access_token": token(created["id"]),
+        "access_token": token(created["id"], created.get("auth_version", 1)),
         "token_type": "bearer",
         "nome": created["nome"],
     }
@@ -1827,6 +1908,9 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
         except InvalidAppointmentStatusError:
             raise HTTPException(409,"Agendamento cancelado não pode ser concluído")
     values=data.model_dump(exclude_none=True)
+    # O preço e o nome do serviço sempre vêm do cadastro da própria barbearia.
+    values.pop("preco",None)
+    values.pop("servico",None)
     if barber_mode:
         values.pop("barbeiro_id",None)
     if data.barbeiro_id is not None:
@@ -2155,8 +2239,16 @@ def remove_customer(client_id:int,user=Depends(current_user)):
     if not row: raise HTTPException(404,"Cliente não encontrado")
     return {"ok":True,"cliente":row}
 
-@app.get("/api/fidelidade/{telefone}")
-def loyalty(telefone:str,barbearia_id:int=1): return one("SELECT *,total_cortes%%10 saldo,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s AND cliente_telefone=%s",(barbearia_id,telefone)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
+@app.get("/api/public/barbearias/{slug}/fidelidade/{telefone}")
+def loyalty(slug:str,telefone:str):
+    shop=resolve_public_shop(slug)
+    digits=''.join(character for character in telefone if character.isdigit())
+    if len(digits)<10: raise HTTPException(422,"Informe um WhatsApp válido")
+    return one("""SELECT total_cortes,total_cortes%%10 saldo,
+        10-(total_cortes%%10) cortes_para_premio
+        FROM fidelidade_cliente WHERE barbearia_id=%s
+        AND RIGHT(regexp_replace(cliente_telefone,'\\D','','g'),11)=RIGHT(%s,11)""",
+        (shop["id"],digits)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
 @app.post("/api/fidelidade/registrar-corte")
 def add_cut(data:Cut,user=Depends(current_user)): return one("INSERT INTO fidelidade_cliente(barbearia_id,cliente_telefone,cliente_nome,total_cortes) VALUES(%s,%s,%s,1) ON CONFLICT(barbearia_id,cliente_telefone) DO UPDATE SET total_cortes=fidelidade_cliente.total_cortes+1,cliente_nome=EXCLUDED.cliente_nome RETURNING *",(user["barbearia_id"],data.cliente_telefone,data.cliente_nome))
 
@@ -2173,7 +2265,7 @@ def whatsapp_reminder(agendamento_id:int,background_tasks:BackgroundTasks,user=D
 def process_whatsapp_queue(request:Request):
     expected=os.getenv("CRON_SECRET","").strip()
     provided=request.headers.get("authorization","")
-    if not expected or provided != f"Bearer {expected}":
+    if not expected or not secrets.compare_digest(provided, f"Bearer {expected}"):
         raise HTTPException(401,"Acesso recusado")
     processed=0
     while processed < 10 and whatsapp_worker.process_next():
@@ -2187,7 +2279,7 @@ def verify_whatsapp_webhook(
     challenge: str = Query(default="", alias="hub.challenge"),
 ):
     expected=os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN","")
-    if mode != "subscribe" or not expected or verify_token != expected:
+    if mode != "subscribe" or not expected or not secrets.compare_digest(verify_token, expected):
         raise HTTPException(401,"Verificação do webhook recusada")
     return Response(content=challenge,media_type="text/plain")
 

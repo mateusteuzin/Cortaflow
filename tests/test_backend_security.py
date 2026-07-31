@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlparse
 from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi import HTTPException
-from jose import jwt
+import jwt
 from starlette.requests import Request
 from starlette.responses import Response
 

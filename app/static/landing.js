@@ -5,10 +5,20 @@ if ('serviceWorker' in navigator) {
 }
 
 const plans = {
-  essencial: { name: 'Essencial', price: 'R$ 29,90/mês' },
-  profissional: { name: 'Profissional', price: 'R$ 44,90/mês' },
-  premium: { name: 'Premium', price: 'R$ 64,90/mês' }
+  essencial: { name: 'Essencial', price: 'R$ 29,90/mês', capacity: '1 profissional' },
+  profissional: { name: 'Profissional', price: 'R$ 44,90/mês', capacity: 'Até 2 profissionais' },
+  premium: { name: 'Premium', price: 'R$ 64,90/mês', capacity: 'Equipe ilimitada' }
 };
+const teamPlanRules = { solo: 'essencial', duo: 'profissional', team: 'premium' };
+
+function recommendedPlanForTeam(teamSize) {
+  return teamPlanRules[teamSize] || 'profissional';
+}
+
+function planIsCompatible(plan, teamSize) {
+  const ranks = { essencial: 1, profissional: 2, premium: 3 };
+  return Boolean(ranks[plan] && ranks[plan] >= ranks[recommendedPlanForTeam(teamSize)]);
+}
 
 const authModes = ['login', 'register', 'verification', 'forgot', 'reset', 'checkout'];
 const modeElements = {
@@ -29,7 +39,7 @@ const modeHeadings = {
 };
 const modeFocus = {
   login: '#email',
-  register: '#register-name',
+  register: '#team-size-picker input',
   verification: '#verification-resend',
   forgot: '#forgot-email',
   reset: '#reset-password',
@@ -186,10 +196,31 @@ function planSummary(plan) {
 
 function updateSelectedPlan(plan = selectedPlan()) {
   if (!plans[plan]) plan = 'profissional';
-  const input = $(`#register-form input[name="plano"][value="${plan}"]`);
+  const input = $(`#register-form input[name="plan_choice"][value="${plan}"]`);
   if (input) input.checked = true;
+  const hiddenInput = $('#register-plan');
+  if (hiddenInput) hiddenInput.value = plan;
   localStorage.setItem('selectedPlan', plan);
+  const selected = plans[plan];
+  const name = $('#recommended-plan-name');
+  const price = $('#recommended-plan-price');
+  const capacity = $('#recommended-plan-capacity');
+  if (name) name.textContent = selected.name;
+  if (price) price.textContent = selected.price;
+  if (capacity) capacity.textContent = `${selected.capacity} • 14 dias grátis • R$ 0 hoje`;
   updateGoogleRegisterButton(plan);
+}
+
+function selectTeamSize(teamSize) {
+  if (!teamPlanRules[teamSize]) return;
+  localStorage.setItem('selectedTeamSize', teamSize);
+  const input = $(`#team-size-picker input[value="${teamSize}"]`);
+  if (input) input.checked = true;
+  $('#register-onboarding-details')?.classList.remove('hidden');
+  $('#register-form .auth-form-header .form-kicker').textContent = 'ETAPA 2 DE 5';
+  $('#register-title').textContent = 'Agora, conte sobre sua barbearia.';
+  updateSelectedPlan(recommendedPlanForTeam(teamSize));
+  announce(`Plano ${plans[recommendedPlanForTeam(teamSize)].name} recomendado para sua equipe.`);
 }
 
 function updateGoogleRegisterButton(plan = selectedPlan()) {
@@ -224,7 +255,11 @@ function showAuth(mode = 'login', { focus = true } = {}) {
   document.body.classList.add('modal-open');
   $('.auth-content').scrollTop = 0;
   updateAuthContext(mode);
-  if (mode === 'register') updateSelectedPlan();
+  if (mode === 'register') {
+    const savedTeamSize = localStorage.getItem('selectedTeamSize');
+    if (savedTeamSize && teamPlanRules[savedTeamSize]) selectTeamSize(savedTeamSize);
+    else updateSelectedPlan();
+  }
 
   if (focus) {
     window.setTimeout(() => {
@@ -834,12 +869,20 @@ function bindAuthActions() {
   $('#register-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const teamSize = $('input[name="team_size"]:checked', form)?.value;
+    if (!teamSize) {
+      showMessage('#register-error', 'Selecione o tamanho da sua equipe para continuar.');
+      $('#team-size-picker input')?.focus();
+      return;
+    }
     if (!form.checkValidity()) {
       form.reportValidity();
       return;
     }
     const button = $('[type="submit"]', form);
     const data = Object.fromEntries(new FormData(form));
+    delete data.team_size;
+    delete data.plan_choice;
     data.nome = data.nome.trim();
     data.barbearia_nome = data.barbearia_nome.trim();
     data.email = data.email.trim();
@@ -887,8 +930,46 @@ function bindPricing() {
       else showAuth('register');
     });
   });
-  $$('#register-form input[name="plano"]').forEach((input) => {
-    input.addEventListener('change', () => updateSelectedPlan(input.value));
+  $$('#team-size-picker input[name="team_size"]').forEach((input) => {
+    input.addEventListener('change', () => selectTeamSize(input.value));
+  });
+  $('#change-recommended-plan')?.addEventListener('click', () => {
+    $('#register-plan-options')?.classList.toggle('hidden');
+  });
+  $$('#register-form input[name="plan_choice"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const teamSize = localStorage.getItem('selectedTeamSize');
+      if (!planIsCompatible(input.value, teamSize)) {
+        updateSelectedPlan(recommendedPlanForTeam(teamSize));
+        toast('Este plano não comporta o tamanho informado da sua equipe.');
+        return;
+      }
+      updateSelectedPlan(input.value);
+    });
+  });
+}
+
+function bindProductDemo() {
+  const tabs = $$('[data-demo-tab]');
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => activateDemoTab(tab.dataset.demoTab));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[next].focus();
+      activateDemoTab(tabs[next].dataset.demoTab);
+    });
+  });
+}
+
+function activateDemoTab(name) {
+  $$('[data-demo-tab]').forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.demoTab === name)));
+  $$('.demo-panel').forEach((panel) => {
+    const active = panel.id === `demo-${name}`;
+    panel.hidden = !active;
+    panel.classList.toggle('active', active);
   });
 }
 
@@ -984,6 +1065,7 @@ async function initialize() {
   bindPhoneFormatting();
   bindAuthActions();
   bindPricing();
+  bindProductDemo();
   bindPwaInstall();
   await loadPublicConfiguration();
   await handleReturnRoute();

@@ -171,6 +171,8 @@ class BarberSelfUpdate(BaseModel):
 
 
 class Appointment(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     barbeiro_id: int
     servico_id: int | None = None
     cliente_nome: str
@@ -185,6 +187,8 @@ class Appointment(BaseModel):
 
 
 class AppointmentUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     barbeiro_id: int | None = None
     servico_id: int | None = None
     cliente_nome: str | None = None
@@ -225,6 +229,8 @@ class PublicAppointment(Appointment):
 
 
 class Product(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     nome: str
     preco: Decimal = Field(ge=0)
     custo_unitario: Decimal = Field(default=0, ge=0)
@@ -243,6 +249,8 @@ class Expense(BaseModel):
 
 
 class Service(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     nome: str = Field(min_length=2, max_length=120)
     descricao: str = Field(default="", max_length=240)
     duracao_minutos: int = Field(default=30, ge=10, le=480)
@@ -251,16 +259,22 @@ class Service(BaseModel):
 
 
 class ProductSale(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     produto_id: int
     quantidade: int = Field(default=1, gt=0)
 
 
 class Cut(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     cliente_telefone: str
     cliente_nome: str = ""
 
 
 class ConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     agendamento_id: int
 
 
@@ -283,6 +297,8 @@ class ShopUpdate(BaseModel):
 
 
 class BusinessHour(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     dia_semana: int = Field(ge=0, le=6)
     ativo: bool = True
     hora_inicio: time | None = None

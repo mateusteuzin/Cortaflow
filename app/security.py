@@ -4,9 +4,10 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import bcrypt
+import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError as JWTError
 
 from .database import one
 
@@ -28,7 +29,8 @@ def _access_token_minutes() -> int:
 
 
 def _validate_production_secret() -> None:
-    if os.getenv("VERCEL") != "1":
+    environment = os.getenv("ENVIRONMENT", "development").strip().lower()
+    if os.getenv("VERCEL") != "1" and environment not in {"production", "prod"}:
         return
     placeholder = any(marker in SECRET.lower() for marker in ("troque", "change-me", "..."))
     if SECRET == DEFAULT_SECRET or placeholder or len(SECRET.encode("utf-8")) < 32:
@@ -103,7 +105,7 @@ def decode_oidc_state(value: str) -> dict:
         algorithms=[JWT_ALGORITHM],
         audience=OIDC_STATE_AUDIENCE,
         issuer=JWT_ISSUER,
-        options={"require_exp": True, "require_iat": True},
+        options={"require": ["exp", "iat"]},
     )
     if not secrets.compare_digest(str(claims.get("type", "")), "oidc_state"):
         raise JWTError("Tipo de state inválido")
@@ -123,7 +125,7 @@ def _decode_access_token(credentials: str) -> tuple[int, int]:
         algorithms=[JWT_ALGORITHM],
         audience=JWT_AUDIENCE,
         issuer=JWT_ISSUER,
-        options={"require_exp": True, "require_sub": True},
+        options={"require": ["exp", "sub"]},
     )
     if not secrets.compare_digest(str(claims.get("type", "")), "access"):
         raise JWTError("Tipo de token inválido")
@@ -158,15 +160,6 @@ def _authenticated_user(auth: HTTPAuthorizationCredentials | None):
         raise HTTPException(401, "Sessão revogada. Entre novamente.")
     if not user["email_verificado"]:
         raise HTTPException(403, "Confirme seu e-mail para acessar o painel")
-    partner_emails = {
-        value.strip().lower()
-        for value in os.getenv("PARTNER_PRO_EMAILS", "eepemanuel@gmail.com").split(",")
-        if value.strip()
-    }
-    if str(user.get("email") or "").strip().lower() in partner_emails:
-        user["plano_ativo"] = True
-        user["subscription_plan"] = "profissional"
-        user["subscription_status"] = "active"
     return user
 
 

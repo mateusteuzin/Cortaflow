@@ -75,7 +75,7 @@ async function api(path, options = {}) {
     const contentType = response.headers.get('content-type') || '';
     const data = contentType.includes('application/json') ? await response.json() : null;
     if (response.status === 401 && path !== '/auth/login') {
-      logout();
+      logout({ revoke: false });
       throw new Error('Sessão expirada. Entre novamente.');
     }
     if (!response.ok) {
@@ -141,10 +141,22 @@ function toast(message) {
   toastTimer = setTimeout(() => element.classList.remove('show'), 2800);
 }
 
-function logout() {
+async function logout({ revoke = true } = {}) {
+  const accessToken = token;
   localStorage.removeItem('token');
   localStorage.removeItem('name');
   token = null;
+  if (revoke && accessToken) {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        keepalive: true
+      });
+    } catch (_) {
+      // A sessão local ainda é encerrada se a rede estiver indisponível.
+    }
+  }
   location.replace('/');
 }
 

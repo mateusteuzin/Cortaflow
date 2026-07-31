@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS cadastros_pendentes (
  checkout_token_hash VARCHAR(64), checkout_token_expires_at TIMESTAMPTZ,
  stripe_checkout_session_id VARCHAR(160), usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
  status VARCHAR(32) NOT NULL DEFAULT 'pending_email', checkout_idempotency_key VARCHAR(64),
- google_subject VARCHAR(255),
+ google_subject VARCHAR(255), checkout_login_consumed_at TIMESTAMPTZ,
  concluido_em TIMESTAMPTZ, criado_em TIMESTAMPTZ DEFAULT NOW(), atualizado_em TIMESTAMPTZ DEFAULT NOW());
 CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google_subject ON usuarios(google_subject) WHERE google_subject IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cadastros_pendentes_google_subject ON cadastros_pendentes(google_subject) WHERE google_subject IS NOT NULL AND usuario_id IS NULL;
