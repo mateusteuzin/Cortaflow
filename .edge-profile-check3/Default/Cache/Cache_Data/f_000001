@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0d0b">
+  <title>CortaFlow: Agenda Online e Gestão para Barbearias</title>
+  <meta name="description" content="Organize agenda, equipe, clientes, serviços e caixa em um só painel. Ganhe controle da sua barbearia no celular ou computador com o CortaFlow.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://cortaflow.com.br/">
+  <meta property="og:title" content="CortaFlow: sua barbearia organizada de ponta a ponta">
+  <meta property="og:description" content="Agenda, equipe, clientes, serviços e caixa conectados em um painel feito para a rotina real da sua barbearia.">
+  <meta property="og:url" content="https://cortaflow.com.br/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="CortaFlow">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:image" content="https://cortaflow.com.br/assets/cortaflow-panel-real.png">
+  <meta property="og:image:width" content="1365">
+  <meta property="og:image:height" content="768">
+  <meta property="og:image:alt" content="Painel de gestão CortaFlow com agenda e indicadores da barbearia">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="CortaFlow: Agenda Online e Gestão para Barbearias">
+  <meta name="twitter:description" content="Sua agenda, equipe, clientes, serviços e caixa trabalhando no mesmo ritmo.">
+  <meta name="twitter:image" content="https://cortaflow.com.br/assets/cortaflow-panel-real.png">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://cortaflow.com.br/#website",
+          "name": "CortaFlow",
+          "alternateName": ["Corta Flow", "cortaflow.com.br"],
+          "url": "https://cortaflow.com.br/",
+          "inLanguage": "pt-BR",
+          "publisher": { "@id": "https://cortaflow.com.br/#organization" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://cortaflow.com.br/#organization",
+          "name": "CortaFlow",
+          "url": "https://cortaflow.com.br/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cortaflow.com.br/assets/favicon-cortaflow-transparent.png",
+            "contentUrl": "https://cortaflow.com.br/assets/favicon-cortaflow-transparent.png",
+            "width": 512,
+            "height": 512,
+            "caption": "CortaFlow"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "CortaFlow",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://cortaflow.com.br/",
+          "description": "Sistema de agenda online e gestão para barbearias com equipe, clientes, serviços e caixa no mesmo painel.",
+          "offers": {
+            "@type": "AggregateOffer",
+            "priceCurrency": "BRL",
+            "lowPrice": "29.90",
+            "highPrice": "64.90",
+            "offerCount": "3"
+          }
+        }
+      ]
+    }
+  </script>
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-cortaflow-transparent.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/assets/favicon-cortaflow-transparent.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/landing.css?v=20260727-agency">
+  <link rel="stylesheet" href="/landing-agency.css?v=20260727-trust-v10">
+</head>
+<body>
+  <header class="site-header">
+    <a class="site-logo" href="#inicio" aria-label="CortaFlow — início">
+      <img class="site-logo-official" src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow">
+    </a>
+    <nav id="site-nav" class="site-nav" aria-label="Navegação principal">
+      <a href="#produto">Produto</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas</a>
+      <div class="mobile-nav-actions">
+        <button class="mobile-login" data-auth="login" type="button">Entrar no painel</button>
+        <button class="header-cta" data-auth="register" type="button">Criar conta <span>→</span></button>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <button class="login-link" data-auth="login" type="button">Entrar <span aria-hidden="true">↗</span></button>
+      <button class="header-cta" data-auth="register" type="button">Criar conta <span aria-hidden="true">→</span></button>
+    </div>
+    <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">☰</button>
+  </header>
+
+  <main>
+    <section id="inicio" class="hero">
+      <div class="hero-atmosphere" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="container hero-grid">
+        <div class="hero-copy" data-reveal>
+          <span class="kicker"><i></i> SISTEMA OPERACIONAL PARA BARBEARIAS</span>
+          <h1>Seu talento corta.<br><em>O CortaFlow organiza.</em></h1>
+          <p>Agenda, equipe, clientes e caixa trabalhando no mesmo ritmo. Menos improviso no balcão, mais controle para crescer.</p>
+          <div class="hero-actions">
+            <button class="btn btn-gold" data-auth="register" type="button">Começar agora <span>→</span></button>
+            <a class="btn btn-ghost" href="#produto"><span class="play-mark">▶</span> Ver o sistema em ação</a>
+          </div>
+          <div class="hero-proof"><span class="proof-pulse" aria-hidden="true"></span><p><b>Produto real, pronto para operar</b><small>Agenda, equipe e caixa no mesmo fluxo</small></p></div>
+        </div>
+
+        <div class="product-visual" data-reveal aria-label="Prévia interativa do painel CortaFlow">
+          <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
+          <div class="dashboard-frame real-panel-frame" data-tilt>
+            <div class="frame-top"><span><i></i><i></i><i></i></span><b>app.cortaflow.com.br</b><em>● AO VIVO</em></div>
+            <img src="/assets/cortaflow-panel-real.png" width="1365" height="768" loading="eager" decoding="async" fetchpriority="high" alt="Captura real do painel de gestão CortaFlow">
+            <div class="glass-stat glass-stat-top"><span>HOJE</span><strong>8 atendimentos</strong><small>+ 14% esta semana</small></div>
+            <div class="glass-stat glass-stat-bottom"><i>✓</i><span><strong>09:30 confirmado</strong><small>Mateus · Corte + barba</small></span></div>
+          </div>
+          <p class="product-caption"><span>PRODUTO REAL, DADOS DEMONSTRATIVOS</span><i></i> sincronizado agora</p>
+        </div>
+      </div>
+      <div class="trust-strip">
+        <div class="container">
+          <span><i>01</i><b>Agenda visual<small>por dia e profissional</small></b></span>
+          <span><i>02</i><b>Cliente confirmado<small>e-mail e WhatsApp</small></b></span>
+          <span><i>03</i><b>Gestão financeira<small>resultado sem planilha</small></b></span>
+          <span><i>04</i><b>Feito para celular<small>opere de qualquer lugar</small></b></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="produto" class="section product-section">
+      <div class="container editorial-heading" data-reveal>
+        <span class="section-index">01 / PRODUTO</span>
+        <div><h2>Uma operação calma.<br><em>Mesmo nos dias cheios.</em></h2><p>O CortaFlow transforma tarefas soltas em um fluxo claro, da chegada do cliente até o fechamento do caixa.</p></div>
+      </div>
+      <div class="container bento-grid">
+        <article class="bento-card bento-agenda" data-reveal>
+          <div class="bento-copy"><span>AGENDA INTELIGENTE</span><h3>Enxergue o dia inteiro sem procurar informação.</h3><p>Horários, serviços e responsáveis organizados em uma única visão.</p></div>
+          <div class="mini-week"><header><b>Julho</b><span>Hoje</span></header><div class="week-days"><i>S<small>27</small></i><i>T<small>28</small></i><i class="active">Q<small>29</small></i><i>Q<small>30</small></i><i>S<small>31</small></i></div><div class="week-booking"><time>09:30</time><span><b>Corte + barba</b><small>Mateus · 60 min</small></span><em>Confirmado</em></div><div class="week-booking"><time>10:40</time><span><b>Degradê</b><small>Otávio · 40 min</small></span><em>Agendado</em></div></div>
+        </article>
+        <article class="bento-card bento-metric" data-reveal><span>OCUPAÇÃO HOJE</span><strong>78<sup>%</sup></strong><div class="metric-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>Seus horários mais procurados, visíveis de relance.</p></article>
+        <article class="bento-card bento-message" data-reveal><div class="message-icon">✓</div><span>CONFIRMAÇÃO ENVIADA</span><h3>“Seu horário está reservado para amanhã, às 09:30.”</h3><p>Menos faltas e menos mensagens repetidas.</p><small>WhatsApp Business · agora</small></article>
+        <article class="bento-card bento-revenue" data-reveal><div><span>FATURAMENTO</span><strong>R$ 18.420</strong><small>+12,4% no mês</small></div><svg viewBox="0 0 480 130" aria-label="Gráfico de faturamento"><path d="M0 112 C55 105 64 86 110 92 S170 53 218 66 S290 40 330 46 S412 12 480 20"/><path class="area" d="M0 112 C55 105 64 86 110 92 S170 53 218 66 S290 40 330 46 S412 12 480 20 V130 H0Z"/></svg></article>
+      </div>
+    </section>
+
+    <section id="recursos" class="section connected-section">
+      <div class="container connected-shell">
+        <header class="connected-heading" data-reveal>
+          <div>
+            <span class="connected-kicker">TUDO CONECTADO</span>
+            <h2>Do primeiro horário<br>ao fechamento. <em>Um único fluxo.</em></h2>
+          </div>
+          <p>O que acontece no balcão, na agenda e no caixa continua no mesmo lugar — claro para você e para toda a equipe.</p>
+        </header>
+
+        <div class="connected-layout">
+          <article class="flow-stage" data-reveal aria-label="Fluxo integrado do CortaFlow">
+            <div class="flow-stage-top">
+              <span class="flow-live"><i></i> Operação ao vivo</span>
+              <span>Hoje · 27 jul</span>
+            </div>
+
+            <div class="flow-canvas">
+              <div class="flow-track" aria-hidden="true"><i></i></div>
+
+              <div class="flow-node flow-node-client">
+                <span class="flow-step">01</span>
+                <div class="flow-avatar">MC</div>
+                <div><small>CLIENTE</small><b>Marcos confirmou</b><span>09:30 · Corte + barba</span></div>
+                <i class="flow-check">✓</i>
+              </div>
+
+              <div class="flow-node flow-node-agenda">
+                <span class="flow-step">02</span>
+                <div class="flow-date"><small>JUL</small><b>27</b></div>
+                <div><small>AGENDA</small><b>Horário reservado</b><span>Sem conflito na equipe</span></div>
+                <span class="flow-status">CONFIRMADO</span>
+              </div>
+
+              <div class="flow-node flow-node-pro">
+                <span class="flow-step">03</span>
+                <img src="/assets/professional-mateus.webp" alt="">
+                <div><small>RESPONSÁVEL</small><b>Mateus</b><span>Próximo atendimento</span></div>
+                <span class="flow-time">09:30</span>
+              </div>
+            </div>
+
+            <footer class="flow-stage-footer">
+              <span><i></i> Confirmação enviada</span>
+              <span><i></i> Agenda atualizada</span>
+              <span><i></i> Resultado registrado</span>
+            </footer>
+          </article>
+
+          <aside class="connected-insights">
+            <article class="insight-card insight-primary" data-reveal>
+              <span class="insight-label">VISÃO DO DIA</span>
+              <div class="insight-value"><strong>12</strong><span>horários<br>confirmados</span></div>
+              <div class="insight-progress"><i></i></div>
+              <p>Equipe e agenda olhando para a mesma operação.</p>
+            </article>
+
+            <article class="insight-card insight-result" data-reveal>
+              <div>
+                <span class="insight-label">FECHAMENTO DO MÊS</span>
+                <strong>R$ 18.420</strong>
+                <small>resultado consolidado</small>
+              </div>
+              <svg viewBox="0 0 220 72" role="img" aria-label="Evolução do resultado no mês">
+                <path class="insight-grid-line" d="M0 60H220M0 34H220"/>
+                <path class="insight-line" d="M0 59 C24 55 31 43 54 46 S87 31 110 36 S145 17 166 24 S198 9 220 11"/>
+              </svg>
+            </article>
+          </aside>
+        </div>
+
+        <div class="connected-note" data-reveal>
+          <span>01 — AGENDA</span><i></i><span>02 — EQUIPE</span><i></i><span>03 — RESULTADO</span>
+        </div>
+      </div>
+    </section>
+
+    <template id="recursos-legado">
+      <div class="container">
+        <div class="section-heading"><div class="section-intro"><span class="kicker">TUDO CONECTADO</span><h2>Do primeiro horário ao fechamento do mês.</h2></div><p>Recursos pensados para reduzir tarefas repetitivas e dar clareza sobre o que acontece na barbearia.</p></div>
+        <div class="feature-grid">
+          <article class="feature-card product-card">
+            <div class="feature-copy"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div><span>AGENDA INTELIGENTE</span><h3>Seu dia inteiro, sem conflito de horários.</h3><p>Visualize profissionais, serviços e horários em uma agenda centralizada e fácil de operar.</p></div>
+            <div class="product-shot agenda-shot">
+              <div class="shot-bar"><span>Agenda de hoje</span><b>23 de julho</b><i>+ Novo horário</i></div>
+              <div class="schedule-row"><time>09:30</time><img src="/assets/service-combo.webp" alt=""><div><b>Corte + Barba</b><small>Lucas • 60 min</small></div><em>Confirmado</em></div>
+              <div class="schedule-row"><time>10:40</time><img src="/assets/service-degrade.webp" alt=""><div><b>Corte degradê</b><small>Rafael • 40 min</small></div><em>Agendado</em></div>
+              <div class="schedule-row"><time>11:30</time><img src="/assets/service-social.webp" alt=""><div><b>Corte social</b><small>Lucas • 30 min</small></div><em>Confirmado</em></div>
+            </div>
+          </article>
+          <article class="feature-card product-card">
+            <div class="feature-copy"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="m8 11 2.2 2.2L16 8"/></svg></div><span>CONFIRMAÇÕES AUTOMÁTICAS</span><h3>Menos esquecimentos. Mais presença.</h3><p>Confirme o agendamento por e-mail e WhatsApp com uma comunicação consistente.</p></div>
+            <div class="product-shot messages-shot">
+              <div class="channel-head"><span class="channel-logo whatsapp-logo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/></svg></span><div><b>WhatsApp Business</b><small>Mensagem enviada</small></div><i>agora</i></div>
+              <div class="message-bubble"><b>Olá, Carlos! Seu horário está confirmado.</b><span>Quinta-feira, 14h • Corte + Barba</span><small>Equipe CortaFlow ✓✓</small></div>
+              <div class="email-status"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg><div><b>Confirmação por e-mail</b><small>Entregue com sucesso</small></div><span>✓</span></div>
+            </div>
+          </article>
+          <article class="feature-card product-card">
+            <div class="feature-copy"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div><span>EQUIPE E COMISSÕES</span><h3>Cada profissional com sua agenda e seus números.</h3><p>Acompanhe produtividade, atendimentos e comissão sem depender de planilhas paralelas.</p></div>
+            <div class="product-shot team-shot">
+              <div class="team-member"><img src="/assets/professional-mateus.webp" alt="Lucas, profissional da equipe"><div><b>Lucas</b><small>12 atendimentos hoje</small></div><span><strong>R$ 540</strong><small>produção</small></span></div>
+              <div class="team-member"><img src="/assets/barbeiro.png" alt="Rafael, profissional da equipe"><div><b>Rafael</b><small>9 atendimentos hoje</small></div><span><strong>R$ 405</strong><small>produção</small></span></div>
+              <div class="commission-summary"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><div><small>COMISSÕES DO MÊS</small><b>Controle calculado por profissional</b></div><em>Atualizado</em></div>
+            </div>
+          </article>
+          <article class="feature-card product-card">
+            <div class="feature-copy"><div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/></svg></div><span>RELATÓRIOS E INSIGHTS</span><h3>Números claros para decidir melhor.</h3><p>Compare faturamento, ticket médio, atendimentos e desempenho por período.</p></div>
+            <div class="product-shot analytics-shot">
+              <div class="analytics-head"><div><small>FATURAMENTO MENSAL</small><b>R$ 18.420,00</b></div><span>+12,4%</span></div>
+              <svg class="analytics-chart" viewBox="0 0 520 145" role="img" aria-label="Gráfico de crescimento mensal"><defs><linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d5a744" stop-opacity=".36"/><stop offset="1" stop-color="#d5a744" stop-opacity="0"/></linearGradient></defs><path class="grid-line" d="M0 28H520M0 72H520M0 116H520"/><path class="chart-area" d="M0 121C38 111 52 92 87 98S139 67 174 74s49-25 84-18 54-27 93-18 56-20 84-11 51-12 85-18V145H0Z"/><path class="chart-line" d="M0 121C38 111 52 92 87 98S139 67 174 74s49-25 84-18 54-27 93-18 56-20 84-11 51-12 85-18"/></svg>
+              <div class="analytics-stats"><span><small>ATENDIMENTOS</small><b>286</b></span><span><small>TICKET MÉDIO</small><b>R$ 64,40</b></span><span><small>MELHOR DIA</small><b>Quinta</b></span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </template>
+
+    <section class="section how-section"><div class="container how-grid"><div><span class="kicker dark">PARA COMEÇAR HOJE</span><h2>Você configura uma vez e já pode abrir a agenda.</h2><p>Sem treinamento longo. O painel acompanha o jeito que sua barbearia trabalha.</p><button class="btn btn-dark" data-auth="register" type="button">Criar minha conta <span>→</span></button></div><ol><li><span>01</span><div><h3>Coloque sua marca</h3><p>Nome, logo, serviços, preços e horários em poucos minutos.</p></div></li><li><span>02</span><div><h3>Convide a equipe</h3><p>Cada profissional enxerga a própria agenda e comissão.</p></div></li><li><span>03</span><div><h3>Envie o link</h3><p>O cliente escolhe o serviço e recebe a confirmação.</p></div></li></ol></div></section>
+
+    <section class="section proof-section"><div class="container"><div class="section-intro centered"><span class="kicker">FEITO PARA A ROTINA REAL</span><h2>Menos coisa para lembrar.<br><em>Mais tempo para atender.</em></h2><p>O essencial para uma barbearia funcionar bem, apresentado sem promessa exagerada.</p></div><div class="proof-grid"><article><span>01</span><h3>Horário organizado</h3><p>Você e sua equipe consultam a mesma agenda, de qualquer lugar.</p></article><article><span>02</span><h3>Cliente avisado</h3><p>As confirmações saem no fluxo certo e reduzem esquecimentos.</p></article><article><span>03</span><h3>Dia acompanhado</h3><p>Atendimentos e faturamento ficam claros antes do fechamento.</p></article></div></div></section>
+
+    <section id="planos" class="section pricing-section">
+      <div class="container">
+        <div class="section-intro centered"><span class="kicker dark">PLANOS PARA CADA MOMENTO</span><h2>Comece do seu tamanho.<br><em>Escale quando precisar.</em></h2><p>Todos os planos incluem acesso seguro, agenda online e cobrança mensal.</p></div>
+        <div class="pricing-grid">
+          <article class="price-card"><div class="plan-head"><span>ESSENCIAL</span><p>Para o profissional que trabalha sozinho.</p></div><div class="plan-price"><small>R$</small><strong>29<sup>,90</sup></strong><span>/mês</span></div><ul><li><b>1</b> barbeiro</li><li>Agenda e serviços</li><li>Cadastro de clientes</li><li>Confirmação por e-mail</li><li>Visão financeira básica</li></ul><button data-plan="essencial" type="button">Começar com Essencial <span>→</span></button></article>
+          <article class="price-card featured"><div class="popular">MAIS ESCOLHIDO</div><div class="plan-head"><span>PROFISSIONAL</span><p>Para pequenas equipes com operação completa.</p></div><div class="plan-price"><small>R$</small><strong>44<sup>,90</sup></strong><span>/mês</span></div><ul><li><b>Até 2</b> profissionais</li><li>Tudo do Essencial</li><li>WhatsApp + e-mail</li><li>Equipe e comissões</li><li>Relatórios e insights completos</li><li>Recursos operacionais liberados</li></ul><button data-plan="profissional" type="button">Escolher Profissional <span>→</span></button></article>
+          <article class="price-card"><div class="plan-head"><span>PREMIUM</span><p>Para barbearias em expansão.</p></div><div class="plan-price"><small>R$</small><strong>64<sup>,90</sup></strong><span>/mês</span></div><ul><li><b>Equipe ilimitada</b></li><li>Tudo do Profissional</li><li>Relatórios mensais e anuais</li><li>Comparativos avançados</li><li>Indicadores por profissional</li><li>Exportação e resumos por e-mail <em>em lançamento</em></li></ul><button data-plan="premium" type="button">Escolher Premium <span>→</span></button></article>
+        </div>
+        <div class="pricing-trust"><span>🔒 Pagamento seguro pela Stripe</span><span>↻ Cobrança mensal</span><span>✓ Cancele quando quiser</span></div>
+      </div>
+    </section>
+
+    <section id="seguranca" class="section security-section"><div class="container security-grid"><div><span class="kicker">SEGURANÇA E TRANSPARÊNCIA</span><h2>O básico bem feito para você trabalhar tranquilo.</h2><p>Do login ao pagamento, cada etapa usa serviços confiáveis e práticas de proteção.</p></div><div class="security-list"><article><i>01</i><div><h3>Conexão protegida</h3><p>O painel funciona com HTTPS.</p></div></article><article><i>02</i><div><h3>Pagamento seguro</h3><p>A assinatura passa pelo Stripe Checkout.</p></div></article><article><i>03</i><div><h3>Acesso só seu</h3><p>Senhas protegidas e sessão autenticada.</p></div></article><article><i>04</i><div><h3>Canais oficiais</h3><p>WhatsApp e e-mail configurados com serviços próprios.</p></div></article></div></div></section>
+
+    <section id="duvidas" class="section faq-section"><div class="container faq-grid"><div class="section-intro"><span class="kicker dark">DÚVIDAS FREQUENTES</span><h2>Antes de começar, tudo bem explicado.</h2><p>Não encontrou sua resposta? Fale com nosso suporte.</p></div><div class="faq-list"><details open><summary>Preciso instalar algum programa?<span>+</span></summary><p>Não. O CortaFlow funciona pelo navegador no computador e no celular.</p></details><details><summary>Como funcionam as confirmações?<span>+</span></summary><p>O sistema pode enviar confirmações por e-mail e, quando configurado, pela API oficial do WhatsApp.</p></details><details><summary>Posso trocar de plano depois?<span>+</span></summary><p>Sim. Você pode evoluir conforme sua equipe e sua necessidade de relatórios crescerem.</p></details><details><summary>Quantos profissionais cabem em cada plano?<span>+</span></summary><p>O Essencial atende 1 barbeiro, o Profissional até 2 e o Premium permite equipe ilimitada.</p></details><details><summary>Posso cancelar quando quiser?<span>+</span></summary><p>Sim. A cobrança é mensal e não exige fidelidade anual.</p></details></div></div></section>
+
+    <section class="final-cta">
+      <div class="container final-cta-grid">
+        <div class="final-cta-copy" data-reveal>
+          <span class="kicker"><i></i> PRÓXIMO PASSO</span>
+          <h2>Comece com uma agenda organizada.</h2>
+          <p>Configure sua barbearia, convide a equipe e abra seus horários.</p>
+          <div class="final-actions">
+            <button class="btn btn-gold" data-auth="register" type="button">Criar minha conta <span>→</span></button>
+            <a class="final-plans-link" href="#planos">Ver planos</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-trust" aria-label="Tecnologias e integrações">
+      <div class="footer-trust-copy">
+        <span>TECNOLOGIA CONFIÁVEL</span>
+        <p>Serviços reconhecidos, trabalhando nos bastidores.</p>
+      </div>
+      <div class="footer-trust-grid">
+        <button class="trust-badge trust-google" data-google-login type="button" aria-label="Continuar com Google">
+          <i class="google-provider-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.15c1.84-1.69 2.9-4.18 2.9-7.42Z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.15-2.45c-.87.58-1.98.92-3.3.92-2.54 0-4.69-1.72-5.46-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M6.54 13.83A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.26.31-1.83V7.64H3.28A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.05 1.03 4.36l3.26-2.53Z"/><path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.27 14.63 2.25 12 2.25a9.74 9.74 0 0 0-8.72 5.39l3.26 2.53c.77-2.31 2.92-4.03 5.46-4.03Z"/></svg></i>
+          <span><small>ACESSO</small><b>Continuar com Google</b></span>
+        </button>
+        <a class="trust-badge trust-stripe" href="https://stripe.com/" target="_blank" rel="noopener" aria-label="Pagamentos processados pela Stripe">
+          <span><small>PAGAMENTOS</small>
+          <img src="https://images.stripeassets.com/fzn2n1nzq965/4M6d6BSWzlgsrJx8rdZb0I/733f37ef69b5ca1d3d33e127184f4ce4/Powered_by_Stripe.svg?q=80&amp;w=1082" alt="Powered by Stripe">
+          </span>
+        </a>
+        <span class="trust-badge trust-whatsapp"><i><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#25D366" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3Z"/><path fill="#fff" d="M22.8 18.9c-.4-.2-2.2-1.1-2.5-1.2-.3-.1-.6-.2-.8.2-.2.4-.9 1.2-1.1 1.4-.2.2-.4.3-.8.1-2.2-1.1-3.7-2-5.2-4.5-.4-.7.4-.7 1.1-2.2.1-.2.1-.5 0-.7-.1-.2-.8-2-1.1-2.7-.3-.7-.6-.6-.8-.6h-.7c-.3 0-.7.1-1 .5-.3.4-1.3 1.3-1.3 3.2s1.4 3.7 1.6 4c.2.3 2.8 4.3 6.8 6 .9.4 1.7.6 2.3.7 1 .3 1.9.3 2.6.2.8-.1 2.2-.9 2.5-1.8.3-.9.3-1.7.2-1.8-.1-.3-.4-.5-.8-.7Z"/></svg></i><span><small>ATENDIMENTO</small><b>WhatsApp Business</b></span></span>
+        <span class="trust-badge trust-https"><i><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></i><span><small>SEGURANÇA</small><b>Conexão HTTPS</b></span></span>
+      </div>
+    </div>
+    <div class="container footer-main">
+      <div class="footer-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><p>Agenda, equipe e resultados no ritmo da sua barbearia.</p><span><i></i> Plataforma disponível</span></div>
+      <nav aria-label="Produto"><strong>PRODUTO</strong><a href="#produto">Como funciona</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a></nav>
+      <nav aria-label="Suporte"><strong>SUPORTE</strong><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas frequentes</a><a href="mailto:suporte@cortaflow.com.br">Falar com a equipe</a></nav>
+      <div class="footer-access"><span>JÁ USA O CORTAFLOW?</span><b>Sua operação continua daqui.</b><button data-auth="login" type="button">Entrar no painel <span>↗</span></button></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 CortaFlow</span><a href="mailto:suporte@cortaflow.com.br">suporte@cortaflow.com.br</a><span>Feito para barbearias no Brasil</span></div>
+  </footer>
+
+  <div id="auth-modal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <button id="modal-backdrop" class="modal-backdrop" type="button" aria-label="Fechar"></button>
+    <section class="auth-panel" data-mode="login" tabindex="-1">
+      <aside class="auth-context">
+        <div class="auth-context-media" aria-hidden="true"></div>
+        <div class="auth-context-inner">
+          <img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow">
+          <div class="auth-context-copy">
+            <span id="auth-context-eyebrow">ACESSO À OPERAÇÃO</span>
+            <h2 id="auth-context-title">Tudo o que acontece na sua barbearia, em um só painel.</h2>
+            <p id="auth-context-description">Agenda, equipe, clientes e resultados protegidos pelo seu acesso.</p>
+          </div>
+          <div class="auth-trust">
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg> Conexão protegida</span>
+            <span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg> Pagamento pela Stripe</span>
+          </div>
+          <small>CortaFlow · Gestão inteligente para barbearias</small>
+        </div>
+      </aside>
+
+      <div class="auth-content">
+        <button id="modal-close" class="modal-close" type="button" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="auth-mobile-brand">
+          <img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow">
+          <span>Gestão inteligente para barbearias</span>
+        </div>
+        <p id="auth-live" class="sr-only" aria-live="polite"></p>
+
+        <form id="login-form" class="auth-form" novalidate>
+          <header class="auth-form-header">
+            <span class="form-kicker">ACESSO SEGURO</span>
+            <h2 id="auth-title">Bem-vindo de volta.</h2>
+            <p id="login-description">Entre para acompanhar sua operação.</p>
+          </header>
+          <div id="login-payment-next" class="login-payment-next hidden">
+            <span class="status-mark" aria-hidden="true">✓</span>
+            <div><small>PRÓXIMA ETAPA</small><b>Concluir sua assinatura</b><strong id="login-plan-summary"></strong></div>
+          </div>
+          <div class="form-field">
+            <label for="email">E-mail</label>
+            <input id="email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@barbearia.com">
+          </div>
+          <div class="form-field">
+            <div class="field-label-row"><label for="password">Senha</label><button id="forgot-password" class="forgot-password" type="button">Esqueci minha senha</button></div>
+            <span class="password-field"><input id="password" type="password" autocomplete="current-password" required placeholder="Digite sua senha"><button class="password-toggle" data-password-toggle="password" type="button" aria-label="Mostrar senha" aria-pressed="false"><span>Mostrar</span></button></span>
+          </div>
+          <p id="login-error" class="form-error" role="alert"></p>
+          <p id="verification-notice" class="form-notice hidden" role="status"></p>
+          <button class="form-submit" type="submit"><span class="button-label">Entrar no painel</span><span class="button-spinner" aria-hidden="true"></span></button>
+          <button id="resend-verification" class="form-secondary hidden" type="button">Reenviar confirmação</button>
+          <div class="auth-divider"><span>ou</span></div>
+          <button class="google-login" data-google-login type="button" aria-disabled="true">
+            <svg class="google-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.15c1.84-1.69 2.9-4.18 2.9-7.42Z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.15-2.45c-.87.58-1.98.92-3.3.92-2.54 0-4.69-1.72-5.46-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M6.54 13.83A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.26.31-1.83V7.64H3.28A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.05 1.03 4.36l3.26-2.53Z"/><path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.27 14.63 2.25 12 2.25a9.74 9.74 0 0 0-8.72 5.39l3.26 2.53c.77-2.31 2.92-4.03 5.46-4.03Z"/></svg>
+            <span>Continuar com Google</span><small>Em breve</small>
+          </button>
+          <div class="auth-switch"><span>Novo no CortaFlow?</span><button id="show-register" type="button">Criar minha conta</button></div>
+          <small class="form-security"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Seus dados são enviados por conexão segura.</small>
+        </form>
+
+        <form id="register-form" class="auth-form hidden" novalidate>
+          <div class="signup-progress" aria-label="Etapa 1 de 3: dados da conta">
+            <span class="active" aria-current="step"><b>1</b><em>Conta</em></span><i></i><span><b>2</b><em>E-mail</em></span><i></i><span><b>3</b><em>Pagamento</em></span>
+          </div>
+          <header class="auth-form-header">
+            <span class="form-kicker">COMECE AGORA</span>
+            <h2 id="register-title">Prepare sua operação.</h2>
+            <p>Seus dados ficam reservados até a confirmação do pagamento.</p>
+          </header>
+          <fieldset class="register-plan-picker">
+            <legend>Escolha o plano mensal</legend>
+            <label><input type="radio" name="plano" value="essencial"><span><b>Essencial</b><small>1 barbeiro</small></span><strong>R$ 29,90<small>/mês</small></strong></label>
+            <label class="recommended"><input type="radio" name="plano" value="profissional" checked><span><b>Profissional</b><small>Até 2 profissionais</small></span><strong>R$ 44,90<small>/mês</small></strong></label>
+            <label><input type="radio" name="plano" value="premium"><span><b>Premium</b><small>Equipe ilimitada</small></span><strong>R$ 64,90<small>/mês</small></strong></label>
+          </fieldset>
+          <button class="google-login google-register" data-google-register type="button" aria-disabled="true" aria-describedby="google-register-help">
+            <svg class="google-mark" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.35 12.27c0-.79-.07-1.55-.23-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.15c1.84-1.69 2.9-4.18 2.9-7.42Z"/><path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.36l-3.15-2.45c-.87.58-1.98.92-3.3.92-2.54 0-4.69-1.72-5.46-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.75Z"/><path fill="#FBBC05" d="M6.54 13.83A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.26.31-1.83V7.64H3.28A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.05 1.03 4.36l3.26-2.53Z"/><path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.27 14.63 2.25 12 2.25a9.74 9.74 0 0 0-8.72 5.39l3.26 2.53c.77-2.31 2.92-4.03 5.46-4.03Z"/></svg>
+            <span>Continuar com Google</span><small id="google-register-help">Plano Profissional</small>
+          </button>
+          <div class="auth-divider register-divider"><span>ou preencha seus dados</span></div>
+          <div class="form-grid">
+            <div class="form-field"><label for="register-name">Seu nome</label><input id="register-name" name="nome" autocomplete="name" required placeholder="Nome completo"></div>
+            <div class="form-field"><label for="shop-name-register">Nome da barbearia</label><input id="shop-name-register" name="barbearia_nome" autocomplete="organization" required placeholder="Nome do negócio"></div>
+            <div class="form-field"><label for="register-email">E-mail profissional</label><input id="register-email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@suaempresa.com.br" aria-describedby="register-email-help"><small id="register-email-help">Você receberá a confirmação e os avisos da assinatura.</small></div>
+            <div class="form-field"><label for="register-phone">Telefone</label><input id="register-phone" name="telefone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000"></div>
+          </div>
+          <div class="form-field">
+            <label for="register-password">Crie uma senha</label>
+            <span class="password-field"><input id="register-password" name="senha" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Use uma frase longa" aria-describedby="register-password-help"><button class="password-toggle" data-password-toggle="register-password" type="button" aria-label="Mostrar senha" aria-pressed="false"><span>Mostrar</span></button></span>
+            <div id="register-password-help" class="password-strength" data-password-strength="register-password" aria-live="polite"><i></i><span>Use uma frase com 12 caracteres ou mais. Você pode colar do gerenciador.</span></div>
+          </div>
+          <p id="register-error" class="form-error" role="alert"></p>
+          <button class="form-submit" type="submit"><span class="button-label">Continuar para confirmação</span><span class="button-spinner" aria-hidden="true"></span></button>
+          <p class="payment-disclaimer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg> Nenhuma cobrança é feita agora. A assinatura começa apenas após o checkout seguro da Stripe.</p>
+          <div class="auth-switch"><span>Já tem uma conta?</span><button id="show-login" type="button">Entrar</button></div>
+        </form>
+
+        <section id="verification-step" class="auth-form verification-step hidden">
+          <div class="signup-progress" aria-label="Etapa 2 de 3: confirmação do e-mail"><span class="done"><b>✓</b><em>Conta</em></span><i class="done"></i><span class="active" aria-current="step"><b>2</b><em>E-mail</em></span><i></i><span><b>3</b><em>Pagamento</em></span></div>
+          <div class="state-illustration mail-illustration" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/><circle cx="18.5" cy="5.5" r="3.5"/></svg></div>
+          <header class="auth-form-header">
+            <span class="form-kicker">CONFIRME SEU E-MAIL</span>
+            <h2 id="verification-title">Agora, confira sua caixa de entrada.</h2>
+            <p>Enviamos um link seguro para <strong id="verification-email"></strong>.</p>
+          </header>
+          <div id="email-sent-status" class="delivery-status" role="status"><span aria-hidden="true">✓</span><div><b>E-mail enviado</b><small>O link é válido por 24 horas</small></div></div>
+          <ol class="verification-help"><li><span>Abra a caixa de entrada informada.</span></li><li><span>Procure pelo e-mail da CortaFlow.</span></li><li><span>Confirme para seguir à Stripe.</span></li></ol>
+          <p class="spam-help">Não encontrou? Verifique Spam, Promoções e Social.</p>
+          <button id="verification-resend" class="form-submit" type="button"><span class="button-label">Reenviar e-mail</span><span class="button-spinner" aria-hidden="true"></span></button>
+          <button id="verification-login" class="form-secondary" type="button">Já confirmei, continuar</button>
+        </section>
+
+        <form id="forgot-form" class="auth-form hidden" novalidate>
+          <button class="auth-back" id="forgot-back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Voltar para entrar</button>
+          <div class="state-illustration" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg></div>
+          <header class="auth-form-header">
+            <span class="form-kicker">RECUPERAR ACESSO</span>
+            <h2 id="forgot-title">Vamos recuperar sua conta.</h2>
+            <p>Você receberá um link de uso único para criar uma nova senha.</p>
+          </header>
+          <div class="form-field"><label for="forgot-email">E-mail da conta</label><input id="forgot-email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@suaempresa.com.br"></div>
+          <p id="forgot-error" class="form-error" role="alert"></p>
+          <p id="forgot-notice" class="form-notice hidden" role="status"></p>
+          <button class="form-submit" type="submit"><span class="button-label">Enviar link seguro</span><span class="button-spinner" aria-hidden="true"></span></button>
+          <small class="form-security"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7 9 18l-5-5"/></svg> Por segurança, o link expira e só pode ser usado uma vez.</small>
+        </form>
+
+        <form id="reset-form" class="auth-form hidden" novalidate>
+          <button class="auth-back" id="reset-back" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg> Voltar para entrar</button>
+          <div class="state-illustration" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div>
+          <header class="auth-form-header">
+            <span class="form-kicker">NOVA SENHA</span>
+            <h2 id="reset-title">Defina uma senha segura.</h2>
+            <p>Use uma senha nova, diferente das anteriores.</p>
+          </header>
+          <div class="form-field"><label for="reset-password">Nova senha</label><span class="password-field"><input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Use uma frase longa" aria-describedby="reset-password-help"><button class="password-toggle" data-password-toggle="reset-password" type="button" aria-label="Mostrar senha" aria-pressed="false"><span>Mostrar</span></button></span><div id="reset-password-help" class="password-strength" data-password-strength="reset-password" aria-live="polite"><i></i><span>Use uma frase com 12 caracteres ou mais. Você pode colar do gerenciador.</span></div></div>
+          <div class="form-field"><label for="reset-password-confirmation">Confirme a nova senha</label><span class="password-field"><input id="reset-password-confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="72" required placeholder="Digite novamente"><button class="password-toggle" data-password-toggle="reset-password-confirmation" type="button" aria-label="Mostrar senha" aria-pressed="false"><span>Mostrar</span></button></span></div>
+          <p id="reset-error" class="form-error" role="alert"></p>
+          <p id="reset-notice" class="form-notice hidden" role="status"></p>
+          <button class="form-submit" type="submit"><span class="button-label">Atualizar minha senha</span><span class="button-spinner" aria-hidden="true"></span></button>
+        </form>
+
+        <section id="checkout-step" class="auth-form checkout-step hidden" aria-live="polite">
+          <div id="checkout-illustration" class="state-illustration checkout-illustration" data-state="loading" aria-hidden="true"><span class="checkout-spinner"></span><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></div>
+          <header class="auth-form-header">
+            <span id="checkout-kicker" class="form-kicker">PAGAMENTO SEGURO</span>
+            <h2 id="checkout-title">Preparando seu checkout.</h2>
+            <p id="checkout-description">Estamos conectando sua assinatura à Stripe.</p>
+          </header>
+          <div id="checkout-plan-summary" class="checkout-plan-summary hidden"><span>PLANO SELECIONADO</span><strong></strong></div>
+          <p id="checkout-error" class="form-error" role="alert"></p>
+          <button id="checkout-primary" class="form-submit hidden" type="button"><span class="button-label">Tentar novamente</span><span class="button-spinner" aria-hidden="true"></span></button>
+          <button id="checkout-login" class="form-secondary hidden" type="button">Voltar para entrar</button>
+          <a class="checkout-support" href="mailto:suporte@cortaflow.com.br">Precisa de ajuda? Fale com o suporte</a>
+        </section>
+      </div>
+    </section>
+  </div>
+  <div id="toast" class="site-toast" role="status" aria-live="polite"></div>
+  <script src="/landing.js?v=20260727-agency-v2"></script>
+</body>
+</html>
