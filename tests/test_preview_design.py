@@ -73,8 +73,8 @@ class PreviewDesignTests(unittest.TestCase):
     def test_product_gallery_uses_distinct_mobile_screens_and_fullscreen_view(self):
         showcase = STATIC / "assets" / "showcase"
         for area in ("agenda", "equipe", "clientes", "financeiro", "insights"):
-            self.assertIn(f'/assets/showcase/mobile-{area}-premium.png', self.html)
-            self.assertTrue((showcase / f"mobile-{area}-premium.png").is_file())
+            self.assertIn(f'/assets/showcase/mobile-{area}-cutout.png', self.html)
+            self.assertTrue((showcase / f"mobile-{area}-cutout.png").is_file())
         self.assertEqual(self.html.count('data-expand-image='), 5)
         self.assertIn('id="showcase-lightbox"', self.html)
         self.assertIn("function closeShowcase()", self.script)
