@@ -240,14 +240,6 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .final-cta { background: #101510; }
 .final-cta .btn-gold { border-color: #171a15; background: #171a15; color: #fff; }
 
-/* Modo usado pela landing nova: mostra apenas o fluxo antigo de autenticação. */
-.embed-auth body{min-height:100dvh;background:transparent}
-.embed-auth body>header,.embed-auth body>main,.embed-auth body>footer,.embed-auth body>dialog,.embed-auth body>.site-toast{display:none!important}
-.embed-auth .auth-modal{position:fixed;inset:0;padding:0;background:transparent}
-.embed-auth .modal-backdrop{display:none}
-.embed-auth .auth-panel{width:100%;height:100dvh;max-height:none;border:0;border-radius:0;box-shadow:none}
-.embed-auth #modal-close{display:none}
-
 /* 2026 agency direction — editorial rhythm, dimensional product, restrained accent */
 :root {
   --agency-bg: #080b09;
