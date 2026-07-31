@@ -51,7 +51,7 @@ class LandingParser(HTMLParser):
 class TechnicalSeoTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.html = (STATIC / "preview-design.html").read_text(encoding="utf-8")
+        cls.html = (STATIC / "landing.html").read_text(encoding="utf-8")
         cls.parser = LandingParser()
         cls.parser.feed(cls.html)
         cls.structured = json.loads(cls.parser.json_ld)
@@ -78,7 +78,7 @@ class TechnicalSeoTests(unittest.TestCase):
         organization = self.entities["Organization"]
         software = self.entities["SoftwareApplication"]
         website = self.entities["WebSite"]
-        self.assertEqual(organization["email"], "suporte@cortaflow.com.br")
+        self.assertEqual(organization["email"], "cortaflow178@gmail.com")
         self.assertEqual(organization["areaServed"]["name"], "Brasil")
         self.assertNotIn("sameAs", organization)
         self.assertEqual(software["applicationCategory"], "BusinessApplication")
