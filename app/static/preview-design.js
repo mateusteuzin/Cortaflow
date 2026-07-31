@@ -10,17 +10,32 @@
   }
 
   const authUrl = (access, plan = '') => {
-    const query = new URLSearchParams({ access });
+    const query = new URLSearchParams({ access, embed: '1' });
     if (plan) query.set('plan', plan);
     return `/landing.html?${query.toString()}`;
   };
+  const authOverlay = document.querySelector('#auth-overlay');
+  const authFrame = document.querySelector('#auth-frame');
+  let authLastFocused = null;
+  const closeAuth = () => {
+    if (!authOverlay || authOverlay.hidden) return;
+    authOverlay.hidden = true;
+    authFrame.removeAttribute('src');
+    document.body.classList.remove('modal-open');
+    authLastFocused?.focus();
+  };
   const goToAuth = (access, plan = '') => {
-    window.location.assign(authUrl(access, plan));
+    authLastFocused = document.activeElement;
+    authFrame.src = authUrl(access, plan);
+    authOverlay.hidden = false;
+    document.body.classList.add('modal-open');
+    authOverlay.querySelector('.auth-overlay-close')?.focus();
   };
 
   document.querySelectorAll('[data-open-signup]').forEach(button => button.addEventListener('click', () => goToAuth('register')));
   document.querySelectorAll('[data-plan]').forEach(button => button.addEventListener('click', () => goToAuth('register', button.dataset.plan)));
   document.querySelectorAll('[data-login]').forEach(button => button.addEventListener('click', () => goToAuth('login')));
+  document.querySelectorAll('[data-close-auth]').forEach(button => button.addEventListener('click', closeAuth));
 
   const tabs = [...document.querySelectorAll('[role="tab"]')];
   function selectTab(tab) {
@@ -68,6 +83,10 @@
     if (details.open && window.matchMedia('(max-width: 820px)').matches) document.querySelectorAll('.faq details').forEach(item => { if (item !== details) item.open = false; });
   }));
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && authOverlay && !authOverlay.hidden) {
+      closeAuth();
+      return;
+    }
     if (event.key === 'Escape' && showcaseLightbox && !showcaseLightbox.hidden) {
       closeShowcase();
       return;

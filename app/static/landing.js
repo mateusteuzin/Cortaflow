@@ -1,5 +1,8 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const embeddedAuth = new URLSearchParams(location.search).get('embed') === '1';
+if (embeddedAuth) document.documentElement.classList.add('embed-auth');
+const navigateTo = (url) => (embeddedAuth ? window.top : window).location.assign(url);
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
@@ -502,7 +505,7 @@ async function startCheckout(plan, sourceButton = null) {
       method: 'POST',
       body: JSON.stringify({ plan })
     });
-    location.assign(result.url);
+    navigateTo(result.url);
   } catch (error) {
     if (/Autenticação necessária|Token inválido|expirado/i.test(error.message)) {
       localStorage.removeItem('token');
@@ -539,7 +542,7 @@ async function completeCheckout(sessionId) {
       title: 'Pagamento confirmado.',
       description: 'Sua conta está pronta. Abrindo o painel agora.'
     });
-    window.setTimeout(() => location.assign('/painel?checkout=sucesso'), 900);
+    window.setTimeout(() => navigateTo('/painel?checkout=sucesso'), 900);
   } catch (error) {
     showCheckoutState('error', {
       error: error.message,
@@ -563,7 +566,7 @@ async function continueVerifiedSession(code, confirmedPlan, confirmedEmail) {
       body: JSON.stringify({ code })
     });
     if (result.checkout_url) {
-      location.assign(result.checkout_url);
+      navigateTo(result.checkout_url);
       return;
     }
     localStorage.setItem('token', result.access_token);
@@ -573,7 +576,7 @@ async function continueVerifiedSession(code, confirmedPlan, confirmedEmail) {
       await startCheckout(plan);
       return;
     }
-    location.assign('/painel');
+    navigateTo('/painel');
   } catch (error) {
     showAuth('login');
     if (confirmedEmail) $('#email').value = confirmedEmail;
@@ -680,7 +683,7 @@ async function handleReturnRoute() {
       title: 'Assinatura confirmada.',
       description: 'Seu acesso está pronto.',
       primaryLabel: 'Abrir meu painel',
-      onPrimary: () => location.assign('/painel')
+      onPrimary: () => navigateTo('/painel')
     });
     return;
   }
@@ -744,7 +747,7 @@ function bindAuthActions() {
   $$('[data-google-login]').forEach((button) => {
     button.addEventListener('click', () => {
       if (googleOAuthConfigured) {
-        location.assign('/api/auth/google/iniciar');
+        navigateTo('/api/auth/google/iniciar');
         return;
       }
       toast('Login Google pronto. Falta configurar as credenciais no ambiente.');
@@ -760,7 +763,7 @@ function bindAuthActions() {
         return;
       }
       const query = new URLSearchParams({ mode: 'register', plan });
-      location.assign(`/api/auth/google/iniciar?${query.toString()}`);
+      navigateTo(`/api/auth/google/iniciar?${query.toString()}`);
     });
   });
 
@@ -861,7 +864,7 @@ function bindAuthActions() {
           toast('Escolha um plano para liberar seu painel.');
         }
       } else {
-        location.assign('/painel');
+        navigateTo('/painel');
       }
     } catch (error) {
       showMessage('#login-error', error.message);
