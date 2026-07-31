@@ -2316,6 +2316,10 @@ def sitemap():
 def robots():
     return FileResponse(static/'robots.txt',media_type="text/plain")
 
+@app.get("/preview-design.html",include_in_schema=False)
+def retired_preview_landing():
+    return RedirectResponse("/", status_code=308)
+
 @app.get("/",include_in_schema=False)
 def landing_page():
     return FileResponse(static/'landing.html')
