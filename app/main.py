@@ -1648,8 +1648,25 @@ def update_barber_self(data:BarberSelfUpdate,user=Depends(panel_user)):
     return row
 
 
+@app.get("/api/barbeiro/resumo")
+def barber_daily_summary(data:date,user=Depends(panel_user)):
+    if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
+        raise HTTPException(403,"Resumo individual disponível somente para o colaborador")
+    summary=one("""SELECT b.nome,b.comissao_percentual,
+        COUNT(a.id) FILTER (WHERE a.status IN ('concluido','realizado')) cortes,
+        COALESCE(SUM(a.preco) FILTER (WHERE a.status IN ('concluido','realizado')),0) faturamento,
+        COALESCE(SUM(a.preco*b.comissao_percentual/100)
+            FILTER (WHERE a.status IN ('concluido','realizado')),0) comissao
+        FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id
+            AND a.barbearia_id=b.barbearia_id AND a.data_hora::date=%s
+        WHERE b.id=%s AND b.barbearia_id=%s AND b.usuario_id=%s
+        GROUP BY b.id""",(data,user["barbeiro_id"],user["barbearia_id"],user["id"]))
+    if not summary:raise HTTPException(404,"Profissional não encontrado")
+    return summary
+
+
 @app.get("/api/servicos")
-def services(user=Depends(current_user)):
+def services(user=Depends(panel_user)):
     return all_rows("SELECT * FROM servicos WHERE barbearia_id=%s AND ativo ORDER BY nome",(user["barbearia_id"],))
 
 @app.post("/api/servicos",status_code=201)
@@ -1706,14 +1723,17 @@ def insert_appointment(data, shop_id):
         raise HTTPException(409,"Este horário acabou de ser ocupado") from error
 
 @app.get("/api/agendamentos")
-def appointments(data:date|None=None,barbeiro_id:int|None=None,user=Depends(current_user)):
+def appointments(data:date|None=None,barbeiro_id:int|None=None,user=Depends(panel_user)):
     clauses=["a.barbearia_id=%s"]
     params=[user["barbearia_id"]]
     if data is not None:
         clauses.extend(["a.data_hora>=%s","a.data_hora<%s"])
         params.extend([datetime.combine(data,datetime.min.time()),
                        datetime.combine(data+timedelta(days=1),datetime.min.time())])
-    if barbeiro_id is not None:
+    if user.get("perfil") == "barbeiro":
+        clauses.append("a.barbeiro_id=%s")
+        params.append(user["barbeiro_id"])
+    elif barbeiro_id is not None:
         clauses.append("a.barbeiro_id=%s")
         params.append(barbeiro_id)
     return all_rows(f"""SELECT a.*,b.nome barbeiro_nome FROM agendamentos a
@@ -1724,17 +1744,23 @@ def appointments(data:date|None=None,barbeiro_id:int|None=None,user=Depends(curr
 def weekly_appointments(
     inicio: date,
     fim: date,
-    user=Depends(current_user),
+    user=Depends(panel_user),
 ):
     if fim < inicio or (fim - inicio).days > 7:
         raise HTTPException(422, "Período da agenda inválido")
-    return all_rows("""SELECT a.*,b.nome barbeiro_nome
+    barber_clause = " AND a.barbeiro_id=%s" if user.get("perfil") == "barbeiro" else ""
+    params = [user["barbearia_id"],inicio,fim]
+    if barber_clause:
+        params.append(user["barbeiro_id"])
+    return all_rows(f"""SELECT a.*,b.nome barbeiro_nome
       FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
       WHERE a.barbearia_id=%s AND a.data_hora::date BETWEEN %s AND %s
-      ORDER BY a.data_hora""",(user["barbearia_id"],inicio,fim))
+      {barber_clause} ORDER BY a.data_hora""",tuple(params))
 
 @app.post("/api/agendamentos",status_code=201)
-def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=Depends(current_user)):
+def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=Depends(panel_user)):
+    if user.get("perfil") == "barbeiro":
+        data = data.model_copy(update={"barbeiro_id": user["barbeiro_id"]})
     row=insert_appointment(data,user["barbearia_id"])
     if not row: raise HTTPException(404,"Barbeiro não encontrado")
     dispatch_whatsapp(background_tasks)
@@ -1746,7 +1772,19 @@ def create_appointment(data: Appointment,background_tasks:BackgroundTasks,user=D
 
 @app.put("/api/agendamentos/{appointment_id}")
 def update_appointment(appointment_id:int,data:AppointmentUpdate,
-    background_tasks:BackgroundTasks,user=Depends(current_user)):
+    background_tasks:BackgroundTasks,user=Depends(panel_user)):
+    barber_mode = user.get("perfil") == "barbeiro"
+    access_clause = " AND barbeiro_id=%s" if barber_mode else ""
+    access_params = ((appointment_id,user["barbearia_id"],user["barbeiro_id"])
+        if barber_mode else (appointment_id,user["barbearia_id"]))
+    before=one(f"SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s{access_clause}",
+        access_params)
+    if not before:raise HTTPException(404,"Agendamento não encontrado")
+    if barber_mode and (
+        (data.barbeiro_id is not None and data.barbeiro_id != user["barbeiro_id"])
+        or data.servico is not None or data.preco is not None
+    ):
+        raise HTTPException(403,"O colaborador pode alterar somente os próprios agendamentos")
     if data.status in ('concluido','realizado'):
         try:
             return complete_appointment(appointment_id,user["barbearia_id"])
@@ -1754,10 +1792,9 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
             raise HTTPException(404,"Agendamento não encontrado")
         except InvalidAppointmentStatusError:
             raise HTTPException(409,"Agendamento cancelado não pode ser concluído")
-    before=one("SELECT * FROM agendamentos WHERE id=%s AND barbearia_id=%s",
-        (appointment_id,user["barbearia_id"]))
-    if not before:raise HTTPException(404,"Agendamento não encontrado")
     values=data.model_dump(exclude_none=True)
+    if barber_mode:
+        values.pop("barbeiro_id",None)
     if data.barbeiro_id is not None:
         valid_barber=one("""SELECT id FROM barbeiros WHERE id=%s
             AND barbearia_id=%s AND ativo""",
@@ -1781,8 +1818,8 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
     else:
         assignments=",".join(f"{key}=%s" for key in values)
         current=one(f"""UPDATE agendamentos SET {assignments},atualizado_em=NOW()
-          WHERE id=%s AND barbearia_id=%s RETURNING *""",
-          (*values.values(),appointment_id,user["barbearia_id"]))
+          WHERE id=%s AND barbearia_id=%s{access_clause} RETURNING *""",
+          (*values.values(),*access_params))
     if not current: raise HTTPException(404,"Agendamento não encontrado")
     if values.get("status") == "cancelado" and before["status"] != "cancelado":
         background_tasks.add_task(
@@ -1804,7 +1841,12 @@ def update_appointment(appointment_id:int,data:AppointmentUpdate,
     return current
 
 @app.patch("/api/agendamentos/{appointment_id}/concluir")
-def conclude_appointment(appointment_id:int,user=Depends(current_user)):
+def conclude_appointment(appointment_id:int,user=Depends(panel_user)):
+    if user.get("perfil") == "barbeiro" and not one(
+        "SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s AND barbeiro_id=%s",
+        (appointment_id,user["barbearia_id"],user["barbeiro_id"]),
+    ):
+        raise HTTPException(404,"Agendamento não encontrado")
     try:
         appointment=complete_appointment(appointment_id,user["barbearia_id"])
     except AppointmentNotFoundError:
@@ -1817,10 +1859,14 @@ def conclude_appointment(appointment_id:int,user=Depends(current_user)):
     }
 
 @app.delete("/api/agendamentos/{appointment_id}")
-def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(current_user)):
-    row=one("""UPDATE agendamentos SET status='cancelado',atualizado_em=NOW()
-        WHERE id=%s AND barbearia_id=%s AND status<>'cancelado'
-        RETURNING id,atualizado_em""",(appointment_id,user["barbearia_id"]))
+def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(panel_user)):
+    barber_clause = " AND barbeiro_id=%s" if user.get("perfil") == "barbeiro" else ""
+    params = [appointment_id,user["barbearia_id"]]
+    if barber_clause:
+        params.append(user["barbeiro_id"])
+    row=one(f"""UPDATE agendamentos SET status='cancelado',atualizado_em=NOW()
+        WHERE id=%s AND barbearia_id=%s{barber_clause} AND status<>'cancelado'
+        RETURNING id,atualizado_em""",tuple(params))
     if not row: raise HTTPException(404,"Agendamento não encontrado")
     background_tasks.add_task(
         send_barber_appointment_notification,appointment_id,"cancelado",
@@ -1829,10 +1875,14 @@ def cancel(appointment_id:int,background_tasks:BackgroundTasks,user=Depends(curr
     return {"ok":True}
 
 @app.delete("/api/agendamentos/{appointment_id}/remover")
-def remove_cancelled_appointment(appointment_id:int,user=Depends(current_user)):
+def remove_cancelled_appointment(appointment_id:int,user=Depends(panel_user)):
     with db() as cur:
-        cur.execute("""SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s
-            AND status IN ('cancelado','nao_compareceu','concluido','realizado')""",(appointment_id,user["barbearia_id"]))
+        barber_clause = " AND barbeiro_id=%s" if user.get("perfil") == "barbeiro" else ""
+        params = [appointment_id,user["barbearia_id"]]
+        if barber_clause:
+            params.append(user["barbeiro_id"])
+        cur.execute(f"""SELECT id FROM agendamentos WHERE id=%s AND barbearia_id=%s{barber_clause}
+            AND status IN ('cancelado','nao_compareceu','concluido','realizado')""",tuple(params))
         if not cur.fetchone(): raise HTTPException(409,"Somente agendamentos encerrados podem ser apagados")
         cur.execute("DELETE FROM pagamentos WHERE agendamento_id=%s",(appointment_id,))
         cur.execute("DELETE FROM vendas_produto WHERE agendamento_id=%s",(appointment_id,))
@@ -1861,7 +1911,10 @@ def available(shop_id:int, day:date, barber_id:int|None, duration:int=30):
     return slots
 
 @app.get("/api/agendamentos/horarios-disponiveis")
-def owner_slots(data:date,barbeiro_id:int|None=None,user=Depends(current_user)): return {"horarios":available(user["barbearia_id"],data,barbeiro_id)}
+def owner_slots(data:date,barbeiro_id:int|None=None,user=Depends(panel_user)):
+    if user.get("perfil") == "barbeiro":
+        barbeiro_id=user["barbeiro_id"]
+    return {"horarios":available(user["barbearia_id"],data,barbeiro_id)}
 
 def validate_public_selection(shop_id:int,barbeiro_id:int,servico_id:int):
     barber=one("SELECT id FROM barbeiros WHERE id=%s AND barbearia_id=%s AND ativo",(barbeiro_id,shop_id))

@@ -156,7 +156,7 @@ function show(view) {
   const breadcrumb = $('#breadcrumb-current');
   if (breadcrumb) breadcrumb.textContent = label;
   closeSidebar();
-  const loaders = { agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, financeiro: loadFinance, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
+  const loaders = { dashboard: loadDashboard, agenda: loadAppointments, clientes: loadClients, servicos: loadServices, produtos: loadProducts, financeiro: loadFinance, relatorios: loadReports, assinatura: loadSubscription, conta: loadProfile };
   if (loaders[view]) loaders[view]().catch((error) => toast(error.message));
 }
 
@@ -369,8 +369,12 @@ async function start() {
       setPushButton('Indisponível agora', 'Não foi possível consultar as notificações neste momento.', { disabled: true });
     });
     if (sessionContext.perfil === 'barbeiro') {
-      await loadBarberSelf();
-      show('conta');
+      const profile = await loadBarberSelf();
+      barbers = [profile];
+      services = await api('/servicos');
+      $('#agenda-barber').innerHTML = `<option value="${profile.id}">${escapeHTML(profile.nome)}</option>`;
+      $('#agenda-barber').value = String(profile.id);
+      await loadDashboard();
       return;
     }
     await confirmCheckout();
@@ -804,15 +808,20 @@ function appointmentHTML(appointment) {
 
 async function loadDashboard() {
   const today = localDate();
-  const [report, appointments, dashboardProducts, dashboardClients] = await Promise.all([
-    api('/relatorios/dia?data=' + today),
+  const barberMode = sessionContext?.perfil === 'barbeiro';
+  const [rawReport, appointments, dashboardProducts, dashboardClients] = await Promise.all([
+    api(barberMode ? '/barbeiro/resumo?data=' + today : '/relatorios/dia?data=' + today),
     api('/agendamentos?data=' + today),
-    api('/produtos'),
-    api('/relatorios/fidelidade')
+    barberMode ? Promise.resolve([]) : api('/produtos'),
+    barberMode ? Promise.resolve([]) : api('/relatorios/fidelidade')
   ]);
   rememberAppointments(appointments);
+  const report = barberMode
+    ? { total: { total: rawReport.faturamento, cortes: rawReport.cortes } }
+    : rawReport;
   $('#revenue').textContent = money(report.total.total);
   $('#cuts').textContent = report.total.cortes;
+  if (barberMode) $('#team-count').textContent = money(rawReport.comissao);
   const upcoming = appointments.filter((appointment) => new Date(appointment.data_hora) > new Date() && !['cancelado', 'concluido', 'realizado', 'nao_compareceu'].includes(appointment.status));
   $('#upcoming-count').textContent = upcoming.length;
   $('#upcoming').innerHTML = upcoming.slice(0, 6).map(appointmentHTML).join('') || `<div class="list-empty">
@@ -1031,7 +1040,7 @@ function openBarber(id = null) {
   const barber = id ? barbers.find((item) => item.id === id) : null;
   if (id && !barber) return toast('Profissional não encontrado.');
   const value = (key, fallback = '') => escapeHTML(barber?.[key] ?? fallback);
-  fields(`<div class="grid2"><label>Nome<input name="nome" value="${value('nome')}" required></label><label>Cargo<input name="cargo" maxlength="80" value="${value('cargo', 'Barbeiro')}"></label><label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" value="${value('notification_email')}" placeholder="profissional@email.com"><small>Receberá somente os agendamentos deste profissional.</small></label><label>Telefone<input name="telefone" type="tel" inputmode="tel" value="${value('telefone')}" placeholder="(00) 00000-0000"></label><label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" value="${value('whatsapp')}" placeholder="Deixe vazio para usar o telefone"></label><label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido por serviço concluído.</small></label></div>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label class="notification-toggle compact"><input name="ativo" type="checkbox"${barber?.ativo !== false ? ' checked' : ''}><span><b>Profissional ativo</b><small>Profissionais inativos não aparecem no agendamento.</small></span></label><label class="notification-toggle compact"><input name="enviar_convite" type="checkbox"><span><b>${barber?.usuario_id ? 'Reenviar acesso ao painel' : 'Convidar para acessar o painel'}</b><small>Envia um link para criar a senha e editar os próprios contatos.</small></span></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
+  fields(`<div class="grid2"><label>Nome<input name="nome" value="${value('nome')}" required></label><label>Cargo<input name="cargo" maxlength="80" value="${value('cargo', 'Barbeiro')}"></label><label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" value="${value('notification_email')}" placeholder="profissional@email.com"><small>Receberá somente os agendamentos deste profissional.</small></label><label>Telefone<input name="telefone" type="tel" inputmode="tel" value="${value('telefone')}" placeholder="(00) 00000-0000"></label><label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" value="${value('whatsapp')}" placeholder="Deixe vazio para usar o telefone"></label><label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido por serviço concluído.</small></label></div>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label class="notification-toggle compact"><input name="ativo" type="checkbox"${barber?.ativo !== false ? ' checked' : ''}><span><b>Profissional ativo</b><small>Profissionais inativos não aparecem no agendamento.</small></span></label><label class="notification-toggle compact"><input name="enviar_convite" type="checkbox"><span><b>${barber?.usuario_id ? 'Reenviar acesso ao painel' : 'Convidar para acessar o painel'}</b><small>Envia um link para criar a senha e acessar somente o próprio resumo, agenda e perfil.</small></span></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
     const file = data.foto_url_arquivo;
     delete data.foto_url_arquivo;
     if (file?.size) data.foto_url = await uploadImage(file);
@@ -1059,6 +1068,7 @@ function nextAppointmentDateTime() {
 }
 
 function openAppointment(id = null, preset = {}) {
+  const barberMode = sessionContext?.perfil === 'barbeiro';
   const active = barbers.filter((barber) => barber.ativo);
   if (!active.length) return toast('Cadastre um barbeiro primeiro.');
   if (!services.length) return toast('Cadastre um serviço primeiro.');
@@ -1069,11 +1079,16 @@ function openAppointment(id = null, preset = {}) {
     : nextAppointmentDateTime();
   const barberOptions = active.map((item) => `<option value="${item.id}"${Number(item.id) === Number(appointment?.barbeiro_id) ? ' selected' : ''}>${escapeHTML(item.nome)}</option>`).join('');
   const serviceOptions = services.map((service) => `<option value="${service.id}"${Number(service.id) === Number(appointment?.servico_id) ? ' selected' : ''}>${escapeHTML(service.nome)} · ${money(service.preco)}</option>`).join('');
+  const barberField = `<label>Responsável pelo atendimento<select name="barbeiro_id" required${barberMode ? ' disabled' : ''}>${barberOptions}</select>${barberMode ? `<input name="barbeiro_id" type="hidden" value="${sessionContext.barbeiro_id}"><small>Seu acesso permite agendar somente para você.</small>` : ''}</label>`;
   if (appointment) {
-    fields(`<div class="appointment-edit-notice"><b>Editar agendamento #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>Alterações de horário ou profissional geram um novo aviso.</small></div><div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(appointment.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(appointment.cliente_telefone || '')}"></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(appointment.cliente_email || '')}" placeholder="cliente@email.com"></label><label>Responsável<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`, 'Editar agendamento', async (data) => {
+    const ownerFields = `<div class="appointment-edit-notice"><b>Editar agendamento #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>Alterações de horário ou profissional geram um novo aviso.</small></div><div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(appointment.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(appointment.cliente_telefone || '')}"></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(appointment.cliente_email || '')}" placeholder="cliente@email.com"></label>${barberField}<label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`;
+    const barberFields = `<div class="appointment-edit-notice"><b>Reagendar #${String(appointment.id).padStart(4, '0')}</b><span>${escapeHTML(appointment.cliente_nome)} · ${escapeHTML(appointment.servico)}</span><small>Você pode alterar somente o horário e as observações deste atendimento.</small></div><div class="grid2">${barberField}<label>Nova data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes">${escapeHTML(appointment.observacoes || '')}</textarea></label>`;
+    fields(barberMode ? barberFields : ownerFields, barberMode ? 'Reagendar atendimento' : 'Editar agendamento', async (data) => {
       data.barbeiro_id = Number(data.barbeiro_id);
-      data.servico_id = Number(data.servico_id);
-      data.cliente_email = data.cliente_email.trim() || null;
+      if (!barberMode) {
+        data.servico_id = Number(data.servico_id);
+        data.cliente_email = data.cliente_email.trim() || null;
+      }
       await api('/agendamentos/' + appointment.id, { method: 'PUT', body: JSON.stringify(data) });
       await loadDashboard();
       await loadAppointments();
@@ -1081,7 +1096,7 @@ function openAppointment(id = null, preset = {}) {
     });
     return;
   }
-  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(preset.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(preset.cliente_telefone || '')}" required></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(preset.cliente_email || '')}" placeholder="cliente@email.com"><small>Opcional. Envia a confirmação da reserva.</small></label><label>Responsável pelo atendimento<select name="barbeiro_id" required>${barberOptions}</select></label><label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea></label>`, 'Novo agendamento', async (data) => {
+  fields(`<div class="grid2"><label>Cliente<input name="cliente_nome" value="${escapeHTML(preset.cliente_nome || '')}" required></label><label>Telefone<input name="cliente_telefone" type="tel" value="${escapeHTML(preset.cliente_telefone || '')}" required></label><label>E-mail do cliente<input name="cliente_email" type="email" value="${escapeHTML(preset.cliente_email || '')}" placeholder="cliente@email.com"><small>Opcional. Envia a confirmação da reserva.</small></label>${barberField}<label>Data e hora<input name="data_hora" type="datetime-local" value="${dateValue}" required></label><label>Serviço<select name="servico_id" required>${serviceOptions}</select></label></div><label>Observações<textarea name="observacoes" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea></label>`, 'Novo agendamento', async (data) => {
     data.barbeiro_id = Number(data.barbeiro_id);
     data.servico_id = Number(data.servico_id);
     data.cliente_email = data.cliente_email.trim() || null;
@@ -1257,10 +1272,19 @@ function applyAccessMode() {
   const barberMode = sessionContext?.perfil === 'barbeiro';
   document.body.classList.toggle('barber-session', barberMode);
   $$('.owner-only').forEach((element) => element.classList.toggle('hidden', barberMode));
+  $$('.nav-label, #public-booking-link, .quick-actions, .professional-filter-wrap').forEach((element) => element.classList.toggle('hidden', barberMode));
   $('#barber-account-form').classList.toggle('hidden', !barberMode);
   $$('nav button[data-view]').forEach((button) => {
-    button.classList.toggle('hidden', barberMode && button.dataset.view !== 'conta');
+    button.classList.toggle('hidden', barberMode && !['dashboard', 'agenda', 'conta'].includes(button.dataset.view));
   });
+  if (barberMode) {
+    $('#metric-revenue-label').textContent = 'MEU FATURAMENTO HOJE';
+    $('#metric-revenue-note').textContent = 'somente meus serviços realizados';
+    $('#metric-team-label').textContent = 'MINHA COMISSÃO HOJE';
+    $('#metric-team-note').textContent = 'calculada somente nos meus serviços';
+    $('#agenda-heading').textContent = 'Minha agenda';
+    $('#agenda-description').textContent = 'Consulte e atualize somente os seus horários.';
+  }
 }
 
 async function loadBarberSelf() {
@@ -1270,6 +1294,7 @@ async function loadBarberSelf() {
     form.elements[name].value = profile[name] || '';
   });
   $('#barber-account-photo-preview').src = profile.foto_url || '/assets/favicon-cortaflow-transparent.png';
+  return profile;
 }
 
 async function saveBarberSelf(event) {
