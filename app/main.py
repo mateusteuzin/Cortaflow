@@ -1665,6 +1665,40 @@ def barber_daily_summary(data:date,user=Depends(panel_user)):
     return summary
 
 
+@app.get("/api/barbeiro/insights")
+def barber_insights(
+    periodo:str=Query("mensal",pattern="^(mensal|anual)$"),
+    mes:int=Query(1,ge=1,le=12),
+    ano:int=Query(...,ge=2020,le=2100),
+    user=Depends(panel_user),
+):
+    if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
+        raise HTTPException(403,"Insights individuais disponíveis somente para o colaborador")
+    inicio=date(ano,mes,1) if periodo=="mensal" else date(ano,1,1)
+    fim=(date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)) if periodo=="mensal" else date(ano+1,1,1)
+    bucket="day" if periodo=="mensal" else "month"
+    params=(user["barbeiro_id"],user["barbearia_id"],user["id"],inicio,fim)
+    pontos=all_rows(f"""SELECT date_trunc('{bucket}',a.data_hora)::date periodo,
+        COUNT(*) atendimentos,COALESCE(SUM(a.preco),0) faturamento,
+        COALESCE(SUM(a.preco*b.comissao_percentual/100),0) comissao
+        FROM barbeiros b JOIN agendamentos a ON a.barbeiro_id=b.id
+        WHERE b.id=%s AND b.barbearia_id=%s AND b.usuario_id=%s
+        AND a.data_hora>=%s AND a.data_hora<%s
+        AND a.status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1""",params)
+    total=one("""SELECT COUNT(a.id) atendimentos,COALESCE(SUM(a.preco),0) faturamento,
+        COALESCE(AVG(a.preco),0) ticket_medio,
+        COALESCE(SUM(a.preco*b.comissao_percentual/100),0) comissao
+        FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id
+        AND a.data_hora>=%s AND a.data_hora<%s
+        AND a.status IN ('concluido','realizado')
+        WHERE b.id=%s AND b.barbearia_id=%s AND b.usuario_id=%s""",
+        (inicio,fim,user["barbeiro_id"],user["barbearia_id"],user["id"]))
+    if not total:raise HTTPException(404,"Profissional não encontrado")
+    melhor=max(pontos,key=lambda item:item["atendimentos"],default=None)
+    return {"periodo":periodo,"inicio":inicio,"fim":fim,"total":total,
+        "pontos":pontos,"melhor_periodo":melhor}
+
+
 @app.get("/api/servicos")
 def services(user=Depends(panel_user)):
     return all_rows("SELECT * FROM servicos WHERE barbearia_id=%s AND ativo ORDER BY nome",(user["barbearia_id"],))

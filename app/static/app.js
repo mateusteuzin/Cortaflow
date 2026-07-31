@@ -1040,7 +1040,7 @@ function openBarber(id = null) {
   const barber = id ? barbers.find((item) => item.id === id) : null;
   if (id && !barber) return toast('Profissional não encontrado.');
   const value = (key, fallback = '') => escapeHTML(barber?.[key] ?? fallback);
-  fields(`<div class="grid2"><label>Nome<input name="nome" value="${value('nome')}" required></label><label>Cargo<input name="cargo" maxlength="80" value="${value('cargo', 'Barbeiro')}"></label><label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" value="${value('notification_email')}" placeholder="profissional@email.com"><small>Receberá somente os agendamentos deste profissional.</small></label><label>Telefone<input name="telefone" type="tel" inputmode="tel" value="${value('telefone')}" placeholder="(00) 00000-0000"></label><label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" value="${value('whatsapp')}" placeholder="Deixe vazio para usar o telefone"></label><label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido por serviço concluído.</small></label></div>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label class="notification-toggle compact"><input name="ativo" type="checkbox"${barber?.ativo !== false ? ' checked' : ''}><span><b>Profissional ativo</b><small>Profissionais inativos não aparecem no agendamento.</small></span></label><label class="notification-toggle compact"><input name="enviar_convite" type="checkbox"><span><b>${barber?.usuario_id ? 'Reenviar acesso ao painel' : 'Convidar para acessar o painel'}</b><small>Envia um link para criar a senha e acessar somente o próprio resumo, agenda e perfil.</small></span></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
+  fields(`<div class="grid2"><label>Nome<input name="nome" value="${value('nome')}" required></label><label>Cargo<input name="cargo" maxlength="80" value="${value('cargo', 'Barbeiro')}"></label><label>E-mail para notificações<input name="notification_email" type="email" autocomplete="email" value="${value('notification_email')}" placeholder="profissional@email.com"><small>Receberá somente os agendamentos deste profissional.</small></label><label>Telefone<input name="telefone" type="tel" inputmode="tel" value="${value('telefone')}" placeholder="(00) 00000-0000"></label><label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" value="${value('whatsapp')}" placeholder="Deixe vazio para usar o telefone"></label><label>Comissão (%)<input name="comissao_percentual" type="number" min="0" max="100" step="0.01" value="${value('comissao_percentual', 40)}" required><small>Percentual recebido por serviço concluído.</small></label></div>${imageUploadField('foto_url', barber?.foto_url || '', 'Foto do profissional')}<label class="notification-toggle compact"><input name="ativo" type="checkbox"${barber?.ativo !== false ? ' checked' : ''}><span><b>Profissional ativo</b><small>Profissionais inativos não aparecem no agendamento.</small></span></label><label class="notification-toggle compact"><input name="enviar_convite" type="checkbox"><span><b>${barber?.usuario_id ? 'Reenviar acesso ao painel' : 'Convidar para acessar o painel'}</b><small>Envia um link para criar a senha e acessar somente o próprio resumo, agenda, insights e perfil.</small></span></label>`, barber ? 'Editar profissional' : 'Novo barbeiro', async (data) => {
     const file = data.foto_url_arquivo;
     delete data.foto_url_arquivo;
     if (file?.size) data.foto_url = await uploadImage(file);
@@ -1275,7 +1275,7 @@ function applyAccessMode() {
   $$('.nav-label, #public-booking-link, .quick-actions, .professional-filter-wrap').forEach((element) => element.classList.toggle('hidden', barberMode));
   $('#barber-account-form').classList.toggle('hidden', !barberMode);
   $$('nav button[data-view]').forEach((button) => {
-    button.classList.toggle('hidden', barberMode && !['dashboard', 'agenda', 'conta'].includes(button.dataset.view));
+    button.classList.toggle('hidden', barberMode && !['dashboard', 'agenda', 'relatorios', 'conta'].includes(button.dataset.view));
   });
   if (barberMode) {
     $('#metric-revenue-label').textContent = 'MEU FATURAMENTO HOJE';
@@ -1284,6 +1284,13 @@ function applyAccessMode() {
     $('#metric-team-note').textContent = 'calculada somente nos meus serviços';
     $('#agenda-heading').textContent = 'Minha agenda';
     $('#agenda-description').textContent = 'Consulte e atualize somente os seus horários.';
+    $('#report-heading').textContent = 'Meus insights';
+    $('#report-description').textContent = 'Acompanhe somente seus cortes, faturamento bruto e comissão.';
+    $('#report-total-label').textContent = 'MEU FATURAMENTO BRUTO';
+    $('#report-total-note').textContent = 'somente meus serviços no período';
+    $('#report-ticket-label').textContent = 'MINHA COMISSÃO';
+    $('#report-ticket-note').textContent = 'calculada pela minha porcentagem';
+    $('#report-details').classList.add('hidden');
   }
 }
 
@@ -1458,14 +1465,19 @@ function renderAttendanceChartLegacy(points) {
 
 async function loadReports() {
   setupReportFilters();
+  const barberMode = sessionContext?.perfil === 'barbeiro';
   const period = $('#report-period').value;
   const month = Number($('#report-month').value);
   const year = Number($('#report-year').value);
-  const [report, loyalty] = await Promise.all([api(`/relatorios/periodo?periodo=${period}&mes=${month}&ano=${year}`), api('/relatorios/fidelidade')]);
+  const reportPath = barberMode ? '/barbeiro/insights' : '/relatorios/periodo';
+  const [report, loyalty] = await Promise.all([
+    api(`${reportPath}?periodo=${period}&mes=${month}&ano=${year}`),
+    barberMode ? Promise.resolve([]) : api('/relatorios/fidelidade')
+  ]);
   $('#report-month-wrap').classList.toggle('hidden', period === 'anual');
   $('#report-total').textContent = money(report.total.faturamento);
   $('#report-cuts').textContent = report.total.atendimentos;
-  $('#report-ticket').textContent = money(report.total.ticket_medio);
+  $('#report-ticket').textContent = money(barberMode ? report.total.comissao : report.total.ticket_medio);
   $('#report-chart-title').textContent = period === 'anual' ? 'Atendimentos por mês' : 'Atendimentos por dia';
   $('#report-chart-description').textContent = period === 'anual'
     ? `Visão consolidada de ${year}, mês a mês.`
@@ -1473,7 +1485,10 @@ async function loadReports() {
   if (report.melhor_periodo) {
     const date = String(report.melhor_periodo.periodo).slice(0, 10);
     $('#report-best').textContent = period === 'anual' ? reportMonths[Number(date.slice(5, 7)) - 1] : `${Number(date.slice(8, 10))}/${date.slice(5, 7)}`;
-    $('#report-best-detail').textContent = `${report.melhor_periodo.atendimentos} atendimento${Number(report.melhor_periodo.atendimentos) === 1 ? '' : 's'}`;
+    const count = Number(report.melhor_periodo.atendimentos);
+    $('#report-best-detail').textContent = barberMode
+      ? `${count} corte${count === 1 ? '' : 's'} · ${money(report.melhor_periodo.faturamento)} bruto · ${money(report.melhor_periodo.comissao)} comissão`
+      : `${count} atendimento${count === 1 ? '' : 's'}`;
   } else {
     $('#report-best').textContent = '—';
     $('#report-best-detail').textContent = 'sem atendimentos';
@@ -1486,8 +1501,10 @@ async function loadReports() {
   $('#chart-average').textContent = (chartTotal / Math.max(chartPoints.length, 1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
   $('#chart-peak').textContent = peak.value ? `${peak.value} · ${peak.fullLabel}` : '—';
   renderAttendanceChart(chartPoints);
-  $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
-  $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
+  if (!barberMode) {
+    $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
+    $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
+  }
 }
 
 // Bar chart: one column per period makes daily volume easier to compare than a smoothed line.

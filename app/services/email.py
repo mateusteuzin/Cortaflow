@@ -297,7 +297,7 @@ def send_barber_invitation(
         action_url=access_url,
         callout_title="Acesso individual",
         callout_text=(
-            "Sua conta permite acessar somente seu resumo, sua agenda e seus dados profissionais. "
+            "Sua conta permite acessar somente seu resumo, sua agenda, seus insights e seus dados profissionais. "
             "Financeiro geral e configurações administrativas continuam protegidos."
         ),
         expiry_text="Por segurança, este convite expira em 30 minutos.",
@@ -310,7 +310,7 @@ def send_barber_invitation(
         f"Olá, {barber_name}.\n\n"
         f"A administração da {shop_name} vinculou você à equipe.\n\n"
         f"Criar minha senha: {access_url}\n\n"
-        "O convite expira em 30 minutos e libera somente seu resumo, sua agenda e seu perfil."
+        "O convite expira em 30 minutos e libera somente seu resumo, sua agenda, seus insights e seu perfil."
     )
     return _send_transactional_email(
         email=email,

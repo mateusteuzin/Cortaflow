@@ -107,6 +107,43 @@ class BarberAccessTests(unittest.TestCase):
             )
         self.assertEqual(raised.exception.status_code, 403)
 
+    @patch("app.main.one")
+    @patch("app.main.all_rows")
+    def test_individual_insights_include_only_linked_barber(self, rows, database_one):
+        rows.return_value = [{
+            "periodo": date(2026, 7, 12),
+            "atendimentos": 4,
+            "faturamento": Decimal("200"),
+            "comissao": Decimal("80"),
+        }]
+        database_one.return_value = {
+            "atendimentos": 4,
+            "faturamento": Decimal("200"),
+            "ticket_medio": Decimal("50"),
+            "comissao": Decimal("80"),
+        }
+
+        result = main.barber_insights("mensal", 7, 2026, BARBER_USER)
+
+        points_query, points_params = rows.call_args.args
+        total_query, total_params = database_one.call_args.args
+        self.assertIn("b.usuario_id=%s", points_query)
+        self.assertIn("b.usuario_id=%s", total_query)
+        self.assertEqual(points_params[:3], (9, 7, 21))
+        self.assertEqual(total_params[2:], (9, 7, 21))
+        self.assertEqual(result["melhor_periodo"]["atendimentos"], 4)
+        self.assertEqual(result["total"]["comissao"], Decimal("80"))
+
+    def test_owner_cannot_use_individual_barber_insights(self):
+        with self.assertRaises(HTTPException) as raised:
+            main.barber_insights(
+                "mensal",
+                7,
+                2026,
+                {"id": 1, "barbearia_id": 7, "perfil": "administrador"},
+            )
+        self.assertEqual(raised.exception.status_code, 403)
+
 
 if __name__ == "__main__":
     unittest.main()
