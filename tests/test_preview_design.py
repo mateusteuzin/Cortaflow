@@ -65,6 +65,11 @@ class PreviewDesignTests(unittest.TestCase):
         self.assertIn("@media(max-width:520px)", self.css)
         self.assertIn("prefers-reduced-motion:reduce", self.css)
 
+    def test_product_gallery_is_button_driven_on_small_screens(self):
+        self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", self.css)
+        self.assertIn(".product-stage figure.active{display:block;width:100%;min-width:0", self.css)
+        self.assertNotIn(".product-stage{display:flex;gap:14px;overflow:auto", self.css)
+
 
 if __name__ == "__main__":
     unittest.main()
