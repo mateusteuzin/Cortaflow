@@ -584,6 +584,7 @@ async function continueVerifiedSession(code, confirmedPlan, confirmedEmail) {
 
 async function handleReturnRoute() {
   const params = new URLSearchParams(location.search);
+  const access = params.get('access');
   const confirmation = params.get('email_confirmado');
   const confirmedEmail = params.get('email');
   const confirmedPlan = params.get('plan');
@@ -592,6 +593,12 @@ async function handleReturnRoute() {
   const checkoutSessionId = params.get('session_id');
   const google = params.get('google');
   resetToken = params.get('reset_password') || '';
+
+  if (access === 'login' || access === 'register') {
+    cleanReturnUrl();
+    showAuth(access);
+    return;
+  }
 
   if (confirmedPlan && plans[confirmedPlan]) updateSelectedPlan(confirmedPlan);
 

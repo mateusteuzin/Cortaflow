@@ -2318,7 +2318,7 @@ def robots():
 
 @app.get("/",include_in_schema=False)
 def landing_page():
-    return FileResponse(static/'landing.html')
+    return FileResponse(static/'preview-design.html')
 
 @app.get("/painel",include_in_schema=False)
 def dashboard_page():

@@ -51,7 +51,7 @@ class LandingParser(HTMLParser):
 class TechnicalSeoTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.html = (STATIC / "landing.html").read_text(encoding="utf-8")
+        cls.html = (STATIC / "preview-design.html").read_text(encoding="utf-8")
         cls.parser = LandingParser()
         cls.parser.feed(cls.html)
         cls.structured = json.loads(cls.parser.json_ld)

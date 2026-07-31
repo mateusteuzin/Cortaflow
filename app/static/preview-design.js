@@ -1,6 +1,14 @@
 (() => {
   'use strict';
 
+  const returnParams = new URLSearchParams(window.location.search);
+  const needsFullAuthFlow = ['email_confirmado', 'checkout', 'google', 'reset_password']
+    .some(key => returnParams.has(key));
+  if (needsFullAuthFlow) {
+    window.location.replace(`/landing.html${window.location.search}`);
+    return;
+  }
+
   const plans = {
     essencial: { name: 'Essencial', price: 'R$ 29,90', capacity: '1 profissional', rank: 1 },
     profissional: { name: 'Profissional', price: 'R$ 44,90', capacity: 'Até 2 profissionais', rank: 2 },
@@ -97,7 +105,7 @@
   document.querySelectorAll('[data-open-signup]').forEach(button => button.addEventListener('click', () => openSignup()));
   document.querySelectorAll('[data-plan]').forEach(button => button.addEventListener('click', () => openSignup(button.dataset.plan)));
   document.querySelectorAll('[data-close-signup]').forEach(button => button.addEventListener('click', closeSignup));
-  document.querySelectorAll('[data-login]').forEach(button => button.addEventListener('click', () => { window.location.href = '/painel'; }));
+  document.querySelectorAll('[data-login]').forEach(button => button.addEventListener('click', () => { window.location.href = '/landing.html?access=login'; }));
   form?.addEventListener('change', event => { if (event.target.name === 'team_size') updateRecommendation(); });
   document.querySelector('#signup-next')?.addEventListener('click', () => {
     if (step === 1 && !teamValue()) return void (document.querySelector('#signup-error').textContent = 'Escolha o tamanho da sua equipe.');

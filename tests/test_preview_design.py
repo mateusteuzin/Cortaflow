@@ -13,8 +13,9 @@ class PreviewDesignTests(unittest.TestCase):
         cls.css = (STATIC / "preview-design.css").read_text(encoding="utf-8")
         cls.script = (STATIC / "preview-design.js").read_text(encoding="utf-8")
 
-    def test_preview_is_isolated_and_not_indexed(self):
-        self.assertIn('<meta name="robots" content="noindex,nofollow">', self.html)
+    def test_preview_is_the_indexable_production_landing(self):
+        self.assertIn('<meta name="robots" content="index, follow">', self.html)
+        self.assertIn('<link rel="canonical" href="https://cortaflow.com.br/">', self.html)
         self.assertIn('/preview-design.css', self.html)
         self.assertIn('/preview-design.js', self.html)
 
@@ -49,6 +50,12 @@ class PreviewDesignTests(unittest.TestCase):
         self.assertIn("event.key === 'Escape'", self.script)
         self.assertIn("event.key === 'Tab'", self.script)
         self.assertIn("(max-width: 820px)", self.script)
+
+    def test_login_and_payment_callbacks_keep_the_complete_auth_flow(self):
+        self.assertIn("/landing.html?access=login", self.script)
+        for parameter in ("email_confirmado", "checkout", "google", "reset_password"):
+            self.assertIn(parameter, self.script)
+        self.assertIn("/landing.html${window.location.search}", self.script)
 
     def test_visual_tokens_and_responsive_fallbacks(self):
         for token in ("#F4F1E9", "#101411", "#153E32", "#B8FF65"):
