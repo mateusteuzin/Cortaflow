@@ -27,10 +27,12 @@ class LandingOnboardingTests(unittest.TestCase):
         self.assertIn("if (!planIsCompatible(input.value, teamSize))", self.script)
         self.assertIn("Este plano não comporta o tamanho informado da sua equipe.", self.script)
 
-    def test_demo_tabs_are_keyboard_accessible(self):
-        self.assertIn('role="tablist"', self.html)
-        self.assertIn('role="tabpanel"', self.html)
-        self.assertIn("['ArrowLeft', 'ArrowRight', 'Home', 'End']", self.script)
+    def test_mobile_showcase_covers_the_five_product_areas(self):
+        self.assertIn('class="section showcase-section"', self.html)
+        self.assertIn('Veja o CortaFlow por dentro.', self.html)
+        for index, area in enumerate(('Agenda', 'Equipe', 'Clientes', 'Financeiro', 'Insights'), 1):
+            self.assertIn(f'<span>{index:02d}</span><h3>{area}</h3>', self.html)
+            self.assertIn(f'mobile-{area.lower()}-premium.png', self.html)
 
 
 if __name__ == "__main__":
