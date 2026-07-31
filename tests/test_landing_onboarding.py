@@ -32,7 +32,7 @@ class LandingOnboardingTests(unittest.TestCase):
         self.assertIn('Veja o CortaFlow por dentro.', self.html)
         for index, area in enumerate(('Agenda', 'Equipe', 'Clientes', 'Financeiro', 'Insights'), 1):
             self.assertIn(f'<span>{index:02d}</span><h3>{area}</h3>', self.html)
-            self.assertIn(f'mobile-{area.lower()}-premium.png', self.html)
+            self.assertIn(f'mobile-{area.lower()}-cutout.png', self.html)
 
 
 if __name__ == "__main__":
