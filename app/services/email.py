@@ -14,7 +14,7 @@ from ..database import one
 from .whatsapp import normalize_phone
 
 logger = logging.getLogger(__name__)
-BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-icon-default.png"
+BRAND_ICON_URL = "https://cortaflow.com.br/assets/cortaflow-logo-on-dark.png"
 RESEND_ENDPOINT = "https://api.resend.com/emails"
 DEFAULT_SENDER = "onboarding@resend.dev"
 DEFAULT_BASE_URL = "https://cortaflow.com.br"
@@ -77,27 +77,27 @@ def _transactional_html(
     }}
   </style>
 </head>
-<body style="margin:0;padding:0;width:100%;background:#f2f0ea;color:#171915;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;width:100%;background:#f4f5f0;color:#0d0d11;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     {escape(preheader)}
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f2f0ea;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f4f5f0;">
     <tr>
       <td class="email-wrap" align="center" style="padding:32px 12px;">
-        <table role="presentation" class="email-card" width="620" cellpadding="0" cellspacing="0" style="width:100%;max-width:620px;background:#ffffff;border:1px solid #ddd9cf;">
+        <table role="presentation" class="email-card" width="620" cellpadding="0" cellspacing="0" style="width:100%;max-width:620px;background:#ffffff;border:1px solid #dfe1db;border-radius:18px;overflow:hidden;">
           <tr>
-            <td class="email-header" style="background:#151713;padding:32px 36px 28px;">
+            <td class="email-header" style="background:#0d0d11;padding:32px 36px 28px;border-bottom:3px solid #f1ff0a;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <img src="{BRAND_ICON_URL}" width="48" height="48" alt="CortaFlow" style="display:block;width:48px;height:48px;border-radius:50%;background:#ffffff;padding:3px;">
+                    <img src="{BRAND_ICON_URL}" width="168" height="34" alt="CortaFlow" style="display:block;width:168px;height:auto;">
                   </td>
-                  <td align="right" style="vertical-align:middle;color:#d8ae54;font-size:11px;font-weight:700;text-transform:uppercase;">
-                    CortaFlow
+                  <td align="right" style="vertical-align:middle;color:#f1ff0a;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">
+                    OPERACAO ATIVA
                   </td>
                 </tr>
               </table>
-              <p style="margin:26px 0 8px;color:#d8ae54;font-size:11px;line-height:1.4;font-weight:700;text-transform:uppercase;">{escape(eyebrow)}</p>
+              <p style="margin:26px 0 8px;color:#f1ff0a;font-size:11px;line-height:1.4;font-weight:800;letter-spacing:1px;text-transform:uppercase;">{escape(eyebrow)}</p>
               <h1 class="email-title" style="margin:0;color:#ffffff;font-size:31px;line-height:1.18;font-weight:700;">{escape(title)}</h1>
             </td>
           </tr>
@@ -108,14 +108,14 @@ def _transactional_html(
               {details_html}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 24px;">
                 <tr>
-                  <td align="center" style="border-radius:4px;background:#171915;">
-                    <a class="email-button" href="{safe_url}" target="_blank" style="display:inline-block;min-width:230px;padding:16px 24px;color:#ffffff;text-decoration:none;font-size:15px;line-height:1.2;font-weight:700;text-align:center;">{escape(action_label)}</a>
+                  <td align="center" style="border-radius:8px;background:#f1ff0a;">
+                    <a class="email-button" href="{safe_url}" target="_blank" style="display:inline-block;min-width:230px;padding:16px 24px;color:#0d0d11;text-decoration:none;font-size:15px;line-height:1.2;font-weight:800;text-align:center;">{escape(action_label)} →</a>
                   </td>
                 </tr>
               </table>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#fbf6e9;border:1px solid #ead8a7;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f4f7df;border:1px solid #d7e760;border-radius:8px;">
                 <tr>
-                  <td style="padding:16px 18px;color:#5e481d;font-size:13px;line-height:1.65;">
+                  <td style="padding:16px 18px;color:#363a16;font-size:13px;line-height:1.65;">
                     <strong>{escape(callout_title)}</strong><br>{escape(callout_text)}
                   </td>
                 </tr>
