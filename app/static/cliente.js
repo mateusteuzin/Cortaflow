@@ -200,7 +200,14 @@ $('#confirm').onclick = async () => {
     const locationLogo = shop.logo_url
       ? `<span class="summary-shop-logo"><img src="${escapeHTML(shop.logo_url)}" alt="Logo da ${escapeHTML(shop.nome)}"></span>`
       : `<span class="summary-shop-logo summary-shop-initials" aria-hidden="true">${escapeHTML(initials(shop.nome))}</span>`;
-    $('#summary').innerHTML = `<div class="summary-highlight"><small>DATA E HORÁRIO</small><strong>${formatDate(dateInput.value)}</strong><b>${escapeHTML(slot)}</b></div><div class="summary-grid"><div><small>Serviço</small><b>${escapeHTML(service.nome)}</b></div><div><small>Profissional</small><b>${escapeHTML(barber.name)}</b></div><div><small>Duração</small><b>${service.duracao_minutos} minutos</b></div><div><small>Valor</small><b>${money(service.preco)}</b></div></div><div class="summary-location">${locationLogo}<p><small>LOCAL CONFIRMADO</small><b>${escapeHTML(shop.nome)}</b><em>${escapeHTML(shop.endereco || 'Endereço informado pela barbearia')}</em></p><span class="summary-verified" aria-label="Local confirmado">✓</span></div><div class="summary-code"><span>NÚMERO DA RESERVA</span><b>#${escapeHTML(reference)}</b></div>`;
+    const address = String(shop.endereco || '').trim();
+    const mapsUrl = address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${shop.nome} ${address}`)}`
+      : '';
+    const mapsLink = mapsUrl
+      ? `<a class="summary-maps" href="${escapeHTML(mapsUrl)}" target="_blank" rel="noopener">Ver no Maps <span aria-hidden="true">↗</span></a>`
+      : '';
+    $('#summary').innerHTML = `<div class="summary-highlight"><small>DATA E HORÁRIO</small><strong>${formatDate(dateInput.value)}</strong><b>${escapeHTML(slot)}</b></div><div class="summary-grid"><div><small>Serviço</small><b>${escapeHTML(service.nome)}</b></div><div><small>Profissional</small><b>${escapeHTML(barber.name)}</b></div><div><small>Duração</small><b>${service.duracao_minutos} minutos</b></div><div><small>Valor</small><b>${money(service.preco)}</b></div></div><div class="summary-location">${locationLogo}<p><small>LOCAL CONFIRMADO</small><b>${escapeHTML(shop.nome)}</b><em>${escapeHTML(address || 'Endereço informado pela barbearia')}</em>${mapsLink}</p><span class="summary-verified" aria-label="Local confirmado">✓</span></div><div class="summary-code"><span>NÚMERO DA RESERVA</span><b>#${escapeHTML(reference)}</b></div>`;
     const shopPhone = String(shop.telefone || '').replace(/\D/g, '');
     const whatsapp = $('#whatsapp');
     if (shopPhone.length >= 10) {

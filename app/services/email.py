@@ -401,7 +401,7 @@ def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
     image_url = candidate if has_remote_logo else _public_url(candidate) if has_local_logo else BRAND_ICON_URL
     image_alt = f"Logo da {title}" if has_remote_logo or has_local_logo else "CortaFlow"
     return f"""
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#151713;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#0d0f0c;border-bottom:2px solid #f1ff0a;">
         <tr>
           <td class="booking-header" style="padding:28px 32px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -409,16 +409,16 @@ def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
                 <td width="76" style="width:76px;vertical-align:middle;">
                   <table role="presentation" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td align="center" valign="middle" style="width:62px;height:62px;border:2px solid #d5a93f;border-radius:50%;background:#ffffff;">
+                      <td align="center" valign="middle" style="width:62px;height:62px;border:2px solid #f1ff0a;border-radius:50%;background:#171a14;">
                         <img src="{escape(image_url, quote=True)}" width="54" height="54" alt="{escape(image_alt, quote=True)}" style="display:block;width:54px;max-width:54px;height:54px;margin:2px auto;border-radius:50%;object-fit:contain;">
                       </td>
                     </tr>
                   </table>
                 </td>
                 <td style="vertical-align:middle;">
-                  <p style="margin:0 0 7px;color:#d8ae54;font-size:10px;line-height:1.3;font-weight:700;text-transform:uppercase;">{escape(label)}</p>
+                  <p style="margin:0 0 7px;color:#f1ff0a;font-size:10px;line-height:1.3;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">{escape(label)}</p>
                   <h1 class="booking-shop-name" style="margin:0;color:#ffffff;font-size:25px;line-height:1.15;font-weight:700;">{escape(title)}</h1>
-                  <p style="margin:7px 0 0;color:#aeb2aa;font-size:12px;line-height:1.4;">Agendamento realizado pelo CortaFlow</p>
+                  <p style="margin:7px 0 0;color:#abb4a4;font-size:12px;line-height:1.4;">Agendamento realizado pelo CortaFlow</p>
                 </td>
               </tr>
             </table>
@@ -437,6 +437,28 @@ def _email_html(item: dict) -> str:
     day, hour = _format_date(item["data_hora"])
     shop = str(item["barbearia_nome"])
     amount = f"{float(item['preco']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    shop_phone = str(item.get("barbearia_telefone") or "").strip()
+    try:
+        shop_whatsapp = normalize_phone(shop_phone)
+    except ValueError:
+        shop_whatsapp = ""
+    whatsapp_href = (
+        f"https://wa.me/{shop_whatsapp}?text={quote(f'Olá! Tenho uma reserva #{int(item["id"]):04d} na {shop}.') }"
+        if shop_whatsapp
+        else ""
+    )
+    contact_html = (
+        f'''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#171a14;border:1px solid #343b2c;border-left:3px solid #f1ff0a;">
+              <tr><td style="padding:16px 17px;color:#eaf0e3;font-size:13px;line-height:1.6;">
+                <strong style="display:block;margin-bottom:3px;color:#f1ff0a;font-size:11px;letter-spacing:.08em;text-transform:uppercase;">Precisa falar com a barbearia?</strong>
+                <span style="color:#c3cabd;">WhatsApp da barbearia: </span><a href="{escape(whatsapp_href, quote=True)}" style="color:#f1ff0a;font-weight:700;text-decoration:none;">{escape(shop_phone)} ↗</a>
+              </td></tr>
+            </table>'''
+        if whatsapp_href
+        else '''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#171a14;border:1px solid #343b2c;border-left:3px solid #f1ff0a;">
+              <tr><td style="padding:16px 17px;color:#c3cabd;font-size:13px;line-height:1.6;">Precisa alterar o horário? Entre em contato diretamente com a barbearia antes do atendimento.</td></tr>
+            </table>'''
+    )
     return f"""<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -461,42 +483,40 @@ def _email_html(item: dict) -> str:
     }}
   </style>
 </head>
-<body style="margin:0;padding:0;width:100%;background:#f2f0ea;color:#171915;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;width:100%;background:#0b0c0a;color:#f4f7ef;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     Sua reserva na {escape(shop)} está confirmada para {escape(day)}, às {hour}.
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f2f0ea;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#0b0c0a;">
     <tr>
       <td class="booking-wrap" align="center" style="padding:32px 12px;">
-        <table role="presentation" class="booking-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #ddd9cf;">
+        <table role="presentation" class="booking-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#10120e;border:1px solid #353a30;">
           <tr><td>{_brand_header('Reserva confirmada', shop, item.get('barbearia_logo_url'))}</td></tr>
           <tr>
             <td class="booking-content" style="padding:34px 32px 12px;">
-              <p style="margin:0 0 12px;color:#171915;font-size:16px;line-height:1.6;">Olá, <strong>{escape(str(item['cliente_nome']))}</strong>.</p>
-              <p style="margin:0;color:#565a52;font-size:15px;line-height:1.7;">Seu horário foi reservado com sucesso. Confira os detalhes:</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#faf8f3;border:1px solid #e5dfd1;border-left:4px solid #d5a93f;">
+              <p style="margin:0 0 12px;color:#f5f8ef;font-size:16px;line-height:1.6;">Olá, <strong>{escape(str(item['cliente_nome']))}</strong>.</p>
+              <p style="margin:0;color:#bfc6b8;font-size:15px;line-height:1.7;">Seu horário foi reservado com sucesso. Confira os detalhes:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#191b15;border:1px solid #343a2d;border-left:4px solid #f1ff0a;">
                 <tr>
                   <td style="padding:20px 18px;">
-                    <p style="margin:0 0 16px;color:#171915;font-size:18px;line-height:1.35;font-weight:700;">{escape(str(item['servico']))}</p>
+                    <p style="margin:0 0 16px;color:#f5f8ef;font-size:18px;line-height:1.35;font-weight:700;">{escape(str(item['servico']))}</p>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Data</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{escape(day)}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Horário</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{hour}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Profissional</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">{escape(str(item['barbeiro_nome']))}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Valor</td><td style="padding:5px 0;color:#242720;font-size:13px;font-weight:700;">R$ {amount}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#777a72;font-size:13px;">Reserva</td><td style="padding:5px 0;color:#8b6418;font-size:13px;font-weight:700;">#{int(item['id']):04d}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Data</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">{escape(day)}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Horário</td><td style="padding:5px 0;color:#f1ff0a;font-size:13px;font-weight:700;">{hour}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Profissional</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">{escape(str(item['barbeiro_nome']))}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Valor</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">R$ {amount}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Reserva</td><td style="padding:5px 0;color:#f1ff0a;font-size:13px;font-weight:700;">#{int(item['id']):04d}</td></tr>
                     </table>
                   </td>
                 </tr>
               </table>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f4;border:1px solid #e3e4de;">
-                <tr><td style="padding:15px 17px;color:#60645c;font-size:13px;line-height:1.6;">Precisa alterar o horário? Entre em contato diretamente com a barbearia antes do atendimento.</td></tr>
-              </table>
+              {contact_html}
             </td>
           </tr>
           <tr>
-            <td class="booking-footer" style="padding:22px 32px 32px;color:#858980;font-size:11px;line-height:1.6;">
+            <td class="booking-footer" style="padding:22px 32px 32px;color:#8e9886;font-size:11px;line-height:1.6;">
               <p style="margin:0 0 6px;">Mensagem automática enviada pela {escape(shop)}.</p>
-              <p style="margin:0;">Agendamentos e gestão por <strong style="color:#725316;">CortaFlow</strong>.</p>
+              <p style="margin:0;">Agendamentos e gestão por <strong style="color:#f1ff0a;">CortaFlow</strong>.</p>
             </td>
           </tr>
         </table>
@@ -687,7 +707,7 @@ def send_appointment_confirmation(appointment_id: int) -> bool:
         one("UPDATE agendamentos SET email_erro=%s WHERE id=%s RETURNING id", ("Resend não configurado", appointment_id))
         return False
     item = one("""SELECT a.id,a.cliente_nome,a.cliente_email,a.data_hora,a.servico,a.preco,
-        b.nome barbeiro_nome,s.nome barbearia_nome,s.logo_url barbearia_logo_url FROM agendamentos a
+        b.nome barbeiro_nome,s.nome barbearia_nome,s.logo_url barbearia_logo_url,s.telefone barbearia_telefone FROM agendamentos a
         JOIN barbeiros b ON b.id=a.barbeiro_id JOIN barbearias s ON s.id=a.barbearia_id
         WHERE a.id=%s AND a.cliente_email IS NOT NULL AND NOT a.email_enviado
           AND a.status NOT IN ('concluido','realizado')""", (appointment_id,))
