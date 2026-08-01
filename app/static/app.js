@@ -1366,6 +1366,36 @@ function setupFinanceFilters() {
   }
 }
 
+function renderFinanceCharts(result) {
+  const days = new Map();
+  const add = (rawDate, key, amount) => {
+    const date = String(rawDate || '').slice(0, 10);
+    if (!date) return;
+    const item = days.get(date) || { income: 0, outflow: 0 };
+    item[key] += Number(amount || 0);
+    days.set(date, item);
+  };
+  (result.atendimentos_detalhes || []).forEach((item) => add(item.data_hora, 'income', item.preco));
+  (result.vendas_detalhes || []).forEach((item) => add(item.criado_em, 'income', item.total_venda));
+  (result.despesas || []).forEach((item) => add(item.data, 'outflow', item.valor));
+  const points = [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-7);
+  const series = points.length ? points : [['', { income: 0, outflow: 0 }]];
+  const max = Math.max(1, ...series.flatMap(([, item]) => [item.income, item.outflow]));
+  const width = 680, height = 210, left = 38, right = 12, top = 18, bottom = 30, chartWidth = width - left - right, chartHeight = height - top - bottom;
+  const xy = (index, value) => [left + (series.length === 1 ? chartWidth / 2 : index * chartWidth / (series.length - 1)), top + chartHeight - value / max * chartHeight];
+  const path = (key) => series.map(([, item], index) => { const [x, y] = xy(index, item[key]); return `${index ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join(' ');
+  const grid = [0, .25, .5, .75, 1].map((step) => { const y = top + chartHeight * step; return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}"/><text x="4" y="${y+4}">${money(max * (1-step)).replace(',00','')}</text>`; }).join('');
+  const labels = series.map(([date], index) => { const [x] = xy(index, 0); return `<text x="${x}" y="${height-5}" text-anchor="middle">${date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : '—'}</text>`; }).join('');
+  $('#finance-breakdown').innerHTML = `<div class="finance-line-chart"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Fluxo de entradas e saídas"><g class="chart-grid">${grid}${labels}</g><path class="finance-income-line" d="${path('income')}"/><path class="finance-outflow-line" d="${path('outflow')}"/></svg></div>`;
+  const groups = Object.values((result.despesas || []).reduce((all, item) => { const label = item.categoria_label || expenseCategories[item.categoria] || 'Outros'; all[label] = (all[label] || 0) + Number(item.valor || 0); return all; }, {}));
+  const entries = Object.entries((result.despesas || []).reduce((all, item) => { const label = item.categoria_label || expenseCategories[item.categoria] || 'Outros'; all[label] = (all[label] || 0) + Number(item.valor || 0); return all; }, {}));
+  const total = Number(result.despesas_total || 0);
+  let cursor = 0;
+  const stops = entries.map(([, value], index) => { const end = cursor + (total ? value / total * 100 : 0); const tone = ['#111216','#585a60','#a9abb0','#dedfe2'][index % 4]; const stop = `${tone} ${cursor}% ${end}%`; cursor = end; return stop; }).join(',') || '#ececef 0 100%';
+  const legend = entries.map(([label, value], index) => `<li><i class="expense-dot dot-${index % 4}"></i><span>${escapeHTML(label)}</span><b>${money(value)}</b><small>${total ? (value / total * 100).toLocaleString('pt-BR',{maximumFractionDigits:1}) : 0}%</small></li>`).join('') || '<li><span>Nenhuma despesa cadastrada</span></li>';
+  $('#expense-list').innerHTML = `<div class="expense-visual"><div class="expense-donut" style="background:conic-gradient(${stops})"><span><b>${money(total)}</b><small>Total</small></span></div><ul class="expense-legend-list">${legend}</ul></div>`;
+}
+
 async function loadFinance() {
   setupFinanceFilters();
   const month = Number($('#finance-month').value);
@@ -1386,8 +1416,7 @@ async function loadFinance() {
     ['Custos dos produtos', -Number(result.custos_produtos), 'negative'],
     ['Despesas cadastradas', -Number(result.despesas_total), 'negative'],
   ];
-  $('#finance-breakdown').innerHTML = rows.map(([label, value, tone]) => `<div class="finance-breakdown-row"><span>${escapeHTML(label)}</span><b class="${tone}">${value >= 0 ? '+' : '−'} ${money(Math.abs(value))}</b></div>`).join('') + `<div class="finance-breakdown-row total"><span>Lucro líquido</span><b>${money(result.lucro_liquido)}</b></div>`;
-  $('#expense-list').innerHTML = financeExpenses.map((expense) => `<article class="expense-row"><span class="expense-date">${new Date(expense.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span><div><b>${escapeHTML(expense.descricao)}</b><small>${escapeHTML(expense.categoria_label || expenseCategories[expense.categoria] || expense.categoria)}${expense.recorrente ? ' · recorrente' : ''}</small></div><strong>${money(expense.valor)}</strong><div class="expense-actions"><button class="link" type="button" data-action="edit-expense" data-id="${expense.id}">Editar</button><button class="danger" type="button" data-action="remove-expense" data-id="${expense.id}">Excluir</button></div></article>`).join('') || '<div class="finance-empty"><b>Nenhuma despesa neste mês</b><span>Cadastre aluguel, materiais, contas e outros custos para ver o lucro real.</span><button class="button button-outline" type="button" data-action="add-expense">Cadastrar primeira despesa</button></div>';
+  renderFinanceCharts(result);
 }
 
 function openExpense(id = null) {
