@@ -1542,6 +1542,7 @@ async function loadReports() {
   $('#chart-average').textContent = (chartTotal / Math.max(chartPoints.length, 1)).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
   $('#chart-peak').textContent = peak.value ? `${peak.value} · ${peak.fullLabel}` : '—';
   renderAttendanceChart(chartPoints);
+  renderRevenueChart(chartPoints, Number(report.total.faturamento || 0));
   if (!barberMode) {
     $('#barber-report').innerHTML = report.por_barbeiro.map((item) => `<div class="report-row"><b>${escapeHTML(item.nome)}</b><span>${item.cortes} cortes</span><span>${money(item.faturamento)}</span></div>`).join('') || '<p class="empty">Sem dados no período.</p>';
     $('#loyalty-report').innerHTML = loyalty.slice(0, 10).map((item) => `<div class="report-row"><b>${escapeHTML(item.cliente_nome || item.cliente_telefone)}</b><span>${item.total_cortes} cortes</span><span>faltam ${item.cortes_para_premio}</span></div>`).join('') || '<p class="empty">Sem clientes fidelizados ainda.</p>';
@@ -1579,6 +1580,16 @@ function renderAttendanceChart(points) {
   }).join('');
   const empty = bestValue === 0 ? '<p class="chart-empty">Ainda não há atendimentos concluídos neste período.</p>' : '';
   $('#attendance-chart').innerHTML = `${empty}<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Gráfico de atendimentos no período"><g class="chart-grid">${grid}${labels}</g><g class="chart-bars">${bars}</g></svg>`;
+}
+
+function renderRevenueChart(points, total) {
+  const values = points.map((point) => point.value); const sum = values.reduce((a,b) => a+b,0) || 1;
+  let running = 0; const series = values.map((value, index) => ({ label: points[index].label, value: running += total * value / sum }));
+  const width=760,height=286,left=46,right=18,top=30,bottom=46,cw=width-left-right,ch=height-top-bottom,max=Math.max(1,...series.map(x=>x.value));
+  const x=(i)=>left+(series.length===1?cw/2:i*cw/(series.length-1)), y=(v)=>top+ch-v/max*ch;
+  const grid=[0,.25,.5,.75,1].map(n=>{const py=top+ch*n;return `<line x1="${left}" y1="${py}" x2="${width-right}" y2="${py}"/><text x="${left-9}" y="${py+3}">${money(max*(1-n)).replace(',00','')}</text>`}).join('');
+  const path=series.map((p,i)=>`${i?'L':'M'}${x(i)},${y(p.value)}`).join(' '); const labels=series.map((p,i)=>`<text x="${x(i)}" y="${height-14}" text-anchor="middle">${escapeHTML(p.label)}</text>`).join(''); const dots=series.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="4"/><text class="chart-value" x="${x(i)}" y="${y(p.value)-9}" text-anchor="middle">${money(p.value).replace(',00','')}</text>`).join('');
+  $('#revenue-chart').innerHTML=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Evolução do faturamento"><g class="chart-grid">${grid}${labels}</g><path class="revenue-line" d="${path}"/>${dots}</svg>`;
 }
 
 const modal = $('#modal');
