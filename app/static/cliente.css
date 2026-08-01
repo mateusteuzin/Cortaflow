@@ -1,15 +1,15 @@
 :root {
-  --black: #090a09;
-  --ink: #151613;
+  --black: #0d0d11;
+  --ink: #161714;
   --ink-2: #252720;
-  --cream: #f3efe6;
-  --paper: #fcfaf5;
+  --cream: #f5f6f0;
+  --paper: #ffffff;
   --muted: #74756e;
   --line: #ddd8cc;
-  --gold: #c89538;
-  --gold-light: #f0cd78;
-  --gold-pale: #fff0bd;
-  --gold-wash: #f9efd7;
+  --gold: #f1ff0a;
+  --gold-light: #f1ff0a;
+  --gold-pale: #f7ffd0;
+  --gold-wash: #f2f7c5;
   --success: #7eb88c;
   --display: "Oswald", "Arial Narrow", sans-serif;
   --sans: "Inter", ui-sans-serif, system-ui, sans-serif;
