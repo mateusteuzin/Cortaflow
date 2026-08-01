@@ -719,7 +719,7 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
   body.sidebar-open { overflow: hidden; }
   .auth-screen { min-height: 100svh; padding: 22px 16px; background-position: 68% center; }
   .auth-screen::before { background: linear-gradient(0deg, rgba(7,8,7,.88), rgba(7,8,7,.62)), radial-gradient(circle at 50% 100%, rgba(201,149,54,.16), transparent 43%); }
-  .auth-brand { margin: 0 auto; align-items: center; }
+  .auth-brand { margin: 0 auto; align-items: center; padding: 12px 20px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: rgba(9,10,12,.94); box-shadow: 0 16px 32px rgba(0,0,0,.28); }
   .auth-brand > img { width: 220px; }
   .auth-layout { display: block; width: 100%; padding: clamp(34px, 8vh, 70px) 0 18px; }
   .auth-message { display: none; }
