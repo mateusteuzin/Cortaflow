@@ -285,6 +285,10 @@ class BackendSecurityTests(unittest.TestCase):
         self.assertEqual(item["price_data"]["recurring"], {"interval": "month"})
         self.assertEqual(item["price_data"]["product_data"]["metadata"], {"plan": "essencial"})
 
+    @patch.dict("os.environ", {"STRIPE_PRICE_30": "price_legacy12345"}, clear=True)
+    def test_stripe_configuration_accepts_existing_legacy_price_names(self):
+        self.assertTrue(main._stripe_price_configured(main.STRIPE_PLANS["essencial"]))
+
     @patch("app.main.one")
     def test_subscription_details_exposes_plan_and_renewal(self, database_one):
         database_one.return_value = {

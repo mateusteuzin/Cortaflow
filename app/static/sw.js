@@ -1,11 +1,18 @@
-const CACHE_NAME = 'cortaflow-shell-20260729-5';
+const CACHE_NAME = 'cortaflow-shell-20260801-brand-v2';
 const APP_SHELL = [
   '/painel',
   '/styles.css',
   '/app.js',
   '/manifest.webmanifest',
+  '/icons/favicon-32.png',
+  '/icons/apple-touch-icon.png',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/notification-badge.png',
+  '/assets/cortaflow-logo-transparent.png',
+  '/assets/cortaflow-icon-default.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,8 +50,8 @@ self.addEventListener('push', (event) => {
   }
   event.waitUntil(self.registration.showNotification(data.title || 'CortaFlow', {
     body: data.body || 'Sua agenda foi atualizada.',
-    icon: '/assets/favicon-cortaflow-transparent.png',
-    badge: '/assets/favicon-cortaflow-transparent.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/notification-badge.png',
     tag: data.tag || 'cortaflow-agenda',
     data: { url: data.url || '/painel#agenda' },
     vibrate: [120, 60, 120]

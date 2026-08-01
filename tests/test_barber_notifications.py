@@ -129,9 +129,10 @@ class PwaAssetsTests(unittest.TestCase):
         for icon in manifest["icons"]:
             self.assertTrue((self.static / icon["src"].lstrip("/")).is_file())
         worker = (self.static / "sw.js").read_text("utf-8")
-        self.assertIn("cortaflow-shell-20260729-5", worker)
+        self.assertIn("cortaflow-shell-20260801-brand-v2", worker)
         self.assertIn("url.pathname.startsWith('/api/')", worker)
-        self.assertIn("/assets/favicon-cortaflow-transparent.png", worker)
+        self.assertIn("/icons/icon-192.png", worker)
+        self.assertIn("/icons/notification-badge.png", worker)
 
     def test_landing_offers_cross_platform_install_flow(self):
         landing = (self.static / "landing.html").read_text("utf-8")

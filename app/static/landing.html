@@ -84,18 +84,17 @@
       ]
     }
   </script>
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/favicon-cortaflow-transparent.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="/assets/favicon-cortaflow-transparent.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/landing.css?v=20260731-auth-restore">
   <link rel="stylesheet" href="/landing-agency.css?v=20260801-phone-float">
+  <link rel="stylesheet" href="/cortaflow-2026.css?v=20260801-phone-float-v2">
 </head>
 <body>
   <header class="site-header">
     <a class="site-logo" href="#inicio" aria-label="CortaFlow — início">
-      <img class="site-logo-official" src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow">
+      <img class="site-logo-official" src="/assets/cortaflow-logo-on-dark.png?v=20260801-brand-v2" alt="CortaFlow — agendamento para barbearias">
     </a>
     <nav id="site-nav" class="site-nav" aria-label="Navegação principal">
       <a href="#produto">Produto</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas</a>
@@ -126,10 +125,12 @@
           <p class="hero-microcopy">R$ 0 hoje • cobrança somente depois do teste • cancele quando quiser</p>
         </div>
 
-        <div class="product-visual hero-phone-visual" data-reveal aria-label="Agenda do CortaFlow em um celular 3D">
-          <div class="hero-phone-glow" aria-hidden="true"></div>
-          <img class="hero-phone-3d" src="/assets/showcase/mobile-agenda-cutout.png" width="1024" height="1536" loading="eager" decoding="async" fetchpriority="high" alt="Agenda do CortaFlow apresentada em um celular 3D">
-          <p class="product-caption"><span>PRODUTO REAL</span><i></i> experiência mobile</p>
+        <div class="product-visual hero-product-preview" data-reveal aria-label="Painel real do CortaFlow">
+          <div class="browser-preview">
+            <div class="browser-preview-bar" aria-hidden="true"><span></span><span></span><span></span><b>app.cortaflow.com.br</b></div>
+            <img src="/assets/showcase/dashboard-preview-2026.png" width="1818" height="868" loading="eager" decoding="async" fetchpriority="high" alt="Resumo do dia no painel CortaFlow">
+          </div>
+          <div class="hero-phone-float" aria-label="CortaFlow no celular"><div class="bento-phone-shadow"></div><div class="bento-phone-device"><div class="bento-phone-speaker"></div><div class="bento-phone-screen"><img src="/assets/showcase/mobile-dashboard-preview-2026.png?v=20260801-mobile" loading="eager" alt="Painel CortaFlow no celular"></div></div></div>
         </div>
       </div>
       <div class="trust-strip">
@@ -281,30 +282,30 @@
 
     <section id="demonstracao" class="section showcase-section" aria-labelledby="demo-title">
       <div class="container showcase-heading">
-        <span class="kicker">PRODUTO REAL. EXPERIÊNCIA MOBILE.</span>
+        <span class="kicker">PRODUTO REAL. SEM MOCKUPS ARTIFICIAIS.</span>
         <h2 id="demo-title">Veja o CortaFlow por dentro.</h2>
         <p>As telas essenciais da sua operação, organizadas para acompanhar você de qualquer lugar.</p>
       </div>
       <div class="container showcase-list">
         <article class="showcase-item" data-reveal>
           <div class="showcase-copy"><span>01</span><h3>Agenda</h3><p>Semana, profissionais e horários em um só lugar.</p></div>
-          <figure><img src="/assets/showcase/mobile-agenda-cutout.png" loading="lazy" alt="Agenda do CortaFlow apresentada em um celular 3D"></figure>
+          <figure class="product-browser"><img src="/assets/showcase/agenda-preview-2026.png" loading="lazy" alt="Agenda semanal real do CortaFlow"></figure>
         </article>
         <article class="showcase-item reverse" data-reveal>
           <div class="showcase-copy"><span>02</span><h3>Equipe</h3><p>Profissionais, acessos e comissões individuais.</p></div>
-          <figure><img src="/assets/showcase/mobile-equipe-cutout.png" loading="lazy" alt="Gestão de equipe do CortaFlow apresentada em um celular 3D"></figure>
+          <figure class="product-browser"><img src="/assets/showcase/admin-equipe.png?v=20260801-real-screens" loading="lazy" alt="Gestão de equipe no CortaFlow"></figure>
         </article>
         <article class="showcase-item" data-reveal>
           <div class="showcase-copy"><span>03</span><h3>Clientes</h3><p>Histórico, retorno e relacionamento organizado.</p></div>
-          <figure><img src="/assets/showcase/mobile-clientes-cutout-v2.png" loading="lazy" alt="Gestão de clientes do CortaFlow apresentada em um celular 3D"></figure>
+          <figure class="product-browser"><img src="/assets/showcase/admin-clientes.png?v=20260801-real-screens" loading="lazy" alt="Gestão de clientes no CortaFlow"></figure>
         </article>
         <article class="showcase-item reverse" data-reveal>
           <div class="showcase-copy"><span>04</span><h3>Financeiro</h3><p>Entradas, saídas, lucro líquido e margem.</p></div>
-          <figure><img src="/assets/showcase/mobile-financeiro-cutout.png" loading="lazy" alt="Financeiro do CortaFlow apresentado em um celular 3D"></figure>
+          <figure class="product-browser"><img src="/assets/showcase/admin-financeiro.png?v=20260801-real-screens" loading="lazy" alt="Financeiro no CortaFlow"></figure>
         </article>
         <article class="showcase-item" data-reveal>
           <div class="showcase-copy"><span>05</span><h3>Insights</h3><p>Indicadores e tendências para decidir com mais clareza.</p></div>
-          <figure><img src="/assets/showcase/mobile-insights-cutout.png" loading="lazy" alt="Insights do CortaFlow apresentados em um celular 3D"></figure>
+          <figure class="product-browser"><img src="/assets/showcase/admin-insights.png?v=20260801-real-screens" loading="lazy" alt="Insights no CortaFlow"></figure>
         </article>
       </div>
     </section>
@@ -384,7 +385,7 @@
       </div>
     </div>
     <div class="container footer-main">
-      <div class="footer-brand"><img src="/assets/cortaflow-logo-transparent.png" alt="CortaFlow"><p>Agenda, equipe e resultados no ritmo da sua barbearia.</p><span><i></i> Plataforma disponível</span></div>
+      <div class="footer-brand"><img src="/assets/cortaflow-logo-on-dark.png?v=20260801-brand-v2" alt="CortaFlow — agendamento para barbearias"><p>Agenda, equipe e resultados no ritmo da sua barbearia.</p><span><i></i> Plataforma disponível</span></div>
       <nav aria-label="Produto"><strong>PRODUTO</strong><a href="#produto">Como funciona</a><a href="#recursos">Funcionalidades</a><a href="#planos">Planos</a></nav>
       <nav aria-label="Suporte"><strong>SUPORTE</strong><a href="#seguranca">Segurança</a><a href="#duvidas">Dúvidas frequentes</a><a href="mailto:cortaflow178@gmail.com">Falar com a equipe</a><a href="https://www.instagram.com/codeflow404/" target="_blank" rel="noopener noreferrer">Instagram @Codeflow404</a></nav>
       <div class="footer-access"><span>JÁ USA O CORTAFLOW?</span><b>Sua operação continua daqui.</b><button data-auth="login" type="button">Entrar no painel <span>↗</span></button></div>

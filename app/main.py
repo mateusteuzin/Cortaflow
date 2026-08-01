@@ -503,11 +503,7 @@ def _configuration_status() -> dict:
         and "..." not in os.getenv("STRIPE_WEBHOOK_SECRET", "")
     )
     stripe_prices = {
-        plan: (
-            os.getenv(config["price_env"], "").strip().startswith("price_")
-            and len(os.getenv(config["price_env"], "").strip()) >= 12
-            and "..." not in os.getenv(config["price_env"], "")
-        )
+        plan: _stripe_price_configured(config)
         for plan, config in STRIPE_PLANS.items()
     }
     whatsapp_access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
@@ -783,11 +779,38 @@ def google_oidc_callback(
 
 
 STRIPE_PLANS = {
-    "essencial": {"name": "CortaFlow Essencial", "amount": 2990, "price_env": "STRIPE_PRICE_ESSENCIAL"},
-    "profissional": {"name": "CortaFlow Profissional", "amount": 4490, "price_env": "STRIPE_PRICE_PROFISSIONAL"},
-    "premium": {"name": "CortaFlow Premium", "amount": 6490, "price_env": "STRIPE_PRICE_PREMIUM"},
+    "essencial": {
+        "name": "CortaFlow Essencial",
+        "amount": 2990,
+        "price_env": "STRIPE_PRICE_ESSENCIAL",
+        "legacy_price_env": "STRIPE_PRICE_30",
+    },
+    "profissional": {
+        "name": "CortaFlow Profissional",
+        "amount": 4490,
+        "price_env": "STRIPE_PRICE_PROFISSIONAL",
+        "legacy_price_env": "STRIPE_PRICE_44_90",
+    },
+    "premium": {
+        "name": "CortaFlow Premium",
+        "amount": 6490,
+        "price_env": "STRIPE_PRICE_PREMIUM",
+        "legacy_price_env": "STRIPE_PRICE_64_90",
+    },
 }
 STRIPE_TRIAL_DAYS = 14
+
+
+def _stripe_price_configured(plan_data: dict) -> bool:
+    """Aceita os nomes atuais e os nomes legados já usados em produção."""
+    candidates = (
+        os.getenv(plan_data["price_env"], "").strip(),
+        os.getenv(plan_data["legacy_price_env"], "").strip(),
+    )
+    return any(
+        value.startswith("price_") and len(value) >= 12 and "..." not in value
+        for value in candidates
+    )
 
 def _public_site_url(request: Request) -> str:
     configured = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")

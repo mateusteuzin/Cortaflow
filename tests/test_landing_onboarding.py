@@ -27,12 +27,21 @@ class LandingOnboardingTests(unittest.TestCase):
         self.assertIn("if (!planIsCompatible(input.value, teamSize))", self.script)
         self.assertIn("Este plano não comporta o tamanho informado da sua equipe.", self.script)
 
-    def test_mobile_showcase_covers_the_five_product_areas(self):
+    def test_real_product_showcase_covers_the_five_product_areas(self):
         self.assertIn('class="section showcase-section"', self.html)
         self.assertIn('Veja o CortaFlow por dentro.', self.html)
-        for index, area in enumerate(('Agenda', 'Equipe', 'Clientes', 'Financeiro', 'Insights'), 1):
+        product_images = {
+            'Agenda': 'agenda-preview-2026.png',
+            'Equipe': 'admin-equipe.png',
+            'Clientes': 'admin-clientes.png',
+            'Financeiro': 'admin-financeiro.png',
+            'Insights': 'admin-insights.png',
+        }
+        for index, area in enumerate(product_images, 1):
             self.assertIn(f'<span>{index:02d}</span><h3>{area}</h3>', self.html)
-            self.assertIn(f'mobile-{area.lower()}-cutout.png', self.html)
+            self.assertIn(product_images[area], self.html)
+        self.assertNotIn('hero-phone-3d', self.html)
+        self.assertNotIn('mobile-agenda-cutout.png', self.html)
 
 
 if __name__ == "__main__":
