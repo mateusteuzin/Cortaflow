@@ -226,7 +226,7 @@
       <section id="financeiro" class="view hidden">
         <div class="section-heading"><div><span class="eyebrow">RESULTADO REAL</span><h2>Financeiro</h2><p>Veja quanto entrou, quanto saiu e o lucro que ficou no caixa.</p></div><button class="button button-primary" type="button" data-action="add-expense">+ Nova despesa</button></div>
         <div class="finance-toolbar panel">
-          <div class="finance-filters"><label>Mês<select id="finance-month"></select></label><label>Ano<select id="finance-year"></select></label></div>
+          <div class="finance-filters"><label>Mês<select id="finance-month"></select></label><label>Ano<select id="finance-year"></select></label><label>Profissional<select id="finance-barber"><option value="">Toda a equipe</option></select></label></div>
           <div class="finance-export-actions"><button id="finance-export-xlsx" class="button button-outline" type="button">Baixar Excel</button><button id="finance-export-pdf" class="button button-dark" type="button">Gerar PDF</button></div>
         </div>
         <div class="metrics finance-metrics">
@@ -253,6 +253,7 @@
           <label>Período<select id="report-period"><option value="mensal">Mensal</option><option value="anual">Anual</option></select></label>
           <label id="report-month-wrap">Mês<select id="report-month"></select></label>
           <label>Ano<select id="report-year"></select></label>
+          <label id="report-barber-wrap">Profissional<select id="report-barber"><option value="">Toda a equipe</option></select></label>
         </div>
         <div class="metrics report-metrics">
           <article class="metric-card"><span id="report-total-label">FATURAMENTO</span><strong id="report-total">R$ 0,00</strong><small id="report-total-note">no período selecionado</small></article>

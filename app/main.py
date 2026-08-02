@@ -2155,21 +2155,30 @@ def delete_expense(expense_id:int,user=Depends(current_user)):
         raise HTTPException(404,"Despesa não encontrada")
     return {"ok":True}
 
-def financial_data(shop_id:int,mes:int,ano:int):
+def financial_data(shop_id:int,mes:int,ano:int,barbeiro_id:int|None=None):
     inicio=date(ano,mes,1);fim=date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)
     shop=one("SELECT nome FROM barbearias WHERE id=%s",(shop_id,))
+    barber_filter=""
+    barber_params=()
+    professional=None
+    if barbeiro_id is not None:
+        professional=one("SELECT id,nome FROM barbeiros WHERE id=%s AND barbearia_id=%s",(barbeiro_id,shop_id))
+        if not professional:
+            raise HTTPException(404,"Profissional não encontrado")
+        barber_filter=" AND a.barbeiro_id=%s"
+        barber_params=(barbeiro_id,)
     appointments=all_rows("""SELECT a.data_hora,a.cliente_nome,a.servico,a.preco,b.nome barbeiro_nome,
         ROUND(a.preco*b.comissao_percentual/100,2) comissao
         FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
         WHERE a.barbearia_id=%s AND a.data_hora>=%s AND a.data_hora<%s
-        AND a.status IN ('concluido','realizado') ORDER BY a.data_hora""",(shop_id,inicio,fim))
+        AND a.status IN ('concluido','realizado')""" + barber_filter + " ORDER BY a.data_hora",(shop_id,inicio,fim,*barber_params))
     sales=all_rows("""SELECT v.criado_em,p.nome produto_nome,v.quantidade,v.preco_unitario,v.custo_unitario,
         v.quantidade*v.preco_unitario total_venda,v.quantidade*v.custo_unitario total_custo
         FROM vendas_produto v JOIN produtos p ON p.id=v.produto_id
         JOIN agendamentos a ON a.id=v.agendamento_id
         WHERE a.barbearia_id=%s AND a.data_hora>=%s AND a.data_hora<%s
-        AND a.status IN ('concluido','realizado') ORDER BY v.criado_em""",(shop_id,inicio,fim))
-    expense_rows=all_rows("""SELECT * FROM despesas WHERE barbearia_id=%s
+        AND a.status IN ('concluido','realizado')""" + barber_filter + " ORDER BY v.criado_em",(shop_id,inicio,fim,*barber_params))
+    expense_rows=[] if barbeiro_id is not None else all_rows("""SELECT * FROM despesas WHERE barbearia_id=%s
         AND data>=%s AND data<%s ORDER BY data DESC,id DESC""",(shop_id,inicio,fim))
     for item in expense_rows:item["categoria_label"]=EXPENSE_CATEGORIES.get(item["categoria"],item["categoria"].title())
     zero=Decimal("0")
@@ -2180,7 +2189,7 @@ def financial_data(shop_id:int,mes:int,ano:int):
     expenses_total=sum((Decimal(item["valor"]) for item in expense_rows),zero)
     gross_revenue=service_revenue+product_revenue
     net_profit=gross_revenue-commissions-product_costs-expenses_total
-    return {"barbearia_nome":shop["nome"],"mes":mes,"ano":ano,
+    return {"barbearia_nome":shop["nome"],"profissional":professional["nome"] if professional else None,"mes":mes,"ano":ano,
         "periodo_label":f"{mes:02d}/{ano}","inicio":inicio,"fim":fim,
         "faturamento_servicos":service_revenue,"faturamento_produtos":product_revenue,
         "faturamento_total":gross_revenue,"comissoes":commissions,
@@ -2191,18 +2200,18 @@ def financial_data(shop_id:int,mes:int,ano:int):
         "vendas_detalhes":sales,"despesas":expense_rows}
 
 @app.get("/api/financeiro/resumo")
-def financial_summary(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
-    return financial_data(user["barbearia_id"],mes,ano)
+def financial_summary(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    return financial_data(user["barbearia_id"],mes,ano,barbeiro_id)
 
 @app.get("/api/financeiro/exportar.xlsx")
-def export_financial_xlsx(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
-    content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano))
+def export_financial_xlsx(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano,barbeiro_id))
     return Response(content,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.xlsx"'})
 
 @app.get("/api/financeiro/exportar.pdf")
-def export_financial_pdf(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
-    content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano))
+def export_financial_pdf(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano,barbeiro_id))
     return Response(content,media_type="application/pdf",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.pdf"'})
 
@@ -2211,22 +2220,30 @@ def daily(data:date,user=Depends(current_user)): return {"data":data,"total":one
 @app.get("/api/relatorios/mes")
 def monthly(mes:int,ano:int,user=Depends(current_user)): return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND EXTRACT(MONTH FROM data_hora)=%s AND EXTRACT(YEAR FROM data_hora)=%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],mes,ano))
 @app.get("/api/relatorios/periodo")
-def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),user=Depends(current_user)):
+def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
     inicio=date(ano,mes,1) if periodo=="mensal" else date(ano,1,1)
     fim=(date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)) if periodo=="mensal" else date(ano+1,1,1)
     bucket="day" if periodo=="mensal" else "month"
+    barber_filter = ""
+    barber_params = ()
+    if barbeiro_id is not None:
+        barber = one("SELECT id FROM barbeiros WHERE id=%s AND barbearia_id=%s",(barbeiro_id,user["barbearia_id"]))
+        if not barber:
+            raise HTTPException(404,"Profissional não encontrado")
+        barber_filter = " AND barbeiro_id=%s"
+        barber_params = (barbeiro_id,)
     pontos=all_rows(f"""SELECT date_trunc('{bucket}',data_hora)::date periodo,
         COUNT(*) atendimentos,COALESCE(SUM(preco),0) faturamento
         FROM agendamentos WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s
-        AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1""",(user["barbearia_id"],inicio,fim))
+        AND status IN ('concluido','realizado'){barber_filter} GROUP BY 1 ORDER BY 1""",(user["barbearia_id"],inicio,fim,*barber_params))
     total=one("""SELECT COUNT(*) atendimentos,COALESCE(SUM(preco),0) faturamento,
         COALESCE(AVG(preco),0) ticket_medio FROM agendamentos
         WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s
-        AND status IN ('concluido','realizado')""",(user["barbearia_id"],inicio,fim))
+        AND status IN ('concluido','realizado')""" + barber_filter,(user["barbearia_id"],inicio,fim,*barber_params))
     por_barbeiro=all_rows("""SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento
         FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora>=%s
         AND a.data_hora<%s AND a.status IN ('concluido','realizado')
-        WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC,b.nome""",(inicio,fim,user["barbearia_id"]))
+        WHERE b.barbearia_id=%s""" + (" AND b.id=%s" if barbeiro_id is not None else "") + " GROUP BY b.id ORDER BY faturamento DESC,b.nome",(inicio,fim,user["barbearia_id"],*barber_params))
     melhor=max(pontos,key=lambda item:item["atendimentos"],default=None)
     return {"periodo":periodo,"inicio":inicio,"fim":fim,"total":total,"pontos":pontos,
         "melhor_periodo":melhor,"por_barbeiro":por_barbeiro}

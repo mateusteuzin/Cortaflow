@@ -1362,8 +1362,14 @@ function setupFinanceFilters() {
     $('#finance-year').innerHTML = Array.from({ length: 7 }, (_, index) => now.getFullYear() - index).map((year) => `<option value="${year}">${year}</option>`).join('');
     $('#finance-month').value = String(now.getMonth() + 1);
     $('#finance-year').value = String(now.getFullYear());
-    ['finance-month', 'finance-year'].forEach((id) => { $('#' + id).onchange = () => loadFinance().catch((error) => toast(error.message)); });
+    ['finance-month', 'finance-year', 'finance-barber'].forEach((id) => { $('#' + id).onchange = () => loadFinance().catch((error) => toast(error.message)); });
   }
+  const barberSelect = $('#finance-barber');
+  const selectedBarber = barberSelect.value;
+  const activeBarbers = barbers.filter((barber) => barber.ativo);
+  barberSelect.innerHTML = '<option value="">Toda a equipe</option>' + activeBarbers
+    .map((barber) => `<option value="${barber.id}">${escapeHTML(barber.nome)}</option>`).join('');
+  barberSelect.value = activeBarbers.some((barber) => String(barber.id) === selectedBarber) ? selectedBarber : '';
 }
 
 function renderFinanceCharts(result) {
@@ -1400,7 +1406,9 @@ async function loadFinance() {
   setupFinanceFilters();
   const month = Number($('#finance-month').value);
   const year = Number($('#finance-year').value);
-  const result = await api(`/financeiro/resumo?mes=${month}&ano=${year}`);
+  const barberId = $('#finance-barber').value;
+  const barberFilter = barberId ? `&barbeiro_id=${encodeURIComponent(barberId)}` : '';
+  const result = await api(`/financeiro/resumo?mes=${month}&ano=${year}${barberFilter}`);
   financeExpenses = result.despesas || [];
   const outflows = Number(result.comissoes) + Number(result.custos_produtos) + Number(result.despesas_total);
   $('#finance-revenue').textContent = money(result.faturamento_total);
@@ -1442,7 +1450,9 @@ async function removeExpense(id) {
 async function downloadFinancial(format) {
   const month = Number($('#finance-month').value);
   const year = Number($('#finance-year').value);
-  const response = await fetch(`/api/financeiro/exportar.${format}?mes=${month}&ano=${year}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const barberId = $('#finance-barber').value;
+  const barberFilter = barberId ? `&barbeiro_id=${encodeURIComponent(barberId)}` : '';
+  const response = await fetch(`/api/financeiro/exportar.${format}?mes=${month}&ano=${year}${barberFilter}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.detail || 'Não foi possível gerar o arquivo.');
@@ -1464,9 +1474,16 @@ function setupReportFilters() {
     $('#report-month').innerHTML = reportMonths.map((name, index) => `<option value="${index + 1}">${name}</option>`).join('');
     $('#report-month').value = String(now.getMonth() + 1);
     $('#report-year').innerHTML = Array.from({ length: 7 }, (_, index) => now.getFullYear() - index).map((year) => `<option value="${year}">${year}</option>`).join('');
-    ['report-period', 'report-month', 'report-year'].forEach((id) => { $('#' + id).onchange = () => loadReports().catch((error) => toast(error.message)); });
+    ['report-period', 'report-month', 'report-year', 'report-barber'].forEach((id) => { $('#' + id).onchange = () => loadReports().catch((error) => toast(error.message)); });
   }
+  const barberSelect = $('#report-barber');
+  const selectedBarber = barberSelect.value;
+  const activeBarbers = barbers.filter((barber) => barber.ativo);
+  barberSelect.innerHTML = '<option value="">Toda a equipe</option>' + activeBarbers
+    .map((barber) => `<option value="${barber.id}">${escapeHTML(barber.nome)}</option>`).join('');
+  barberSelect.value = activeBarbers.some((barber) => String(barber.id) === selectedBarber) ? selectedBarber : '';
   $('#report-month-wrap').classList.toggle('hidden', $('#report-period').value === 'anual');
+  $('#report-barber-wrap').classList.toggle('hidden', sessionContext?.perfil === 'barbeiro');
 }
 
 function completeReportPoints(report, month, year) {
@@ -1510,9 +1527,11 @@ async function loadReports() {
   const period = $('#report-period').value;
   const month = Number($('#report-month').value);
   const year = Number($('#report-year').value);
+  const barberId = $('#report-barber').value;
   const reportPath = barberMode ? '/barbeiro/insights' : '/relatorios/periodo';
+  const barberFilter = !barberMode && barberId ? `&barbeiro_id=${encodeURIComponent(barberId)}` : '';
   const [report, loyalty] = await Promise.all([
-    api(`${reportPath}?periodo=${period}&mes=${month}&ano=${year}`),
+    api(`${reportPath}?periodo=${period}&mes=${month}&ano=${year}${barberFilter}`),
     barberMode ? Promise.resolve([]) : api('/relatorios/fidelidade')
   ]);
   $('#report-month-wrap').classList.toggle('hidden', period === 'anual');
