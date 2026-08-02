@@ -1362,7 +1362,7 @@ function setupFinanceFilters() {
     $('#finance-year').innerHTML = Array.from({ length: 7 }, (_, index) => now.getFullYear() - index).map((year) => `<option value="${year}">${year}</option>`).join('');
     $('#finance-month').value = String(now.getMonth() + 1);
     $('#finance-year').value = String(now.getFullYear());
-    ['finance-month', 'finance-year', 'finance-barber'].forEach((id) => { $('#' + id).onchange = () => loadFinance().catch((error) => toast(error.message)); });
+    ['finance-period', 'finance-month', 'finance-year', 'finance-barber'].forEach((id) => { $('#' + id).onchange = () => loadFinance().catch((error) => toast(error.message)); });
   }
   const barberSelect = $('#finance-barber');
   const selectedBarber = barberSelect.value;
@@ -1370,12 +1370,14 @@ function setupFinanceFilters() {
   barberSelect.innerHTML = '<option value="">Toda a equipe</option>' + activeBarbers
     .map((barber) => `<option value="${barber.id}">${escapeHTML(barber.nome)}</option>`).join('');
   barberSelect.value = activeBarbers.some((barber) => String(barber.id) === selectedBarber) ? selectedBarber : '';
+  $('#finance-month-wrap').classList.toggle('hidden', $('#finance-period').value === 'anual');
 }
 
 function renderFinanceCharts(result) {
   const days = new Map();
+  const annual = result.periodo === 'anual';
   const add = (rawDate, key, amount) => {
-    const date = String(rawDate || '').slice(0, 10);
+    const date = String(rawDate || '').slice(0, annual ? 7 : 10);
     if (!date) return;
     const item = days.get(date) || { income: 0, outflow: 0 };
     item[key] += Number(amount || 0);
@@ -1384,14 +1386,25 @@ function renderFinanceCharts(result) {
   (result.atendimentos_detalhes || []).forEach((item) => add(item.data_hora, 'income', item.preco));
   (result.vendas_detalhes || []).forEach((item) => add(item.criado_em, 'income', item.total_venda));
   (result.despesas || []).forEach((item) => add(item.data, 'outflow', item.valor));
-  const points = [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-7);
+  const points = annual
+    ? Array.from({ length: 12 }, (_, index) => {
+      const date = `${result.ano}-${String(index + 1).padStart(2, '0')}`;
+      return [date, days.get(date) || { income: 0, outflow: 0 }];
+    })
+    : [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(-7);
   const series = points.length ? points : [['', { income: 0, outflow: 0 }]];
   const max = Math.max(1, ...series.flatMap(([, item]) => [item.income, item.outflow]));
   const width = 680, height = 210, left = 38, right = 12, top = 18, bottom = 30, chartWidth = width - left - right, chartHeight = height - top - bottom;
   const xy = (index, value) => [left + (series.length === 1 ? chartWidth / 2 : index * chartWidth / (series.length - 1)), top + chartHeight - value / max * chartHeight];
   const path = (key) => series.map(([, item], index) => { const [x, y] = xy(index, item[key]); return `${index ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join(' ');
   const grid = [0, .25, .5, .75, 1].map((step) => { const y = top + chartHeight * step; return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}"/><text x="4" y="${y+4}">${money(max * (1-step)).replace(',00','')}</text>`; }).join('');
-  const labels = series.map(([date], index) => { const [x] = xy(index, 0); return `<text x="${x}" y="${height-5}" text-anchor="middle">${date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : '—'}</text>`; }).join('');
+  const labels = series.map(([date], index) => {
+    const [x] = xy(index, 0);
+    const label = annual
+      ? new Date(`${date}-01T12:00:00`).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
+      : new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    return `<text x="${x}" y="${height-5}" text-anchor="middle">${date ? label : '—'}</text>`;
+  }).join('');
   $('#finance-breakdown').innerHTML = `<div class="finance-line-chart"><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Fluxo de entradas e saídas"><g class="chart-grid">${grid}${labels}</g><path class="finance-income-line" d="${path('income')}"/><path class="finance-outflow-line" d="${path('outflow')}"/></svg></div>`;
   const groups = Object.values((result.despesas || []).reduce((all, item) => { const label = item.categoria_label || expenseCategories[item.categoria] || 'Outros'; all[label] = (all[label] || 0) + Number(item.valor || 0); return all; }, {}));
   const entries = Object.entries((result.despesas || []).reduce((all, item) => { const label = item.categoria_label || expenseCategories[item.categoria] || 'Outros'; all[label] = (all[label] || 0) + Number(item.valor || 0); return all; }, {}));
@@ -1404,11 +1417,12 @@ function renderFinanceCharts(result) {
 
 async function loadFinance() {
   setupFinanceFilters();
+  const period = $('#finance-period').value;
   const month = Number($('#finance-month').value);
   const year = Number($('#finance-year').value);
   const barberId = $('#finance-barber').value;
   const barberFilter = barberId ? `&barbeiro_id=${encodeURIComponent(barberId)}` : '';
-  const result = await api(`/financeiro/resumo?mes=${month}&ano=${year}${barberFilter}`);
+  const result = await api(`/financeiro/resumo?periodo=${period}&mes=${month}&ano=${year}${barberFilter}`);
   financeExpenses = result.despesas || [];
   const outflows = Number(result.comissoes) + Number(result.custos_produtos) + Number(result.despesas_total);
   $('#finance-revenue').textContent = money(result.faturamento_total);
@@ -1448,11 +1462,12 @@ async function removeExpense(id) {
 }
 
 async function downloadFinancial(format) {
+  const period = $('#finance-period').value;
   const month = Number($('#finance-month').value);
   const year = Number($('#finance-year').value);
   const barberId = $('#finance-barber').value;
   const barberFilter = barberId ? `&barbeiro_id=${encodeURIComponent(barberId)}` : '';
-  const response = await fetch(`/api/financeiro/exportar.${format}?mes=${month}&ano=${year}${barberFilter}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const response = await fetch(`/api/financeiro/exportar.${format}?periodo=${period}&mes=${month}&ano=${year}${barberFilter}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.detail || 'Não foi possível gerar o arquivo.');
@@ -1460,7 +1475,7 @@ async function downloadFinancial(format) {
   const blob = await response.blob();
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `financeiro-${year}-${String(month).padStart(2, '0')}.${format}`;
+  link.download = period === 'anual' ? `financeiro-${year}.${format}` : `financeiro-${year}-${String(month).padStart(2, '0')}.${format}`;
   document.body.appendChild(link);
   link.click();
   link.remove();

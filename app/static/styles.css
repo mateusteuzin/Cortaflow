@@ -82,7 +82,7 @@ a { color: inherit; }
 .auth-screen { position: relative; display: flex; min-height: 100svh; flex-direction: column; overflow: hidden; padding: clamp(22px, 3.4vw, 54px) clamp(22px, 4.5vw, 72px); background: linear-gradient(90deg, rgba(7,8,7,.98) 0%, rgba(7,8,7,.92) 38%, rgba(7,8,7,.48) 69%, rgba(7,8,7,.66) 100%), url('/assets/barber-hero.webp') 64% center / cover no-repeat; color: #fff; }
 .auth-screen::before { position: absolute; inset: 0; background: radial-gradient(circle at 10% 105%, rgba(201,149,54,.2), transparent 34%), linear-gradient(0deg, rgba(5,6,5,.55), transparent 32%); content: ""; pointer-events: none; }
 .auth-brand { position: relative; z-index: 2; display: flex; width: fit-content; margin: 0 auto; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
-.auth-brand > img { display: block; width: clamp(188px, 15vw, 248px); height: auto; filter: invert(87%) sepia(37%) saturate(968%) hue-rotate(352deg) brightness(101%) contrast(93%) drop-shadow(0 10px 24px rgba(0,0,0,.32)); }
+.auth-brand img { display: block; width: clamp(188px, 15vw, 248px); height: auto; filter: invert(87%) sepia(37%) saturate(968%) hue-rotate(352deg) brightness(101%) contrast(93%) drop-shadow(0 10px 24px rgba(0,0,0,.32)); }
 .auth-brand > span { color: rgba(255,255,255,.5); font-size: 11px; font-weight: 600; letter-spacing: .08em; }
 .brand-mark { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: var(--radius-md); filter: drop-shadow(0 10px 18px rgba(201,149,54,.18)); }
 .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -748,8 +748,9 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
   body.sidebar-open { overflow: hidden; }
   .auth-screen { min-height: 100svh; padding: 22px 16px; background-position: 68% center; }
   .auth-screen::before { background: linear-gradient(0deg, rgba(7,8,7,.88), rgba(7,8,7,.62)), radial-gradient(circle at 50% 100%, rgba(201,149,54,.16), transparent 43%); }
-  .auth-brand { margin: 0 auto; align-items: center; padding: 12px 20px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: rgba(9,10,12,.94); box-shadow: 0 16px 32px rgba(0,0,0,.28); }
-  .auth-brand > img { width: 220px; }
+  .auth-brand { margin: 0 auto; align-items: center; padding: 12px 20px 10px; border: 1px solid rgba(13,13,17,.12); border-radius: 16px; background: rgba(255,255,255,.97); box-shadow: 0 16px 32px rgba(0,0,0,.28); }
+  .auth-brand img { width: 220px; filter: drop-shadow(0 4px 10px rgba(0,0,0,.12)); }
+  .auth-brand > span { color: rgba(13,13,17,.58); }
   .auth-layout { display: block; width: 100%; padding: clamp(34px, 8vh, 70px) 0 18px; }
   .auth-message { display: none; }
   .auth-card { width: min(100%, 470px); margin: auto; }
@@ -811,7 +812,7 @@ html[data-theme="dark"] .list-empty b { color: var(--ink); }
   .eyebrow { font-size: 11px; letter-spacing: .12em; }
   .button { min-height: 49px; padding-inline: 18px; font-size: 14px; }
   .auth-brand { margin: 0 auto; }
-  .auth-brand > img { width: 194px; }
+  .auth-brand img { width: 194px; }
   .auth-brand > span { font-size: 10px; }
   .auth-layout { padding-top: 30px; }
   .auth-card { padding: 29px 20px 24px; }
@@ -1402,7 +1403,7 @@ body {
 .auth-screen::before {
   background: radial-gradient(circle at 10% 105%, rgba(241,255,10,.12), transparent 34%);
 }
-.auth-brand > img {
+.auth-brand img {
   filter: drop-shadow(0 10px 24px rgba(0,0,0,.32));
 }
 .auth-card {

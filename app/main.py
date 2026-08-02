@@ -2155,8 +2155,9 @@ def delete_expense(expense_id:int,user=Depends(current_user)):
         raise HTTPException(404,"Despesa não encontrada")
     return {"ok":True}
 
-def financial_data(shop_id:int,mes:int,ano:int,barbeiro_id:int|None=None):
-    inicio=date(ano,mes,1);fim=date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)
+def financial_data(shop_id:int,mes:int,ano:int,barbeiro_id:int|None=None,periodo:str="mensal"):
+    inicio=date(ano,1,1) if periodo=="anual" else date(ano,mes,1)
+    fim=date(ano+1,1,1) if periodo=="anual" or mes==12 else date(ano,mes+1,1)
     shop=one("SELECT nome FROM barbearias WHERE id=%s",(shop_id,))
     barber_filter=""
     barber_params=()
@@ -2189,8 +2190,8 @@ def financial_data(shop_id:int,mes:int,ano:int,barbeiro_id:int|None=None):
     expenses_total=sum((Decimal(item["valor"]) for item in expense_rows),zero)
     gross_revenue=service_revenue+product_revenue
     net_profit=gross_revenue-commissions-product_costs-expenses_total
-    return {"barbearia_nome":shop["nome"],"profissional":professional["nome"] if professional else None,"mes":mes,"ano":ano,
-        "periodo_label":f"{mes:02d}/{ano}","inicio":inicio,"fim":fim,
+    return {"barbearia_nome":shop["nome"],"profissional":professional["nome"] if professional else None,"periodo":periodo,"mes":mes,"ano":ano,
+        "periodo_label":str(ano) if periodo=="anual" else f"{mes:02d}/{ano}","inicio":inicio,"fim":fim,
         "faturamento_servicos":service_revenue,"faturamento_produtos":product_revenue,
         "faturamento_total":gross_revenue,"comissoes":commissions,
         "custos_produtos":product_costs,"despesas_total":expenses_total,
@@ -2200,18 +2201,18 @@ def financial_data(shop_id:int,mes:int,ano:int,barbeiro_id:int|None=None):
         "vendas_detalhes":sales,"despesas":expense_rows}
 
 @app.get("/api/financeiro/resumo")
-def financial_summary(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
-    return financial_data(user["barbearia_id"],mes,ano,barbeiro_id)
+def financial_summary(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    return financial_data(user["barbearia_id"],mes,ano,barbeiro_id,periodo)
 
 @app.get("/api/financeiro/exportar.xlsx")
-def export_financial_xlsx(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
-    content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano,barbeiro_id))
+def export_financial_xlsx(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano,barbeiro_id,periodo))
     return Response(content,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.xlsx"'})
 
 @app.get("/api/financeiro/exportar.pdf")
-def export_financial_pdf(mes:int=Query(...,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
-    content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano,barbeiro_id))
+def export_financial_pdf(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano,barbeiro_id,periodo))
     return Response(content,media_type="application/pdf",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.pdf"'})
 
