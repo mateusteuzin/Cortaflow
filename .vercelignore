@@ -1,0 +1,11 @@
+.pytest_cache
+__pycache__
+.venv
+.edge-profile*
+.env
+.env.local
+tmp
+tests
+docs
+artifacts
+python-3.12.10-amd64.exe
