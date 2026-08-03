@@ -240,6 +240,15 @@ button:focus-visible, a:focus-visible, input:focus-visible {
 .final-cta { background: #101510; }
 .final-cta .btn-gold { border-color: #171a15; background: #171a15; color: #fff; }
 
+.footer-bottom { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 24px; }
+.footer-bottom .footer-legal-links { display:flex; align-items:center; gap:8px; }
+.footer-bottom .footer-legal-links b { color:#4f564e; font-weight:400; }
+.footer-bottom .footer-legal-links a { white-space:nowrap; }
+@media (max-width:720px) {
+  .footer-bottom { align-items:flex-start; flex-direction:column; gap:9px; }
+  .footer-bottom span:last-child { text-align:left; }
+}
+
 /* 2026 agency direction — editorial rhythm, dimensional product, restrained accent */
 :root {
   --agency-bg: #080b09;
