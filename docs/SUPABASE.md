@@ -54,4 +54,8 @@ Execute também `sql/004_database_performance.sql` no SQL Editor. A migração �
 e adiciona índices para agenda, clientes, profissionais, serviços, vendas e pagamentos sem
 alterar os dados existentes.
 
+Em bancos que já estão em produção, execute depois `sql/016_query_performance.sql`. Essa
+migração idempotente otimiza relatórios, próximos agendamentos, produtos, fidelidade e push,
+e atualiza as estatísticas do planejador de consultas.
+
 Depois de iniciar a API, abra `http://localhost:8000/api/health`. Em seguida, crie uma conta pelo painel. Se os dois computadores estiverem usando a mesma `DATABASE_URL`, ambos verão os mesmos cadastros e agendamentos.

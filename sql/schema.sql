@@ -134,3 +134,8 @@ CREATE INDEX IF NOT EXISTS idx_servicos_barbearia_ativos ON servicos(barbearia_i
 CREATE INDEX IF NOT EXISTS idx_vendas_produto_agendamento ON vendas_produto(agendamento_id);
 CREATE INDEX IF NOT EXISTS idx_despesas_barbearia_data ON despesas(barbearia_id, data DESC);
 CREATE INDEX IF NOT EXISTS idx_pagamentos_agendamento ON pagamentos(agendamento_id);
+CREATE INDEX IF NOT EXISTS idx_agenda_relatorios_finalizados ON agendamentos(barbearia_id, data_hora) INCLUDE (barbeiro_id, preco) WHERE status IN ('concluido', 'realizado');
+CREATE INDEX IF NOT EXISTS idx_agenda_cliente_proximo ON agendamentos(barbearia_id, cliente_telefone, data_hora) INCLUDE (barbeiro_id, servico, whatsapp_status) WHERE status IN ('agendado', 'confirmado', 'em_andamento');
+CREATE INDEX IF NOT EXISTS idx_produtos_barbearia_nome ON produtos(barbearia_id, nome);
+CREATE INDEX IF NOT EXISTS idx_fidelidade_barbearia_total ON fidelidade_cliente(barbearia_id, total_cortes DESC);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_usuario_ativo ON push_subscriptions(usuario_id, barbearia_id) WHERE ativo;

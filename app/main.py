@@ -1847,15 +1847,17 @@ def update_barber_self(data:BarberSelfUpdate,user=Depends(panel_user)):
 def barber_daily_summary(data:date,user=Depends(panel_user)):
     if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
         raise HTTPException(403,"Resumo individual disponível somente para o colaborador")
+    inicio = datetime.combine(data, datetime.min.time())
+    fim = inicio + timedelta(days=1)
     summary=one("""SELECT b.nome,b.comissao_percentual,
         COUNT(a.id) FILTER (WHERE a.status IN ('concluido','realizado')) cortes,
         COALESCE(SUM(a.preco) FILTER (WHERE a.status IN ('concluido','realizado')),0) faturamento,
         COALESCE(SUM(a.preco*b.comissao_percentual/100)
             FILTER (WHERE a.status IN ('concluido','realizado')),0) comissao
         FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id
-            AND a.barbearia_id=b.barbearia_id AND a.data_hora::date=%s
+            AND a.barbearia_id=b.barbearia_id AND a.data_hora>=%s AND a.data_hora<%s
         WHERE b.id=%s AND b.barbearia_id=%s AND b.usuario_id=%s
-        GROUP BY b.id""",(data,user["barbeiro_id"],user["barbearia_id"],user["id"]))
+        GROUP BY b.id""",(inicio,fim,user["barbeiro_id"],user["barbearia_id"],user["id"]))
     if not summary:raise HTTPException(404,"Profissional não encontrado")
     return summary
 
@@ -1981,12 +1983,14 @@ def weekly_appointments(
     if fim < inicio or (fim - inicio).days > 7:
         raise HTTPException(422, "Período da agenda inválido")
     barber_clause = " AND a.barbeiro_id=%s" if user.get("perfil") == "barbeiro" else ""
-    params = [user["barbearia_id"],inicio,fim]
+    inicio_data = datetime.combine(inicio, datetime.min.time())
+    fim_exclusivo = datetime.combine(fim + timedelta(days=1), datetime.min.time())
+    params = [user["barbearia_id"],inicio_data,fim_exclusivo]
     if barber_clause:
         params.append(user["barbeiro_id"])
     return all_rows(f"""SELECT a.*,b.nome barbeiro_nome
       FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
-      WHERE a.barbearia_id=%s AND a.data_hora::date BETWEEN %s AND %s
+      WHERE a.barbearia_id=%s AND a.data_hora>=%s AND a.data_hora<%s
       {barber_clause} ORDER BY a.data_hora""",tuple(params))
 
 @app.post("/api/agendamentos",status_code=201)
@@ -2315,11 +2319,15 @@ def export_financial_pdf(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),
 @app.get("/api/relatorios/dia")
 def daily(data:date,user=Depends(current_user)):
     require_plan(user, "profissional", "relatorios")
-    return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status IN ('concluido','realizado')",(user["barbearia_id"],data)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora::date=%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(data,user["barbearia_id"]))}
+    inicio = datetime.combine(data, datetime.min.time())
+    fim = inicio + timedelta(days=1)
+    return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s AND status IN ('concluido','realizado')",(user["barbearia_id"],inicio,fim)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora>=%s AND a.data_hora<%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(inicio,fim,user["barbearia_id"]))}
 @app.get("/api/relatorios/mes")
 def monthly(mes:int,ano:int,user=Depends(current_user)):
     require_plan(user, "profissional", "relatorios")
-    return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND EXTRACT(MONTH FROM data_hora)=%s AND EXTRACT(YEAR FROM data_hora)=%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],mes,ano))
+    inicio = date(ano,mes,1)
+    fim = date(ano+1,1,1) if mes == 12 else date(ano,mes+1,1)
+    return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND data_hora>=%s AND data_hora<%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],inicio,fim))
 @app.get("/api/relatorios/periodo")
 def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
     require_plan(user, "profissional", "relatorios")
