@@ -868,10 +868,12 @@ def create_checkout(data: CheckoutRequest, request: Request, user=Depends(curren
             line_items=[_stripe_line_item(plan)],
             success_url=f"{site_url}/painel?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{site_url}/painel?checkout=cancelado",
+            payment_method_collection="if_required",
             allow_promotion_codes=True,
             metadata={"plan": plan, "barbearia_id": str(shop["id"]), "usuario_id": str(user["id"])},
             subscription_data={
                 "trial_period_days": STRIPE_TRIAL_DAYS,
+                "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
                 "metadata": {"plan": plan, "barbearia_id": str(shop["id"])},
             },
         )
@@ -938,10 +940,12 @@ def _create_pending_checkout(pending, request: Request):
             line_items=[_stripe_line_item(plan)],
             success_url=f"{site_url}/?checkout=sucesso&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{site_url}/?checkout=cancelado",
+            payment_method_collection="if_required",
             allow_promotion_codes=True,
             metadata={"plan": plan, "pending_signup_id": str(pending["id"])},
             subscription_data={
                 "trial_period_days": STRIPE_TRIAL_DAYS,
+                "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
                 "metadata": {"plan": plan, "pending_signup_id": str(pending["id"])},
             },
             idempotency_key=f"pending-checkout-{pending['id']}-{idempotency_key}",
