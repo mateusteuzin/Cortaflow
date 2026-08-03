@@ -897,9 +897,8 @@ def _stripe_line_item(plan: str):
     plan_data = STRIPE_PLANS.get(plan)
     if not plan_data:
         raise HTTPException(422, "Plano inválido.")
-    price_id = _stripe_price_id(plan)
-    if price_id:
-        return {"price": price_id, "quantity": 1}
+    # O checkout cria o preço recorrente a partir do catálogo do servidor.
+    # A troca de plano usa IDs fixos e validados separadamente.
     return {
         "price_data": {
             "currency": "brl",
