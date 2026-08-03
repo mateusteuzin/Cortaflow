@@ -960,6 +960,14 @@ def _create_pending_checkout(pending, request: Request):
 def _timestamp(value):
     return datetime.fromtimestamp(int(value), tz=timezone.utc) if value else None
 
+
+def _subscription_period_end_value(subscription):
+    return subscription.get("trial_end") or subscription.get("current_period_end")
+
+
+def _subscription_period_end(subscription):
+    return _timestamp(_subscription_period_end_value(subscription))
+
 def _metadata_shop_id(metadata) -> int:
     try:
         return int((metadata or {}).get("barbearia_id") or 0)
@@ -1037,7 +1045,7 @@ def _activate_pending_signup(pending_id: int, session, subscription):
             VALUES(%s,%s,%s,%s,TRUE,%s,%s,%s,%s,%s,%s,CURRENT_DATE) RETURNING id""",
             (user_id, pending["barbearia_nome"], shop_slug, pending["telefone"], status,
              pending["plano"], session.get("customer"), subscription.get("id"),
-             _timestamp(subscription.get("current_period_end")),
+             _subscription_period_end(subscription),
              bool(subscription.get("cancel_at_period_end"))))
         shop_id = cur.fetchone()["id"]
         cur.execute("""INSERT INTO horarios_funcionamento(barbearia_id,dia_semana,hora_inicio,hora_fim)
@@ -1078,7 +1086,7 @@ def _save_stripe_subscription(shop_id: int, subscription, plan: str | None = Non
         data_assinatura=CASE WHEN %s THEN CURRENT_DATE ELSE data_assinatura END
         WHERE id=%s RETURNING id""",
         (active, selected_plan, status, subscription.get("id"),
-         _timestamp(subscription.get("current_period_end")),
+         _subscription_period_end(subscription),
          bool(subscription.get("cancel_at_period_end")), active, shop_id))
 
 def _send_subscription_email_once(shop_id: int, plan: str | None, period_end=None):
@@ -1247,13 +1255,13 @@ def _process_stripe_event(stripe, event_type: str, obj) -> None:
                 _link_stripe_metadata(stripe, obj, subscription, created, metadata.get("plan", ""))
                 _send_subscription_email_once(
                     created["barbearia_id"], metadata.get("plan"),
-                    subscription.get("current_period_end"),
+                    _subscription_period_end_value(subscription),
                 )
         elif shop_id and subscription_id:
             subscription = stripe.Subscription.retrieve(subscription_id)
             _save_stripe_subscription(shop_id, subscription, metadata.get("plan"))
             _send_subscription_email_once(
-                shop_id, metadata.get("plan"), subscription.get("current_period_end")
+                shop_id, metadata.get("plan"), _subscription_period_end_value(subscription)
             )
     elif event_type in {
         "checkout.session.expired",
