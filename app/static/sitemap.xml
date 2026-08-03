@@ -4,7 +4,7 @@
   xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://cortaflow.com.br/</loc>
-    <lastmod>2026-07-31</lastmod>
+    <lastmod>2026-08-03</lastmod>
     <image:image>
       <image:loc>https://cortaflow.com.br/assets/cortaflow-logo-transparent.png</image:loc>
     </image:image>
@@ -12,4 +12,6 @@
       <image:loc>https://cortaflow.com.br/assets/cortaflow-panel-real.png</image:loc>
     </image:image>
   </url>
+  <url><loc>https://cortaflow.com.br/termos-de-uso</loc><lastmod>2026-08-03</lastmod></url>
+  <url><loc>https://cortaflow.com.br/politica-de-privacidade</loc><lastmod>2026-08-03</lastmod></url>
 </urlset>

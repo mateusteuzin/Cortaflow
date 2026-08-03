@@ -2463,6 +2463,14 @@ def sitemap():
 def robots():
     return FileResponse(static/'robots.txt',media_type="text/plain")
 
+@app.get("/politica-de-privacidade",include_in_schema=False)
+def privacy_policy():
+    return FileResponse(static/'politica-de-privacidade.html')
+
+@app.get("/termos-de-uso",include_in_schema=False)
+def terms_of_use():
+    return FileResponse(static/'termos-de-uso.html')
+
 @app.get("/preview-design.html",include_in_schema=False)
 def retired_preview_landing():
     return RedirectResponse("/", status_code=308)
