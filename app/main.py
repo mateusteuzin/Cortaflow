@@ -879,6 +879,9 @@ def _stripe_line_item(plan: str):
     plan_data = STRIPE_PLANS.get(plan)
     if not plan_data:
         raise HTTPException(422, "Plano inválido.")
+    price_id = _stripe_price_id(plan)
+    if price_id:
+        return {"price": price_id, "quantity": 1}
     return {
         "price_data": {
             "currency": "brl",
@@ -891,6 +894,17 @@ def _stripe_line_item(plan: str):
         },
         "quantity": 1,
     }
+
+
+def _stripe_price_id(plan: str) -> str | None:
+    plan_data = STRIPE_PLANS.get(plan)
+    if not plan_data:
+        raise HTTPException(422, "Plano inválido.")
+    for env_name in (plan_data["price_env"], plan_data["legacy_price_env"]):
+        value = os.getenv(env_name, "").strip()
+        if value.startswith("price_") and len(value) >= 12 and "..." not in value:
+            return value
+    return None
 
 def _create_pending_checkout(pending, request: Request):
     stripe = _stripe_client()
@@ -1113,6 +1127,57 @@ def billing_portal(request: Request, user=Depends(current_user)):
     except stripe.error.StripeError as error:
         raise HTTPException(502, "Não foi possível abrir o portal da assinatura.") from error
     return {"url": session.url}
+
+
+@app.post("/api/billing/change-plan")
+def change_plan(data: CheckoutRequest, user=Depends(current_user)):
+    """Troca o preço da assinatura existente sem abrir um novo checkout."""
+    stripe = _stripe_client()
+    price_id = _stripe_price_id(data.plan)
+    if not price_id:
+        raise HTTPException(503, "O preço do plano ainda não está configurado na Stripe.")
+    shop = one("""SELECT id,stripe_subscription_id,subscription_plan
+        FROM barbearias WHERE id=%s""", (user["barbearia_id"],))
+    if not shop or not shop["stripe_subscription_id"]:
+        raise HTTPException(422, "Conclua sua primeira assinatura antes de trocar de plano.")
+    if shop["subscription_plan"] == data.plan:
+        raise HTTPException(409, "Este já é o seu plano atual.")
+    try:
+        current = stripe.Subscription.retrieve(shop["stripe_subscription_id"])
+        items = ((current.get("items") or {}).get("data") or [])
+        if len(items) != 1 or not items[0].get("id"):
+            raise HTTPException(409, "A assinatura não possui um item válido para alteração.")
+        updated = stripe.Subscription.modify(
+            shop["stripe_subscription_id"],
+            cancel_at_period_end=False,
+            items=[{"id": items[0]["id"], "price": price_id, "quantity": 1}],
+            proration_behavior="create_prorations",
+            metadata={"plan": data.plan, "barbearia_id": str(shop["id"])},
+        )
+        _save_stripe_subscription(shop["id"], updated, data.plan)
+    except stripe.error.StripeError as error:
+        logging.exception("Stripe plan change error")
+        raise HTTPException(502, "Não foi possível trocar o plano agora.") from error
+    return {"ok": True, "plan": data.plan}
+
+
+@app.post("/api/billing/cancel")
+def cancel_subscription(user=Depends(current_user)):
+    """Agenda o cancelamento no fim do período já pago, mantendo o acesso até lá."""
+    stripe = _stripe_client()
+    shop = one("""SELECT id,stripe_subscription_id
+        FROM barbearias WHERE id=%s""", (user["barbearia_id"],))
+    if not shop or not shop["stripe_subscription_id"]:
+        raise HTTPException(422, "Não existe uma assinatura Stripe ativa para cancelar.")
+    try:
+        updated = stripe.Subscription.modify(
+            shop["stripe_subscription_id"], cancel_at_period_end=True,
+        )
+        _save_stripe_subscription(shop["id"], updated)
+    except stripe.error.StripeError as error:
+        logging.exception("Stripe subscription cancellation error")
+        raise HTTPException(502, "Não foi possível cancelar a assinatura agora.") from error
+    return {"ok": True, "cancel_at_period_end": True}
 
 
 def _claim_stripe_event(event_id: str, event_type: str) -> bool:

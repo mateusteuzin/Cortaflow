@@ -301,6 +301,7 @@ function bindNavigation() {
   };
   $('#copy-booking-link').onclick = copyBookingLink;
   $('#manage-subscription').onclick = openBillingPortal;
+  $('#cancel-subscription').onclick = cancelSubscription;
   $('#finance-export-xlsx').onclick = () => downloadFinancial('xlsx').catch((error) => toast(error.message));
   $('#finance-export-pdf').onclick = () => downloadFinancial('pdf').catch((error) => toast(error.message));
   $$('[data-subscription-plan]').forEach((button) => {
@@ -451,6 +452,8 @@ async function loadSubscription() {
     ? 'O acesso permanece até esta data'
     : (subscription.current_period_end ? 'Renovação automática mensal' : 'Escolha um plano para iniciar');
   $('#manage-subscription').classList.toggle('hidden', !subscription.managed_by_stripe);
+  const cancelButton = $('#cancel-subscription');
+  cancelButton.classList.toggle('hidden', !subscription.managed_by_stripe || subscription.cancel_at_period_end || !active);
   $$('[data-subscription-card]').forEach((card) => {
     const current = active && card.dataset.subscriptionCard === subscription.plan;
     card.classList.toggle('current', current);
@@ -495,7 +498,21 @@ function renderAccountSubscription(data) {
 }
 
 async function chooseSubscription(plan, button) {
-  if (subscription?.managed_by_stripe) return openBillingPortal();
+  if (subscription?.managed_by_stripe) {
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Alterando plano...';
+    try {
+      await api('/billing/change-plan', { method: 'POST', body: JSON.stringify({ plan }) });
+      toast('Plano alterado com sucesso.');
+      await loadSubscription();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = original;
+      toast(error.message);
+    }
+    return;
+  }
   const original = button.textContent;
   button.disabled = true;
   button.textContent = 'Abrindo checkout...';
@@ -509,6 +526,20 @@ async function chooseSubscription(plan, button) {
   } catch (error) {
     button.disabled = false;
     button.textContent = original;
+    toast(error.message);
+  }
+}
+
+async function cancelSubscription() {
+  if (!window.confirm('Cancelar a renovação da assinatura? Seu acesso continua até a próxima renovação.')) return;
+  const button = $('#cancel-subscription');
+  button.disabled = true;
+  try {
+    await api('/billing/cancel', { method: 'POST' });
+    toast('Cancelamento agendado. Seu acesso continua até o fim do período.');
+    await loadSubscription();
+  } catch (error) {
+    button.disabled = false;
     toast(error.message);
   }
 }

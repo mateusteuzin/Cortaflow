@@ -36,6 +36,8 @@
   --transition-base: 220ms var(--ease);
 }
 
+.subscription-actions { display:flex; flex-direction:column; gap:9px; }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--ink); font: 500 14px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
