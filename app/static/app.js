@@ -392,6 +392,7 @@ async function start() {
     }
     await confirmCheckout();
     subscription = await api('/billing/subscription');
+    applyPlanAccess(subscription);
     if (!subscription.active) {
       document.body.classList.add('subscription-locked');
       show('assinatura');
@@ -431,6 +432,7 @@ async function loadSubscription() {
   $('#subscription-loading').classList.remove('hidden');
   $('#subscription-content').classList.add('hidden');
   subscription = await api('/billing/subscription');
+  applyPlanAccess(subscription);
   renderAccountSubscription(subscription);
   const names = { essencial: 'Essencial', profissional: 'Profissional', premium: 'Premium' };
   const descriptions = {
@@ -528,6 +530,24 @@ async function chooseSubscription(plan, button) {
     button.disabled = false;
     button.textContent = original;
     toast(error.message);
+  }
+}
+
+function applyPlanAccess(data) {
+  const features = new Set(data?.features || []);
+  const reportsNav = document.querySelector('[data-view="relatorios"]');
+  if (reportsNav) reportsNav.classList.toggle('hidden', !features.has('relatorios'));
+  const exportButtons = ['#finance-export-xlsx', '#finance-export-pdf'];
+  exportButtons.forEach((selector) => {
+    const button = $(selector);
+    if (!button) return;
+    button.disabled = !features.has('exportacoes');
+    button.title = features.has('exportacoes') ? '' : 'Disponível a partir do plano Profissional';
+  });
+  const annualReport = $('#report-period')?.querySelector('option[value="anual"]');
+  if (annualReport) {
+    annualReport.disabled = !features.has('anual');
+    annualReport.textContent = features.has('anual') ? 'Anual' : 'Anual (Premium)';
   }
 }
 

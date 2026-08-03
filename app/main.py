@@ -800,6 +800,22 @@ STRIPE_PLANS = {
 }
 STRIPE_TRIAL_DAYS = 14
 
+PLAN_RANK = {"essencial": 1, "profissional": 2, "premium": 3}
+PLAN_FEATURES = {
+    "essencial": {"financeiro_basico"},
+    "profissional": {"financeiro_basico", "relatorios", "whatsapp", "fidelidade", "exportacoes"},
+    "premium": {"financeiro_basico", "relatorios", "whatsapp", "fidelidade", "exportacoes", "anual", "indicadores", "comparativos"},
+}
+
+
+def require_plan(user: dict, minimum: str, feature: str) -> None:
+    current = user.get("subscription_plan") or ""
+    if PLAN_RANK.get(current, 0) < PLAN_RANK[minimum]:
+        raise HTTPException(
+            403,
+            f"Este recurso faz parte do plano {STRIPE_PLANS[minimum]['name'].replace('CortaFlow ', '')}.",
+        )
+
 
 def _stripe_price_configured(plan_data: dict) -> bool:
     """Aceita os nomes atuais e os nomes legados já usados em produção."""
@@ -1098,6 +1114,7 @@ def subscription_details(user=Depends(current_user)):
         "cancel_at_period_end": bool(shop["subscription_cancel_at_period_end"]),
         "managed_by_stripe": managed_by_stripe,
         "billing_data_complete": bool(plan and period_end and managed_by_stripe),
+        "features": sorted(PLAN_FEATURES.get(plan or "", set())),
     }
 
 @app.post("/api/billing/confirm")
@@ -1846,6 +1863,9 @@ def barber_insights(
     ano:int=Query(...,ge=2020,le=2100),
     user=Depends(panel_user),
 ):
+    require_plan(user, "profissional", "relatorios")
+    if periodo == "anual":
+        require_plan(user, "premium", "anual")
     if user.get("perfil") != "barbeiro" or not user.get("barbeiro_id"):
         raise HTTPException(403,"Insights individuais disponíveis somente para o colaborador")
     inicio=date(ano,mes,1) if periodo=="mensal" else date(ano,1,1)
@@ -2276,22 +2296,31 @@ def financial_summary(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes
 
 @app.get("/api/financeiro/exportar.xlsx")
 def export_financial_xlsx(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    require_plan(user, "profissional", "exportacoes")
     content=build_financial_xlsx(financial_data(user["barbearia_id"],mes,ano,barbeiro_id,periodo))
     return Response(content,media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.xlsx"'})
 
 @app.get("/api/financeiro/exportar.pdf")
 def export_financial_pdf(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    require_plan(user, "profissional", "exportacoes")
     content=build_financial_pdf(financial_data(user["barbearia_id"],mes,ano,barbeiro_id,periodo))
     return Response(content,media_type="application/pdf",
         headers={"Content-Disposition":f'attachment; filename="financeiro-{ano}-{mes:02d}.pdf"'})
 
 @app.get("/api/relatorios/dia")
-def daily(data:date,user=Depends(current_user)): return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status IN ('concluido','realizado')",(user["barbearia_id"],data)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora::date=%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(data,user["barbearia_id"]))}
+def daily(data:date,user=Depends(current_user)):
+    require_plan(user, "profissional", "relatorios")
+    return {"data":data,"total":one("SELECT COALESCE(SUM(preco),0) total,COUNT(*) cortes FROM agendamentos WHERE barbearia_id=%s AND data_hora::date=%s AND status IN ('concluido','realizado')",(user["barbearia_id"],data)),"por_barbeiro":all_rows("SELECT b.nome,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.data_hora::date=%s AND a.status IN ('concluido','realizado') WHERE b.barbearia_id=%s GROUP BY b.id ORDER BY faturamento DESC",(data,user["barbearia_id"]))}
 @app.get("/api/relatorios/mes")
-def monthly(mes:int,ano:int,user=Depends(current_user)): return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND EXTRACT(MONTH FROM data_hora)=%s AND EXTRACT(YEAR FROM data_hora)=%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],mes,ano))
+def monthly(mes:int,ano:int,user=Depends(current_user)):
+    require_plan(user, "profissional", "relatorios")
+    return all_rows("SELECT data_hora::date data,COALESCE(SUM(preco),0) total FROM agendamentos WHERE barbearia_id=%s AND EXTRACT(MONTH FROM data_hora)=%s AND EXTRACT(YEAR FROM data_hora)=%s AND status IN ('concluido','realizado') GROUP BY 1 ORDER BY 1",(user["barbearia_id"],mes,ano))
 @app.get("/api/relatorios/periodo")
 def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int=Query(1,ge=1,le=12),ano:int=Query(...,ge=2020,le=2100),barbeiro_id:int|None=Query(None,ge=1),user=Depends(current_user)):
+    require_plan(user, "profissional", "relatorios")
+    if periodo == "anual":
+        require_plan(user, "premium", "anual")
     inicio=date(ano,mes,1) if periodo=="mensal" else date(ano,1,1)
     fim=(date(ano+1,1,1) if mes==12 else date(ano,mes+1,1)) if periodo=="mensal" else date(ano+1,1,1)
     bucket="day" if periodo=="mensal" else "month"
@@ -2319,9 +2348,13 @@ def period_report(periodo:str=Query("mensal",pattern="^(mensal|anual)$"),mes:int
     return {"periodo":periodo,"inicio":inicio,"fim":fim,"total":total,"pontos":pontos,
         "melhor_periodo":melhor,"por_barbeiro":por_barbeiro}
 @app.get("/api/relatorios/barbeiro/{barber_id}")
-def barber_report(barber_id:int,user=Depends(current_user)): return one("SELECT b.nome,b.comissao_percentual,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento,COALESCE(SUM(a.preco)*b.comissao_percentual/100,0) comissao FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.status IN ('concluido','realizado') WHERE b.id=%s AND b.barbearia_id=%s GROUP BY b.id",(barber_id,user["barbearia_id"]))
+def barber_report(barber_id:int,user=Depends(current_user)):
+    require_plan(user, "premium", "indicadores")
+    return one("SELECT b.nome,b.comissao_percentual,COUNT(a.id) cortes,COALESCE(SUM(a.preco),0) faturamento,COALESCE(SUM(a.preco)*b.comissao_percentual/100,0) comissao FROM barbeiros b LEFT JOIN agendamentos a ON a.barbeiro_id=b.id AND a.status IN ('concluido','realizado') WHERE b.id=%s AND b.barbearia_id=%s GROUP BY b.id",(barber_id,user["barbearia_id"]))
 @app.get("/api/relatorios/fidelidade")
-def loyalty_report(user=Depends(current_user)): return all_rows("SELECT *,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s ORDER BY total_cortes DESC",(user["barbearia_id"],))
+def loyalty_report(user=Depends(current_user)):
+    require_plan(user, "profissional", "fidelidade")
+    return all_rows("SELECT *,10-(total_cortes%%10) cortes_para_premio FROM fidelidade_cliente WHERE barbearia_id=%s ORDER BY total_cortes DESC",(user["barbearia_id"],))
 
 @app.get("/api/clientes")
 def customer_relationships(user=Depends(current_user)):
@@ -2361,10 +2394,13 @@ def loyalty(slug:str,telefone:str):
         AND RIGHT(regexp_replace(cliente_telefone,'\\D','','g'),11)=RIGHT(%s,11)""",
         (shop["id"],digits)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
 @app.post("/api/fidelidade/registrar-corte")
-def add_cut(data:Cut,user=Depends(current_user)): return one("INSERT INTO fidelidade_cliente(barbearia_id,cliente_telefone,cliente_nome,total_cortes) VALUES(%s,%s,%s,1) ON CONFLICT(barbearia_id,cliente_telefone) DO UPDATE SET total_cortes=fidelidade_cliente.total_cortes+1,cliente_nome=EXCLUDED.cliente_nome RETURNING *",(user["barbearia_id"],data.cliente_telefone,data.cliente_nome))
+def add_cut(data:Cut,user=Depends(current_user)):
+    require_plan(user, "profissional", "fidelidade")
+    return one("INSERT INTO fidelidade_cliente(barbearia_id,cliente_telefone,cliente_nome,total_cortes) VALUES(%s,%s,%s,1) ON CONFLICT(barbearia_id,cliente_telefone) DO UPDATE SET total_cortes=fidelidade_cliente.total_cortes+1,cliente_nome=EXCLUDED.cliente_nome RETURNING *",(user["barbearia_id"],data.cliente_telefone,data.cliente_nome))
 
 @app.post("/api/whatsapp/enviar-lembranca")
 def whatsapp_reminder(agendamento_id:int,background_tasks:BackgroundTasks,user=Depends(current_user)):
+    require_plan(user, "profissional", "whatsapp")
     a=one("""UPDATE agendamentos SET whatsapp_autorizado=true,whatsapp_enviado=false,
         whatsapp_status='PENDENTE',whatsapp_erro=NULL,whatsapp_proxima_tentativa=NOW()
         WHERE id=%s AND barbearia_id=%s AND NOT whatsapp_enviado RETURNING id""",(agendamento_id,user['barbearia_id']))
