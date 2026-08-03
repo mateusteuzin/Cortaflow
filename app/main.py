@@ -1167,8 +1167,13 @@ def cancel_subscription(user=Depends(current_user)):
     stripe = _stripe_client()
     shop = one("""SELECT id,stripe_subscription_id
         FROM barbearias WHERE id=%s""", (user["barbearia_id"],))
-    if not shop or not shop["stripe_subscription_id"]:
-        raise HTTPException(422, "Não existe uma assinatura Stripe ativa para cancelar.")
+    if not shop:
+        raise HTTPException(404, "Barbearia não encontrada.")
+    if not shop["stripe_subscription_id"]:
+        one("""UPDATE barbearias SET plano_ativo=FALSE,subscription_plan=NULL,
+            subscription_status='inactive',subscription_cancel_at_period_end=FALSE
+            WHERE id=%s RETURNING id""", (shop["id"],))
+        return {"ok": True, "active": False, "cancel_at_period_end": False}
     try:
         updated = stripe.Subscription.modify(
             shop["stripe_subscription_id"], cancel_at_period_end=True,

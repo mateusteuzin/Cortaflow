@@ -446,14 +446,15 @@ async function loadSubscription() {
   const badge = $('#subscription-status-badge');
   badge.textContent = active ? (subscription.cancel_at_period_end ? 'CANCELAMENTO AGENDADO' : 'ASSINATURA ATIVA') : 'AGUARDANDO ASSINATURA';
   badge.classList.toggle('inactive', !active || subscription.cancel_at_period_end);
-  const renewal = subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR') : '—';
+  const renewal = subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR') : 'Sem renovação';
   $('#subscription-renewal-date').textContent = renewal;
   $('#subscription-renewal-note').textContent = subscription.cancel_at_period_end
     ? 'O acesso permanece até esta data'
-    : (subscription.current_period_end ? 'Renovação automática mensal' : 'Escolha um plano para iniciar');
+    : (subscription.current_period_end ? 'Renovação automática mensal' : 'Plano administrativo sem cobrança');
   $('#manage-subscription').classList.toggle('hidden', !subscription.managed_by_stripe);
   const cancelButton = $('#cancel-subscription');
-  cancelButton.classList.toggle('hidden', !subscription.managed_by_stripe || subscription.cancel_at_period_end || !active);
+  cancelButton.classList.toggle('hidden', subscription.cancel_at_period_end || !active);
+  cancelButton.textContent = subscription.managed_by_stripe ? 'Cancelar assinatura' : 'Cancelar plano Premium';
   $$('[data-subscription-card]').forEach((card) => {
     const current = active && card.dataset.subscriptionCard === subscription.plan;
     card.classList.toggle('current', current);
@@ -531,12 +532,17 @@ async function chooseSubscription(plan, button) {
 }
 
 async function cancelSubscription() {
-  if (!window.confirm('Cancelar a renovação da assinatura? Seu acesso continua até a próxima renovação.')) return;
+  const message = subscription?.managed_by_stripe
+    ? 'Cancelar a renovação da assinatura? Seu acesso continua até a próxima renovação.'
+    : 'Cancelar o plano Premium administrativo desta conta?';
+  if (!window.confirm(message)) return;
   const button = $('#cancel-subscription');
   button.disabled = true;
   try {
     await api('/billing/cancel', { method: 'POST' });
-    toast('Cancelamento agendado. Seu acesso continua até o fim do período.');
+    toast(subscription?.managed_by_stripe
+      ? 'Cancelamento agendado. Seu acesso continua até o fim do período.'
+      : 'Plano Premium cancelado.');
     await loadSubscription();
   } catch (error) {
     button.disabled = false;
