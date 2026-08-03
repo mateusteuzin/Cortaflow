@@ -54,7 +54,7 @@ const contextContent = {
   register: {
     eyebrow: 'SUA OPERAÇÃO COMEÇA AQUI',
     title: 'Uma base profissional para crescer com controle.',
-    description: 'Escolha o plano, confirme seu e-mail e conclua o pagamento com segurança.'
+    description: 'Escolha o plano, confirme seu e-mail e comece 14 dias grátis sem cartão.'
   },
   verification: {
     eyebrow: 'ETAPA 2 DE 3',
@@ -73,8 +73,8 @@ const contextContent = {
   },
   checkout: {
     eyebrow: 'ÚLTIMA ETAPA',
-    title: 'Pagamento protegido, acesso liberado.',
-    description: 'A Stripe processa sua assinatura. Os dados do cartão não passam pelo CortaFlow.'
+    title: 'Seu teste grátis está protegido.',
+    description: 'São 14 dias grátis sem cartão. Você só adiciona pagamento se quiser continuar depois.'
   }
 };
 
@@ -302,24 +302,24 @@ function showPaymentNext(plan, verified = false) {
 function showCheckoutState(state, options = {}) {
   const defaults = {
     loading: {
-      kicker: 'PAGAMENTO SEGURO',
-      title: 'Preparando seu checkout.',
-      description: 'Estamos conectando sua assinatura à Stripe.'
+      kicker: 'TESTE GRÁTIS • SEM CARTÃO',
+      title: 'Preparando seu teste grátis.',
+      description: 'Estamos ativando seus 14 dias grátis sem cartão.'
     },
     success: {
-      kicker: 'PAGAMENTO CONFIRMADO',
+      kicker: 'TESTE ATIVADO',
       title: 'Sua assinatura está ativa.',
       description: 'Tudo certo. Estamos preparando seu painel.'
     },
     cancelled: {
-      kicker: 'PAGAMENTO NÃO CONCLUÍDO',
+      kicker: 'NÃO FOI POSSÍVEL CONFIRMAR',
       title: 'Você não foi cobrado.',
-      description: 'O checkout foi fechado antes da confirmação. Seu plano continua reservado.'
+      description: 'O cadastro não foi confirmado. Tente novamente; nenhum cartão foi cobrado.'
     },
     error: {
       kicker: 'NÃO FOI POSSÍVEL CONCLUIR',
       title: 'Vamos tentar novamente.',
-      description: 'Sua cobrança não foi confirmada. Revise a tentativa ou entre novamente.'
+      description: 'Seu teste ainda não foi confirmado. Tente novamente; não houve cobrança.'
     }
   };
   const content = { ...defaults[state], ...options };
@@ -493,8 +493,8 @@ async function startCheckout(plan, sourceButton = null) {
   updateSelectedPlan(plan);
   if (sourceButton) sourceButton.disabled = true;
   showCheckoutState('loading', {
-    title: 'Abrindo o pagamento seguro.',
-    description: 'Você será direcionado à Stripe para concluir sua assinatura.',
+    title: 'Abrindo seu teste grátis sem cartão.',
+    description: 'Você será direcionado à Stripe para ativar seus 14 dias grátis.',
     plan
   });
   try {
@@ -554,7 +554,7 @@ async function continueVerifiedSession(code, confirmedPlan, confirmedEmail) {
   showCheckoutState('loading', {
     kicker: 'E-MAIL CONFIRMADO',
     title: 'Preparando a última etapa.',
-    description: 'Estamos abrindo o pagamento seguro do seu plano.',
+    description: 'Estamos ativando seus 14 dias grátis sem cartão.',
     plan: confirmedPlan
   });
   try {
