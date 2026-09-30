@@ -2,10 +2,19 @@ import json
 import logging
 import os
 from datetime import datetime
+from requests import Session
 
 from ..database import all_rows, one
+from .push_endpoints import validate_push_endpoint
 
 logger = logging.getLogger(__name__)
+
+
+class _PushSession(Session):
+    def request(self, method, url, **kwargs):
+        validate_push_endpoint(url)
+        kwargs["allow_redirects"] = False
+        return super().request(method, url, **kwargs)
 
 
 def push_is_configured() -> bool:
@@ -101,25 +110,31 @@ def _send_payload(subscriptions: list[dict], payload: dict) -> int:
     subject = claims_email if claims_email.startswith("mailto:") else f"mailto:{claims_email}"
     for subscription in subscriptions:
         try:
-            webpush(
-                subscription_info={
-                    "endpoint": subscription["endpoint"],
-                    "keys": {
-                        "p256dh": subscription["p256dh"],
-                        "auth": subscription["auth"],
+            validate_push_endpoint(subscription["endpoint"])
+            with _PushSession() as session:
+                webpush(
+                    subscription_info={
+                        "endpoint": subscription["endpoint"],
+                        "keys": {
+                            "p256dh": subscription["p256dh"],
+                            "auth": subscription["auth"],
+                        },
                     },
-                },
-                data=json.dumps(payload, ensure_ascii=False),
-                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY", "").strip(),
-                vapid_claims={"sub": subject},
-                ttl=300,
-            )
+                    data=json.dumps(payload, ensure_ascii=False),
+                    vapid_private_key=os.getenv("VAPID_PRIVATE_KEY", "").strip(),
+                    vapid_claims={"sub": subject},
+                    ttl=300,
+                    timeout=10,
+                    requests_session=session,
+                )
             sent += 1
             one(
                 """UPDATE push_subscriptions SET ultimo_envio_em=NOW(),atualizado_em=NOW()
                 WHERE id=%s RETURNING id""",
                 (subscription["id"],),
             )
+        except ValueError:
+            logger.warning("Endpoint Web Push recusado para inscricao %s", subscription["id"])
         except WebPushException as error:
             response = getattr(error, "response", None)
             status = getattr(response, "status_code", None) or getattr(response, "status", None)
@@ -129,7 +144,7 @@ def _send_payload(subscriptions: list[dict], payload: dict) -> int:
                     WHERE id=%s RETURNING id""",
                     (subscription["id"],),
                 )
-            logger.warning("Falha ao enviar Web Push para inscrição %s: %s", subscription["id"], error)
+            logger.warning("Falha ao enviar Web Push para inscricao %s: HTTP %s", subscription["id"], status)
         except Exception:
             logger.exception("Erro inesperado ao enviar Web Push para inscrição %s", subscription["id"])
     logger.info("Web Push enviado para %s de %s inscrição(ões)", sent, len(subscriptions))

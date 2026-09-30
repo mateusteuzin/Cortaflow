@@ -14,8 +14,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/cliente.css?v=20260801-maps-v3">
+  <link rel="stylesheet" href="/product-system.css?v=20260930">
 </head>
-<body>
+<body data-product="booking">
   <header class="topbar">
     <div class="topbar-inner">
       <a class="identity" href="#top" aria-label="Voltar ao início">
@@ -25,7 +26,7 @@
       </a>
       <div class="topbar-actions">
         <span class="status-chip"><i></i> Agenda online</span>
-        <button class="text-button" id="find" type="button">Minhas reservas <span>↗</span></button>
+        <button class="text-button" id="find" type="button">Consultar reserva <span>↗</span></button>
       </div>
     </div>
   </header>
@@ -38,9 +39,9 @@
       <div class="hero-orbit orbit-b" aria-hidden="true"></div>
       <div class="hero-inner">
         <div class="hero-copy">
-          <span class="eyebrow"><i></i> Precisão em cada detalhe</span>
-          <h1 id="hero-title">Seu estilo.<br><em>No seu tempo.</em></h1>
-          <p>Uma experiência premium do primeiro toque ao acabamento final. Escolha o serviço, o profissional e o melhor horário para você.</p>
+          <span class="eyebrow">Agendamento online</span>
+          <h1 id="hero-title">Agende seu horário</h1>
+          <p>Escolha o serviço, o profissional e um horário disponível.</p>
           <div class="hero-actions">
             <a class="gold-button" href="#booking"><span>Agendar meu horário</span><b>↘</b></a>
             <span class="hero-caption">Reserva rápida<br><strong>em menos de 2 minutos</strong></span>
@@ -76,11 +77,11 @@
           <div class="progress-steps" aria-hidden="true"><span class="active">Serviço</span><span>Seus dados</span><span>Confirmação</span></div>
         </div>
 
-        <div id="loading" class="state"><span class="spinner"></span><p>Preparando a melhor experiência para você...</p></div>
+        <div id="loading" class="state" role="status"><span class="spinner"></span><p>Carregando serviços e profissionais...</p></div>
         <div id="fatal" class="state hidden"><span class="state-icon">!</span><span class="progress-kicker">PAUSA RÁPIDA</span><h2>Agenda indisponível</h2><p id="fatal-message"></p><button type="button" data-reload-page>Tentar novamente <span>↗</span></button></div>
         <div id="flow" class="hidden">
           <section class="step" data-step="1">
-            <div class="field-block"><div class="field-heading"><label>Qual experiência você quer?</label><span class="field-hint">ESCOLHA 1</span></div><div id="services" class="service-list" role="radiogroup" aria-label="Escolha um serviço"></div></div>
+            <div class="field-block"><div class="field-heading"><label>Serviço</label><span class="field-hint">ESCOLHA 1</span></div><div id="services" class="service-list" role="radiogroup" aria-label="Escolha um serviço"></div></div>
             <div id="barber-block" class="field-block muted-block"><div class="field-heading"><label>Escolha seu profissional</label><span class="field-hint">ESCOLHA 2</span></div><div id="barbers" class="professional-list"></div></div>
             <div id="date-block" class="field-block muted-block"><div class="field-heading"><label for="date">Qual o melhor dia?</label><span class="field-hint">ESCOLHA 3</span></div><input id="date" type="date"></div>
             <div id="time-block" class="field-block muted-block"><div class="field-row"><label>Horários disponíveis</label><small id="slot-count"></small></div><div id="slots" class="slot-grid"><p class="helper">Escolha um serviço e um profissional.</p></div></div>
@@ -90,7 +91,7 @@
           <section class="step hidden" data-step="2">
             <button class="back" type="button" data-back="1">← Voltar</button><span class="step-kicker">SEUS DADOS</span><h2>Como podemos falar com você?</h2><p class="description">Usaremos seus dados somente para identificar e confirmar esta reserva.</p>
             <label class="input-label" for="name">Nome completo<input id="name" autocomplete="name" required placeholder="Como devemos chamar você?"></label>
-            <label class="input-label" for="phone">WhatsApp<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(00) 00000-0000"><small>A confirmação será enviada para este número.</small></label>
+            <label class="input-label" for="phone">WhatsApp<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(00) 00000-0000"><small>Usado para contato sobre sua reserva.</small></label>
             <label class="input-label" for="client-email">E-mail<input id="client-email" type="email" inputmode="email" autocomplete="email" required placeholder="voce@email.com"><small>Enviaremos os detalhes da reserva para este e-mail.</small></label>
             <label class="input-label" for="observations">Observações <span class="optional-label">opcional</span><textarea id="observations" maxlength="500" rows="3" placeholder="Preferências ou informações importantes"></textarea><small>O profissional responsável receberá esta informação.</small></label>
             <button id="to-review" class="primary" type="button"><span>Revisar agendamento</span><b>→</b></button>

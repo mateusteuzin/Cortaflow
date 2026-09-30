@@ -14,6 +14,7 @@ BARBER_USER = {
     "barbearia_id": 7,
     "barbeiro_id": 9,
     "perfil": "barbeiro",
+    "subscription_plan": "profissional",
 }
 
 
@@ -41,7 +42,8 @@ class BarberAccessTests(unittest.TestCase):
 
         query, params = rows.call_args.args
         self.assertIn("a.barbeiro_id=%s", query)
-        self.assertEqual(params, (7, date(2026, 7, 27), date(2026, 8, 2), 9))
+        self.assertIn("a.data_hora>=%s AND a.data_hora<%s", query)
+        self.assertEqual(params, (7, datetime(2026, 7, 27), datetime(2026, 8, 3), 9))
 
     @patch("app.main.send_owner_notification")
     @patch("app.main.dispatch_whatsapp")
@@ -96,7 +98,8 @@ class BarberAccessTests(unittest.TestCase):
 
         query, params = database_one.call_args.args
         self.assertIn("b.usuario_id=%s", query)
-        self.assertEqual(params, (date(2026, 7, 31), 9, 7, 21))
+        self.assertIn("a.data_hora>=%s AND a.data_hora<%s", query)
+        self.assertEqual(params, (datetime(2026, 7, 31), datetime(2026, 8, 1), 9, 7, 21))
         self.assertEqual(result["faturamento"], Decimal("100"))
 
     def test_owner_cannot_use_individual_barber_summary(self):

@@ -218,9 +218,8 @@ class PushSubscription(BaseModel):
     @field_validator("endpoint")
     @classmethod
     def validate_endpoint(cls, value):
-        if not value.startswith("https://"):
-            raise ValueError("Endpoint de notificação inválido")
-        return value
+        from .services.push_endpoints import validate_push_endpoint
+        return validate_push_endpoint(value)
 
 
 class PublicAppointment(Appointment):

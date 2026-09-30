@@ -11,9 +11,14 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *.log
+*.exe
+.edge-profile*
+artifacts/
+.agents/
 app/static/uploads/*
 !app/static/uploads/.gitkeep
 
 .vercel
 .env*
 !.env.example
+

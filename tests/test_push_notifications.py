@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from app.schemas import PushSubscription
 from app.services import push
+from pydantic import ValidationError
 
 
 PUSH_ENV = {
@@ -16,7 +17,7 @@ PUSH_ENV = {
 class PushNotificationTests(unittest.TestCase):
     def test_browser_subscription_accepts_standard_expiration_time(self):
         subscription = PushSubscription(**{
-            "endpoint": "https://push.example/subscription",
+            "endpoint": "https://fcm.googleapis.com/fcm/send/subscription",
             "expirationTime": None,
             "keys": {
                 "p256dh": "p256dh-key-with-enough-length",
@@ -30,6 +31,36 @@ class PushNotificationTests(unittest.TestCase):
             self.assertFalse(push.push_is_configured())
         with patch.dict("os.environ", PUSH_ENV, clear=True):
             self.assertTrue(push.push_is_configured())
+
+    def test_rejects_arbitrary_push_hosts_and_credentialed_urls(self):
+        for endpoint in ("https://127.0.0.1/private", "https://internal.example/private",
+                         "https://fcm.googleapis.com.attacker.example/push",
+                         "https://user:password@fcm.googleapis.com/push",
+                         "https://fcm.googleapis.com:8443/push"):
+            with self.subTest(endpoint=endpoint), self.assertRaises(ValidationError):
+                PushSubscription(endpoint=endpoint, keys={
+                    "p256dh": "p256dh-key-with-enough-length", "auth": "auth-key-value"})
+
+    @patch("pywebpush.webpush")
+    def test_invalid_stored_subscription_never_makes_network_request(self, mocked_webpush):
+        with patch.dict("os.environ", PUSH_ENV, clear=True):
+            sent = push._send_payload([{"id": 1, "endpoint": "https://127.0.0.1/private",
+                                       "p256dh": "key", "auth": "key"}], {"title": "test"})
+        self.assertEqual(sent, 0)
+        mocked_webpush.assert_not_called()
+
+    @patch("requests.Session.request")
+    def test_push_transport_does_not_follow_redirects(self, request):
+        session = push._PushSession()
+        session.post("https://fcm.googleapis.com/fcm/send/subscription", allow_redirects=True)
+        self.assertFalse(request.call_args.kwargs["allow_redirects"])
+
+    @patch("requests.Session.request")
+    def test_push_transport_rechecks_destination_before_network_io(self, request):
+        session = push._PushSession()
+        with self.assertRaises(ValueError):
+            session.post("https://127.0.0.1/private")
+        request.assert_not_called()
 
     @patch("pywebpush.webpush")
     @patch("app.services.push.all_rows")
@@ -50,7 +81,7 @@ class PushNotificationTests(unittest.TestCase):
         ]
         mocked_rows.return_value = [{
             "id": 1,
-            "endpoint": "https://push.example/subscription",
+            "endpoint": "https://fcm.googleapis.com/fcm/send/subscription",
             "p256dh": "p256dh-key",
             "auth": "auth-key",
         }]
@@ -70,7 +101,7 @@ class PushNotificationTests(unittest.TestCase):
     def test_user_can_receive_immediate_test_notification(self, _mocked_one, mocked_rows, mocked_webpush):
         mocked_rows.return_value = [{
             "id": 1,
-            "endpoint": "https://push.example/subscription",
+            "endpoint": "https://fcm.googleapis.com/fcm/send/subscription",
             "p256dh": "p256dh-key",
             "auth": "auth-key",
         }]

@@ -139,3 +139,22 @@ CREATE INDEX IF NOT EXISTS idx_agenda_cliente_proximo ON agendamentos(barbearia_
 CREATE INDEX IF NOT EXISTS idx_produtos_barbearia_nome ON produtos(barbearia_id, nome);
 CREATE INDEX IF NOT EXISTS idx_fidelidade_barbearia_total ON fidelidade_cliente(barbearia_id, total_cortes DESC);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_usuario_ativo ON push_subscriptions(usuario_id, barbearia_id) WHERE ativo;
+
+-- No browser database policies: all access goes through authenticated FastAPI.
+-- The backend connection must use a table-owner or BYPASSRLS role.
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE barbearias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cadastros_pendentes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stripe_webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE barbeiros ENABLE ROW LEVEL SECURITY;
+ALTER TABLE horarios_funcionamento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agendamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificacoes_email ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE servicos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendas_produto ENABLE ROW LEVEL SECURITY;
+ALTER TABLE despesas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fidelidade_cliente ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;

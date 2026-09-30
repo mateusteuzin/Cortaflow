@@ -18,6 +18,7 @@ const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'cu
 
 let shop;
 let service;
+let availabilityRequest = 0;
 let barber;
 let slot;
 let currentStep = 1;
@@ -109,7 +110,7 @@ async function loadServices() {
         element.setAttribute('aria-checked', String(selected));
       });
       $('#barber-block').classList.add('ready');
-      if (barber) loadSlots();
+      loadSlots();
     };
   });
 }
@@ -117,12 +118,15 @@ async function loadServices() {
 async function loadBarbers() {
   const list = await api(`${publicBase()}/profissionais`);
   if (!list.length) throw new Error('Esta barbearia ainda não possui profissionais disponíveis.');
-  $('#barbers').innerHTML = list.map((item, index) => `<button class="professional" type="button" data-index="${index}"><span class="avatar">${item.foto_url ? `<img src="${escapeHTML(item.foto_url)}" alt="Foto de ${escapeHTML(item.nome)}" loading="lazy">` : escapeHTML(initials(item.nome))}</span><span><b>${escapeHTML(item.nome)}</b><small>Profissional disponível</small></span></button>`).join('');
+  $('#barbers').innerHTML = list.map((item, index) => `<button class="professional" type="button" aria-pressed="false" data-index="${index}"><span class="avatar">${item.foto_url ? `<img src="${escapeHTML(item.foto_url)}" alt="Foto de ${escapeHTML(item.nome)}" loading="lazy">` : escapeHTML(initials(item.nome))}</span><span><b>${escapeHTML(item.nome)}</b><small>Profissional disponível</small></span></button>`).join('');
   $$('.professional').forEach((button) => {
     button.onclick = () => {
       const item = list[Number(button.dataset.index)];
       barber = { id: item.id, name: item.nome, photo: item.foto_url || '' };
-      $$('.professional').forEach((element) => element.classList.toggle('active', element === button));
+      $$('.professional').forEach((element) => {
+        element.classList.toggle('active', element === button);
+        element.setAttribute('aria-pressed', String(element === button));
+      });
       $('#date-block').classList.add('ready');
       loadSlots();
     };
@@ -130,24 +134,37 @@ async function loadBarbers() {
 }
 
 async function loadSlots() {
-  if (!barber || !dateInput.value) return;
+  const requestId = ++availabilityRequest;
   slot = null;
   $('#to-details').disabled = true;
+  $('#slot-count').textContent = '';
+  if (!service || !barber || !dateInput.value) {
+    $('#slots').innerHTML = '<p class="helper">Escolha um serviço, um profissional e uma data.</p>';
+    return;
+  }
   $('#time-block').classList.add('ready');
+  $('#slots').setAttribute('aria-busy', 'true');
   $('#slots').innerHTML = '<span class="spinner"></span>';
   try {
     const result = await api(`${publicBase()}/horarios?data=${dateInput.value}&barbeiro_id=${barber.id}&servico_id=${service.id}`);
+    if (requestId !== availabilityRequest) return;
     $('#slot-count').textContent = result.horarios.length ? `${result.horarios.length} opções` : '';
-    $('#slots').innerHTML = result.horarios.map((hour) => `<button class="slot" type="button" data-hour="${escapeHTML(hour)}">${escapeHTML(hour)}</button>`).join('') || '<p class="helper">Nenhum horário livre neste dia. Tente outra data.</p>';
+    $('#slots').innerHTML = result.horarios.map((hour) => `<button class="slot" type="button" aria-pressed="false" data-hour="${escapeHTML(hour)}">${escapeHTML(hour)}</button>`).join('') || '<p class="helper">Nenhum horário livre neste dia. Escolha outra data ou profissional.</p>';
     $$('.slot').forEach((button) => {
       button.onclick = () => {
         slot = button.dataset.hour;
-        $$('.slot').forEach((element) => element.classList.toggle('active', element === button));
+        $$('.slot').forEach((element) => {
+          element.classList.toggle('active', element === button);
+          element.setAttribute('aria-pressed', String(element === button));
+        });
         $('#to-details').disabled = false;
       };
     });
   } catch (error) {
+    if (requestId !== availabilityRequest) return;
     $('#slots').innerHTML = `<p class="helper">${escapeHTML(error.message)}</p>`;
+  } finally {
+    if (requestId === availabilityRequest) $('#slots').setAttribute('aria-busy', 'false');
   }
 }
 
@@ -185,13 +202,14 @@ $('#to-review').onclick = () => {
       <div class="review-item review-date"><span class="review-icon">${icons.calendar}</span><span><small>Data e horário</small><b>${formatDate(dateInput.value)}</b><strong>${escapeHTML(slot)}</strong></span></div>
       <div class="review-item review-professional">${barberVisual}<span><small>Profissional</small><b>${escapeHTML(barber.name)}</b><em>Barbeiro selecionado</em></span></div>
       <div class="review-item"><span class="review-icon">${icons.scissors}</span><span><small>Serviço escolhido</small><b>${escapeHTML(service.nome)}</b><em>${service.duracao_minutos} min · ${money(service.preco)}</em></span></div>
-      <div class="review-item review-email"><span class="review-icon">${icons.mail}</span><span><small>Confirmação enviada para</small><b>${escapeHTML($('#client-email').value.trim())}</b></span></div>
+      <div class="review-item review-email"><span class="review-icon">${icons.mail}</span><span><small>E-mail de contato</small><b>${escapeHTML($('#client-email').value.trim())}</b></span></div>
     </div>`;
   setStep(3);
 };
 
 $('#confirm').onclick = async () => {
   const button = $('#confirm');
+  if (button.disabled || !service || !barber || !slot) return;
   button.disabled = true;
   button.textContent = 'Confirmando...';
   try {
@@ -219,16 +237,24 @@ $('#confirm').onclick = async () => {
     }
     $('#success').classList.remove('hidden');
   } catch (error) {
-    showError(error.message);
     setStep(1);
-    loadSlots();
+    showError(error.message);
+    await loadSlots();
   } finally {
     button.disabled = false;
     button.innerHTML = '<span>Confirmar meu agendamento</span><b>✓</b>';
   }
 };
 
-$('#find').onclick = (event) => { event.preventDefault(); $('#lookup').showModal(); };
+$('#find').onclick = (event) => {
+  event.preventDefault();
+  $('#lookup').showModal();
+  $('#lookup-result').textContent = 'Para consultar ou alterar uma reserva, entre em contato com a barbearia. Seu telefone sozinho não permite acessar dados pessoais.';
+  $('#lookup-phone').hidden = true;
+  $('#lookup-submit').hidden = true;
+  $('#lookup-phone').closest('label').hidden = true;
+  $('#lookup .dialog-copy').textContent = 'Fale com a barbearia para consultar ou alterar seu atendimento.';
+};
 $('#lookup-submit').onclick = async () => {
   const value = $('#lookup-phone').value;
   if (value.replace(/\D/g, '').length < 10) return;

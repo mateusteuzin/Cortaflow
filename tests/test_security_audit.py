@@ -37,6 +37,7 @@ class SecurityAuditTests(unittest.TestCase):
     def setUp(self):
         main.hits.clear()
         main.auth_hits.clear()
+        main._rate_cleanup_at = 0.0
 
     def test_private_access_without_authentication_is_rejected(self):
         with self.assertRaises(HTTPException) as caught:
@@ -148,10 +149,10 @@ class SecurityAuditTests(unittest.TestCase):
 
     def test_stripe_subscription_value_must_match_server_catalog(self):
         subscription = {
-            "items": {"data": [{"price": {
+            "items": {"data": [{"quantity": 1, "price": {
                 "currency": "brl",
                 "unit_amount": 2990,
-                "recurring": {"interval": "month"},
+                "recurring": {"interval": "month", "interval_count": 1},
             }}]},
         }
         self.assertEqual(
@@ -171,6 +172,16 @@ class SecurityAuditTests(unittest.TestCase):
         }
         with self.assertRaises(HTTPException):
             main._verified_subscription_plan(subscription, "premium")
+
+    def test_stripe_subscription_rejects_nonmonthly_cadence_and_quantity(self):
+        for interval_count, quantity in ((12, 1), (1, 2), (1, 0), (None, 1), (1, None)):
+            subscription = {"items": {"data": [{"quantity": quantity, "price": {
+                "currency": "brl", "unit_amount": 2990,
+                "recurring": {"interval": "month", "interval_count": interval_count},
+            }}]}}
+            with self.subTest(interval_count=interval_count, quantity=quantity):
+                with self.assertRaises(HTTPException):
+                    main._verified_subscription_plan(subscription, "essencial")
 
     @patch("app.main.one")
     def test_logout_invalidates_all_existing_tokens(self, database_one):
@@ -205,6 +216,44 @@ class SecurityAuditTests(unittest.TestCase):
         self.assertEqual(response.headers["X-Frame-Options"], "DENY")
         self.assertIn("frame-ancestors 'none'", response.headers["Content-Security-Policy"])
         self.assertIn("max-age=31536000", response.headers["Strict-Transport-Security"])
+
+    def test_login_and_customer_responses_are_not_cacheable(self):
+        async def call_next(_request):
+            return Response(status_code=200)
+
+        for path in ("/api/auth/login", "/api/clientes", "/api/public/barbearias/shop/reservas/11999999999"):
+            response = asyncio.run(main.security_and_rate_limit(request_for(path), call_next))
+            self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+
+    def test_bootstrap_code_on_landing_does_not_leak_in_referrers(self):
+        async def call_next(_request):
+            return Response(status_code=200)
+
+        request = request_for("/", method="GET")
+        request.scope["query_string"] = b"code=private-bootstrap-code"
+        response = asyncio.run(main.security_and_rate_limit(request, call_next))
+        self.assertEqual(response.headers["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+
+    def test_expired_rate_limit_buckets_are_removed(self):
+        async def call_next(_request):
+            return Response(status_code=200)
+
+        main.hits["expired-client"].append(time.time() - 2000)
+        main.auth_hits[("expired-client", "/api/auth/login")].append(time.time() - 2000)
+        asyncio.run(main.security_and_rate_limit(request_for("/api/health", method="GET"), call_next))
+        self.assertNotIn("expired-client", main.hits)
+        self.assertNotIn(("expired-client", "/api/auth/login"), main.auth_hits)
+
+    @patch("app.main.all_rows")
+    @patch("app.main.one")
+    def test_phone_number_is_not_a_credential_for_public_customer_data(self, database_one, database_rows):
+        for endpoint in (main.my_appointment, main.loyalty):
+            with self.assertRaises(HTTPException) as caught:
+                endpoint("shop", "11999999999")
+            self.assertEqual(caught.exception.status_code, 403)
+        database_one.assert_not_called()
+        database_rows.assert_not_called()
 
     def test_env_files_are_ignored_and_outside_static_root(self):
         gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")

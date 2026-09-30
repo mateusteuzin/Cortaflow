@@ -91,6 +91,19 @@ app.add_middleware(
 )
 hits = defaultdict(deque)
 auth_hits = defaultdict(deque)
+_rate_cleanup_at = 0.0
+
+
+def _prune_rate_limit_buckets(now: float) -> None:
+    global _rate_cleanup_at
+    if now - _rate_cleanup_at < 60:
+        return
+    _rate_cleanup_at = now
+    auth_window = max(window for _, window in (*AUTH_RATE_LIMITS.values(), *PUBLIC_RATE_LIMITS.values()))
+    for storage, window in ((hits, 60), (auth_hits, auth_window)):
+        for key, bucket in list(storage.items()):
+            if not bucket or bucket[-1] < now - window:
+                del storage[key]
 
 
 def local_now() -> datetime:
@@ -347,6 +360,7 @@ async def security_and_rate_limit(request: Request, call_next):
     else:
         ip = request.client.host if request.client else "unknown"
     now = time_module.time()
+    _prune_rate_limit_buckets(now)
     bucket = hits[ip]
     while bucket and bucket[0] < now - 60: bucket.popleft()
     if len(bucket) >= 100:
@@ -398,7 +412,7 @@ async def security_and_rate_limit(request: Request, call_next):
             "/api/auth/verificar-email",
             "/api/auth/google/callback",
         }
-        or "reset_password" in request.query_params
+        or any(key in request.query_params for key in ("reset_password", "code", "token", "checkout_token"))
     )
     csp = (
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
@@ -419,7 +433,7 @@ async def security_and_rate_limit(request: Request, call_next):
         "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
         "Content-Security-Policy": csp,
     })
-    if sensitive_auth_response:
+    if sensitive_auth_response or request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
     if is_vercel() or request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
@@ -1007,6 +1021,8 @@ def _verified_subscription_plan(subscription, claimed_plan: str | None = None) -
         if price.get("currency") == "brl"
         and price.get("unit_amount") == config["amount"]
         and recurring.get("interval") == "month"
+        and recurring.get("interval_count") == 1
+        and items[0].get("quantity") == 1
     ]
     if len(matches) != 1 or (claimed_plan and claimed_plan != matches[0]):
         raise HTTPException(409, "Plano ou valor da assinatura não corresponde ao catálogo do servidor.")
@@ -2190,15 +2206,7 @@ def public_create(slug:str,data:PublicAppointment,background_tasks:BackgroundTas
     return row
 @app.get("/api/public/barbearias/{slug}/reservas/{telefone}")
 def my_appointment(slug:str,telefone:str):
-    shop=resolve_public_shop(slug)
-    digits=''.join(character for character in telefone if character.isdigit())
-    if len(digits)<10: raise HTTPException(422,"Informe um WhatsApp válido")
-    return all_rows("""SELECT a.id,a.data_hora,a.servico,a.status,b.nome barbeiro_nome
-      FROM agendamentos a JOIN barbeiros b ON b.id=a.barbeiro_id
-      WHERE a.barbearia_id=%s
-        AND RIGHT(regexp_replace(a.cliente_telefone,'\\D','','g'),11)=RIGHT(%s,11)
-        AND a.data_hora>=NOW()-INTERVAL '30 days' AND a.status<>'cancelado'
-      ORDER BY (a.data_hora>=NOW()) DESC,a.data_hora DESC LIMIT 10""",(shop["id"],digits))
+    raise HTTPException(403,"Para consultar seus agendamentos, entre em contato com a barbearia.")
 @app.post("/api/cliente/confirmar")
 def confirm(data:ConfirmRequest):
     raise HTTPException(410,"Esta confirmação pública foi desativada")
@@ -2404,14 +2412,7 @@ def remove_customer(client_id:int,user=Depends(current_user)):
 
 @app.get("/api/public/barbearias/{slug}/fidelidade/{telefone}")
 def loyalty(slug:str,telefone:str):
-    shop=resolve_public_shop(slug)
-    digits=''.join(character for character in telefone if character.isdigit())
-    if len(digits)<10: raise HTTPException(422,"Informe um WhatsApp válido")
-    return one("""SELECT total_cortes,total_cortes%%10 saldo,
-        10-(total_cortes%%10) cortes_para_premio
-        FROM fidelidade_cliente WHERE barbearia_id=%s
-        AND RIGHT(regexp_replace(cliente_telefone,'\\D','','g'),11)=RIGHT(%s,11)""",
-        (shop["id"],digits)) or {"total_cortes":0,"saldo":0,"cortes_para_premio":10}
+    raise HTTPException(403,"Para consultar sua fidelidade, entre em contato com a barbearia.")
 @app.post("/api/fidelidade/registrar-corte")
 def add_cut(data:Cut,user=Depends(current_user)):
     require_plan(user, "profissional", "fidelidade")

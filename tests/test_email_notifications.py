@@ -10,6 +10,7 @@ from app.services.email import (
     _email_html,
     _owner_email_html,
     _owner_whatsapp_url,
+    _barber_notification_html,
     send_account_verification,
     send_password_reset,
     send_subscription_confirmation,
@@ -32,6 +33,29 @@ def notification_item(phone="(11) 99999-8888"):
 
 
 class OwnerEmailNotificationTests(unittest.TestCase):
+    def test_booking_templates_share_responsive_white_table_layout(self):
+        item = notification_item()
+        for html in (_email_html(item), _owner_email_html(item),
+                     *(_barber_notification_html(item, event)
+                       for event in ("novo", "reagendado", "cancelado"))):
+            with self.subTest(html=html[:80]):
+                self.assertIn('max-width:600px', html)
+                self.assertIn('<meta name="viewport"', html)
+                self.assertIn('background:#ffffff', html)
+                self.assertNotIn('background:#10120e', html)
+                self.assertIn('role="presentation"', html)
+
+    def test_booking_dynamic_values_are_escaped(self):
+        item = notification_item()
+        item.update(cliente_nome='<script>bad</script>',
+                    observacoes='<img src=x onerror=bad>',
+                    barbearia_nome='Shop & Friends')
+        for html in (_email_html(item), _owner_email_html(item),
+                     _barber_notification_html(item, "novo")):
+            self.assertIn('&lt;script&gt;bad&lt;/script&gt;', html)
+            self.assertIn('Shop &amp; Friends', html)
+            self.assertNotIn('<img src=x', html)
+
     @patch.dict("os.environ", {
         "RESEND_API_KEY": "re_test",
         "EMAIL_FROM": "CortaFlow <contato@cortaflow.com.br>",

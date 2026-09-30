@@ -1,4 +1,4 @@
-﻿import json
+import json
 import hashlib
 import logging
 import os
@@ -69,60 +69,57 @@ def _transactional_html(
     @media only screen and (max-width: 640px) {{
       .email-wrap {{ padding: 12px 8px !important; }}
       .email-card {{ width: 100% !important; }}
-      .email-header {{ padding: 28px 22px 24px !important; }}
+      .email-header {{ padding: 20px 22px !important; }}
       .email-content {{ padding: 28px 22px 12px !important; }}
       .email-footer {{ padding: 20px 22px 28px !important; }}
-      .email-title {{ font-size: 27px !important; }}
+      .email-title {{ font-size: 22px !important; }}
       .email-button {{ display: block !important; min-width: 0 !important; padding: 16px 18px !important; }}
     }}
   </style>
 </head>
-<body style="margin:0;padding:0;width:100%;background:#f4f5f0;color:#0d0d11;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;width:100%;background:#f3f4f6;color:#0d0d11;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     {escape(preheader)}
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f4f5f0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f3f4f6;">
     <tr>
       <td class="email-wrap" align="center" style="padding:32px 12px;">
-        <table role="presentation" class="email-card" width="620" cellpadding="0" cellspacing="0" style="width:100%;max-width:620px;background:#ffffff;border:1px solid #dfe1db;border-radius:18px;overflow:hidden;">
+        <table role="presentation" class="email-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e2e4e7;border-radius:8px;overflow:hidden;">
           <tr>
-            <td class="email-header" style="background:#0d0d11;padding:32px 36px 28px;border-bottom:3px solid #f1ff0a;">
+            <td class="email-header" style="background:#202124;padding:22px 32px;border-bottom:2px solid #e6cf38;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
                     <img src="{BRAND_ICON_URL}" width="168" height="34" alt="CortaFlow" style="display:block;width:168px;height:auto;">
                   </td>
-                  <td align="right" style="vertical-align:middle;color:#f1ff0a;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">
-                    OPERACAO ATIVA
-                  </td>
                 </tr>
               </table>
-              <p style="margin:26px 0 8px;color:#f1ff0a;font-size:11px;line-height:1.4;font-weight:800;letter-spacing:1px;text-transform:uppercase;">{escape(eyebrow)}</p>
-              <h1 class="email-title" style="margin:0;color:#ffffff;font-size:31px;line-height:1.18;font-weight:700;">{escape(title)}</h1>
             </td>
           </tr>
           <tr>
             <td class="email-content" style="padding:34px 36px 12px;">
-              <p style="margin:0 0 14px;color:#171915;font-size:16px;line-height:1.65;">Olá, <strong>{safe_name}</strong>.</p>
+              <p style="margin:0 0 8px;color:#6b7078;font-size:11px;line-height:1.4;font-weight:700;text-transform:uppercase;">{escape(eyebrow)}</p>
+              <h1 class="email-title" style="margin:0 0 24px;color:#202124;font-size:24px;line-height:1.3;font-weight:700;">{escape(title)}</h1>
+              <p style="margin:0 0 14px;color:#202124;font-size:16px;line-height:1.65;overflow-wrap:anywhere;">Olá, <strong>{safe_name}</strong>.</p>
               <p style="margin:0;color:#555950;font-size:15px;line-height:1.75;">{escape(intro)}</p>
               {details_html}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 24px;">
                 <tr>
-                  <td align="center" style="border-radius:8px;background:#f1ff0a;">
+                  <td align="center" style="border-radius:8px;background:#e6cf38;">
                     <a class="email-button" href="{safe_url}" target="_blank" style="display:inline-block;min-width:230px;padding:16px 24px;color:#0d0d11;text-decoration:none;font-size:15px;line-height:1.2;font-weight:800;text-align:center;">{escape(action_label)} →</a>
                   </td>
                 </tr>
               </table>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f4f7df;border:1px solid #d7e760;border-radius:8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f6f7f8;border:1px solid #e2e4e7;border-radius:8px;">
                 <tr>
-                  <td style="padding:16px 18px;color:#363a16;font-size:13px;line-height:1.65;">
+                  <td style="padding:16px 18px;color:#444b54;font-size:13px;line-height:1.65;">
                     <strong>{escape(callout_title)}</strong><br>{escape(callout_text)}
                   </td>
                 </tr>
               </table>
               {expiry_html}
               <p style="margin:0 0 8px;color:#777a72;font-size:12px;line-height:1.6;">Se o botão não abrir, copie e cole este endereço no navegador:</p>
-              <p style="margin:0;word-break:break-all;font-size:12px;line-height:1.6;"><a href="{safe_url}" style="color:#8b6418;text-decoration:underline;">{safe_url}</a></p>
+              <p style="margin:0;word-break:break-all;font-size:12px;line-height:1.6;"><a href="{safe_url}" style="color:#515b68;text-decoration:underline;">{safe_url}</a></p>
             </td>
           </tr>
           <tr>
@@ -401,24 +398,24 @@ def _brand_header(label: str, title: str, logo_url: str | None = None) -> str:
     image_url = candidate if has_remote_logo else _public_url(candidate) if has_local_logo else BRAND_ICON_URL
     image_alt = f"Logo da {title}" if has_remote_logo or has_local_logo else "CortaFlow"
     return f"""
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#0d0f0c;border-bottom:2px solid #f1ff0a;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#202124;border-bottom:2px solid #e6cf38;">
         <tr>
-          <td class="booking-header" style="padding:28px 32px;">
+          <td class="booking-header" style="padding:20px 32px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td width="76" style="width:76px;vertical-align:middle;">
                   <table role="presentation" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td align="center" valign="middle" style="width:62px;height:62px;border:2px solid #f1ff0a;border-radius:50%;background:#171a14;">
+                      <td align="center" valign="middle" style="width:62px;height:62px;border:1px solid #53575e;border-radius:50%;background:#202124;">
                         <img src="{escape(image_url, quote=True)}" width="54" height="54" alt="{escape(image_alt, quote=True)}" style="display:block;width:54px;max-width:54px;height:54px;margin:2px auto;border-radius:50%;object-fit:contain;">
                       </td>
                     </tr>
                   </table>
                 </td>
                 <td style="vertical-align:middle;">
-                  <p style="margin:0 0 7px;color:#f1ff0a;font-size:10px;line-height:1.3;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">{escape(label)}</p>
-                  <h1 class="booking-shop-name" style="margin:0;color:#ffffff;font-size:25px;line-height:1.15;font-weight:700;">{escape(title)}</h1>
-                  <p style="margin:7px 0 0;color:#abb4a4;font-size:12px;line-height:1.4;">Agendamento realizado pelo CortaFlow</p>
+                  <p style="margin:0 0 7px;color:#e6cf38;font-size:10px;line-height:1.3;font-weight:700;text-transform:uppercase;letter-spacing:0;">{escape(label)}</p>
+                  <h1 class="booking-shop-name" style="margin:0;color:#ffffff;font-size:20px;line-height:1.3;font-weight:700;overflow-wrap:anywhere;">{escape(title)}</h1>
+                  <p style="margin:7px 0 0;color:#c1c5cb;font-size:12px;line-height:1.4;">Agendamento realizado pelo CortaFlow</p>
                 </td>
               </tr>
             </table>
@@ -448,15 +445,15 @@ def _email_html(item: dict) -> str:
         else ""
     )
     contact_html = (
-        f'''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#171a14;border:1px solid #343b2c;border-left:3px solid #f1ff0a;">
-              <tr><td style="padding:16px 17px;color:#eaf0e3;font-size:13px;line-height:1.6;">
-                <strong style="display:block;margin-bottom:3px;color:#f1ff0a;font-size:11px;letter-spacing:.08em;text-transform:uppercase;">Precisa falar com a barbearia?</strong>
-                <span style="color:#c3cabd;">WhatsApp da barbearia: </span><a href="{escape(whatsapp_href, quote=True)}" style="color:#f1ff0a;font-weight:700;text-decoration:none;">{escape(shop_phone)} ↗</a>
+        f'''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#f6f7f8;border:1px solid #e2e4e7;border-left:3px solid #e6cf38;">
+              <tr><td style="padding:16px 17px;color:#202124;font-size:13px;line-height:1.6;">
+                <strong style="display:block;margin-bottom:3px;color:#202124;font-size:13px;letter-spacing:0;">Precisa falar com a barbearia?</strong>
+                <span style="color:#59616b;">WhatsApp da barbearia: </span><a href="{escape(whatsapp_href, quote=True)}" style="color:#202124;font-weight:700;text-decoration:underline;">{escape(shop_phone)}</a>
               </td></tr>
             </table>'''
         if whatsapp_href
-        else '''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#171a14;border:1px solid #343b2c;border-left:3px solid #f1ff0a;">
-              <tr><td style="padding:16px 17px;color:#c3cabd;font-size:13px;line-height:1.6;">Precisa alterar o horário? Entre em contato diretamente com a barbearia antes do atendimento.</td></tr>
+        else '''<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;background:#f6f7f8;border:1px solid #e2e4e7;border-left:3px solid #e6cf38;">
+              <tr><td style="padding:16px 17px;color:#59616b;font-size:13px;line-height:1.6;">Precisa alterar o horário? Entre em contato diretamente com a barbearia antes do atendimento.</td></tr>
             </table>'''
     )
     return f"""<!doctype html>
@@ -483,29 +480,29 @@ def _email_html(item: dict) -> str:
     }}
   </style>
 </head>
-<body style="margin:0;padding:0;width:100%;background:#0b0c0a;color:#f4f7ef;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;width:100%;background:#f3f4f6;color:#202124;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">
     Sua reserva na {escape(shop)} está confirmada para {escape(day)}, às {hour}.
   </div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#0b0c0a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f3f4f6;">
     <tr>
       <td class="booking-wrap" align="center" style="padding:32px 12px;">
-        <table role="presentation" class="booking-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#10120e;border:1px solid #353a30;">
+        <table role="presentation" class="booking-card" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e2e4e7;">
           <tr><td>{_brand_header('Reserva confirmada', shop, item.get('barbearia_logo_url'))}</td></tr>
           <tr>
-            <td class="booking-content" style="padding:34px 32px 12px;">
-              <p style="margin:0 0 12px;color:#f5f8ef;font-size:16px;line-height:1.6;">Olá, <strong>{escape(str(item['cliente_nome']))}</strong>.</p>
-              <p style="margin:0;color:#bfc6b8;font-size:15px;line-height:1.7;">Seu horário foi reservado com sucesso. Confira os detalhes:</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#191b15;border:1px solid #343a2d;border-left:4px solid #f1ff0a;">
+            <td class="booking-content" style="padding:28px 32px 12px;overflow-wrap:anywhere;">
+              <p style="margin:0 0 12px;color:#202124;font-size:16px;line-height:1.6;">Olá, <strong>{escape(str(item['cliente_nome']))}</strong>.</p>
+              <p style="margin:0;color:#59616b;font-size:15px;line-height:1.7;">Seu horário foi reservado com sucesso. Confira os detalhes:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background:#f6f7f8;border:1px solid #e2e4e7;border-left:4px solid #e6cf38;">
                 <tr>
                   <td style="padding:20px 18px;">
-                    <p style="margin:0 0 16px;color:#f5f8ef;font-size:18px;line-height:1.35;font-weight:700;">{escape(str(item['servico']))}</p>
+                    <p style="margin:0 0 16px;color:#202124;font-size:18px;line-height:1.35;font-weight:700;">{escape(str(item['servico']))}</p>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Data</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">{escape(day)}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Horário</td><td style="padding:5px 0;color:#f1ff0a;font-size:13px;font-weight:700;">{hour}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Profissional</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">{escape(str(item['barbeiro_nome']))}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Valor</td><td style="padding:5px 0;color:#f5f8ef;font-size:13px;font-weight:700;">R$ {amount}</td></tr>
-                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#9da595;font-size:13px;">Reserva</td><td style="padding:5px 0;color:#f1ff0a;font-size:13px;font-weight:700;">#{int(item['id']):04d}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#6b7078;font-size:13px;">Data</td><td style="padding:5px 0;color:#202124;font-size:13px;font-weight:700;">{escape(day)}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#6b7078;font-size:13px;">Horário</td><td style="padding:5px 0;color:#202124;font-size:13px;font-weight:700;">{hour}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#6b7078;font-size:13px;">Profissional</td><td style="padding:5px 0;color:#202124;font-size:13px;font-weight:700;">{escape(str(item['barbeiro_nome']))}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#6b7078;font-size:13px;">Valor</td><td style="padding:5px 0;color:#202124;font-size:13px;font-weight:700;">R$ {amount}</td></tr>
+                      <tr><td class="detail-label" width="120" style="padding:5px 12px 5px 0;color:#6b7078;font-size:13px;">Reserva</td><td style="padding:5px 0;color:#202124;font-size:13px;font-weight:700;">#{int(item['id']):04d}</td></tr>
                     </table>
                   </td>
                 </tr>
@@ -514,9 +511,9 @@ def _email_html(item: dict) -> str:
             </td>
           </tr>
           <tr>
-            <td class="booking-footer" style="padding:22px 32px 32px;color:#8e9886;font-size:11px;line-height:1.6;">
+            <td class="booking-footer" style="padding:22px 32px 32px;color:#6b7078;font-size:12px;line-height:1.6;">
               <p style="margin:0 0 6px;">Mensagem automática enviada pela {escape(shop)}.</p>
-              <p style="margin:0;">Agendamentos e gestão por <strong style="color:#f1ff0a;">CortaFlow</strong>.</p>
+              <p style="margin:0;">Agendamentos e gestão por <strong style="color:#202124;">CortaFlow</strong>.</p>
             </td>
           </tr>
         </table>
@@ -547,26 +544,28 @@ def _owner_email_html(item: dict) -> str:
     if whatsapp_url:
         whatsapp_button = (
             f'<a href="{escape(whatsapp_url, quote=True)}" '
-            'style="display:inline-block;background:#1f9d55;color:#fff;text-decoration:none;'
+            'style="display:inline-block;background:#e6cf38;color:#202124;text-decoration:none;'
             'font-weight:bold;padding:14px 20px;margin:22px 0 4px">Abrir conversa no WhatsApp</a>'
         )
     client_email = escape(item.get("cliente_email") or "Não informado")
-    return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head><body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
-    <div style="max-width:620px;margin:32px auto;background:#fff;border:1px solid #ded9ce">
+    return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#202124">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e2e4e7"><tr><td>
       {_brand_header('NOVO AGENDAMENTO', item['barbearia_nome'], item.get('barbearia_logo_url'))}
-      <div style="padding:30px"><p>Uma nova reserva foi registrada pelo site.</p>
-      <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:28px 24px"><p>Uma nova reserva foi registrada pelo site.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f8;border:1px solid #e2e4e7"><tr><td style="padding:18px;line-height:1.9;overflow-wrap:anywhere">
         <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
         WhatsApp: {escape(item['cliente_telefone'] or 'Não informado')}<br>
-        E-mail: <a href="mailto:{client_email}" style="color:#9a6b13">{client_email}</a><br>
+        E-mail: <a href="mailto:{client_email}" style="color:#515b68">{client_email}</a><br>
         Serviço: {escape(item['servico'])}<br>
         Profissional: {escape(item['barbeiro_nome'])}<br>
         Data: {escape(day)} às {hour}<br>
         Valor: R$ {item['preco']:.2f}<br>
         Reserva: #{item['id']:04d}
-      </div>{whatsapp_button}
+      </td></tr></table>{whatsapp_button}
       <p style="font-size:12px;color:#777">Você recebeu este aviso porque as notificações de novos agendamentos estão ativadas no CortaFlow.</p>
-      </div></div></body></html>"""
+      </td></tr></table></td></tr></table></td></tr></table></body></html>"""
 
 
 def _barber_notification_html(item: dict, event: str) -> str:
@@ -583,29 +582,30 @@ def _barber_notification_html(item: dict, event: str) -> str:
     amount = f"{float(item['preco']):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1"></head>
-    <body style="margin:0;background:#f3f0e9;font-family:Arial,sans-serif;color:#171713">
-    <div style="max-width:640px;margin:28px auto;background:#fff;border:1px solid #ded9ce">
+    <body style="margin:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#171713">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e2e4e7"><tr><td>
       {_brand_header(eyebrow, item['barbearia_nome'], item.get('barbearia_logo_url'))}
-      <div style="padding:30px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:28px 24px">
         <p style="font-size:18px;margin:0 0 8px"><strong>{escape(title)}</strong></p>
         <p style="color:#62645e;margin:0 0 22px">Olá, {escape(item['barbeiro_nome'])}. Confira os dados:</p>
-        <div style="border-left:4px solid #d5a93f;background:#faf8f3;padding:18px;line-height:1.9">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f8;border:1px solid #e2e4e7"><tr><td style="padding:18px;line-height:1.9;overflow-wrap:anywhere">
           <strong style="font-size:18px">{escape(item['cliente_nome'])}</strong><br>
           Telefone: {escape(item.get('cliente_telefone') or 'Não informado')}<br>
-          E-mail: <a href="mailto:{client_email}" style="color:#9a6b13">{client_email}</a><br>
+          E-mail: <a href="mailto:{client_email}" style="color:#515b68">{client_email}</a><br>
           Serviço: {escape(item['servico'])}<br>
           Profissional: {escape(item['barbeiro_nome'])}<br>
           Data: {escape(day)} às {hour}<br>
           Valor: R$ {amount}<br>
           Observações: {observations}<br>
           Reserva: #{int(item['id']):04d}
-        </div>
+        </td></tr></table>
         <p style="margin:24px 0;text-align:center">
-          <a href="{escape(panel_url, quote=True)}" style="display:inline-block;background:#171915;color:#fff;text-decoration:none;font-weight:bold;padding:14px 22px">Abrir no painel</a>
+          <a href="{escape(panel_url, quote=True)}" style="display:inline-block;background:#e6cf38;color:#202124;text-decoration:none;font-weight:bold;padding:14px 22px">Abrir no painel</a>
         </p>
         <p style="font-size:12px;color:#777">Este aviso foi enviado somente ao profissional responsável. Quando ele não possui e-mail cadastrado, o endereço administrativo é usado como contingência.</p>
-      </div>
-    </div></body></html>"""
+      </td></tr></table>
+    </td></tr></table></td></tr></table></body></html>"""
 
 
 def send_barber_appointment_notification(
@@ -744,4 +744,3 @@ def send_owner_notification(appointment_id: int) -> bool:
         event="novo",
         event_key=f"novo-{appointment_id}",
     )
-
